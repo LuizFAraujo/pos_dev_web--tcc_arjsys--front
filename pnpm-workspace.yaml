@@ -1,6 +1,5 @@
 packages:
   - app
-  - docs
 
 onlyBuiltDependencies:
   - esbuild
