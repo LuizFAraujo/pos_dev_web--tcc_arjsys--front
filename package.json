@@ -1,0 +1,17 @@
+{
+  "name": "workspace-root",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter ./app dev",
+    "build": "pnpm -F ./app build",
+    "preview": "pnpm -F ./app preview",
+    "lint": "pnpm -F ./app lint"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@tailwindcss/oxide"
+    ]
+  }
+}
+
