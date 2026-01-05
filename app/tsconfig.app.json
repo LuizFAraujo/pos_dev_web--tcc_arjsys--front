@@ -22,7 +22,11 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    
+    "resolveJsonModule": true,
+    "composite": true
   },
+  "extends": "./tsconfig.paths.json",
   "include": ["src"]
 }

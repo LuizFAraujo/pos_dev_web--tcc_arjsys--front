@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@components": ["src/components/index.ts"],
+      "@ui/*": ["src/components/ui/*"],
+      "@ui": ["src/components/ui/index.ts"],
+      "@helpers/*": ["src/helpers/*"],
+      "@helpers": ["src/helpers/index.ts"],
+      "@hooks/*": ["src/hooks/*"],
+      "@hooks": ["src/hooks/index.ts"],
+      "@layouts/*": ["src/layouts/*"],
+      "@layouts": ["src/layouts/index.ts"],
+      "@lib/*": ["src/lib/*"],
+      "@lib": ["src/lib/index.ts"],
+      "@routes/*": ["src/routes/*"],
+      "@routes": ["src/routes/index.ts"],
+      "@services/*": ["src/services/*"],
+      "@services": ["src/services/index.ts"],
+      "@stores/*": ["src/stores/*"],
+      "@stores": ["src/stores/index.ts"],
+      "@styles/*": ["src/styles/*"],
+      "@styles": ["src/styles/index.ts"]
+    }
+  }
+}
