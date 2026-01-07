@@ -1,0 +1,413 @@
+# 🌳 ESTRUTURA DO PROJETO - ARJSYS FRONTEND
+
+**Versão:** Estrutura Final (após todas as 6 fases)  
+**Base:** React 19 + TypeScript + Vite + TanStack Router + Zustand + shadcn/ui
+
+---
+
+## 📦 ESTRUTURA COMPLETA
+
+```
+pos_dev_web--tcc_front--arjsys/
+├── package.json                    # Workspace root (scripts centralizados)
+├── pnpm-workspace.yaml             # Configuração workspace
+├── README.md
+├── .gitignore
+│
+├── docs/                           # Documentação do projeto
+│   ├── PLANO_DE_ACAO.md           ⭐ Este arquivo
+│   └── ESTRUTURA_PROJETO.md        ⭐ Este arquivo
+│
+└── app/                            # Aplicação principal
+    ├── package.json                # Dependências do app
+    ├── pnpm-lock.yaml
+    ├── index.html
+    ├── vite.config.ts
+    ├── tsconfig.json
+    ├── tsconfig.app.json
+    ├── tsconfig.node.json
+    ├── tsconfig.paths.json
+    ├── components.json             # Configuração shadcn/ui
+    │
+    ├── public/                     # Assets estáticos
+    │
+    └── src/
+        │
+        ├── components/
+        │   ├── ui/                 # shadcn/ui components
+        │   │   ├── button.tsx      ✅ Instalado
+        │   │   ├── card.tsx        ✅ Instalado
+        │   │   ├── input.tsx       ✅ Instalado
+        │   │   ├── accordion.tsx   📌 FASE 3
+        │   │   ├── tooltip.tsx     📌 FASE 3
+        │   │   ├── dialog.tsx      📌 FASE 3
+        │   │   ├── alert-dialog.tsx📌 FASE 3
+        │   │   ├── dropdown-menu.tsx📌 FASE 4
+        │   │   ├── avatar.tsx      📌 FASE 4
+        │   │   ├── badge.tsx       📌 FASE 4
+        │   │   ├── popover.tsx     📌 FASE 4
+        │   │   ├── sheet.tsx       📌 FASE 4
+        │   │   ├── command.tsx     📌 FASE 4
+        │   │   ├── breadcrumb.tsx  📌 FASE 5
+        │   │   ├── form.tsx        📌 FASE 5
+        │   │   ├── label.tsx       📌 FASE 5
+        │   │   ├── textarea.tsx    📌 FASE 5
+        │   │   ├── select.tsx      📌 FASE 5
+        │   │   ├── tabs.tsx        📌 FASE 5
+        │   │   └── table.tsx       📌 FASE 5
+        │   │
+        │   ├── workspace/          # Componentes do workspace
+        │   │   ├── TabsBar.tsx             📌 FASE 3
+        │   │   ├── WorkspaceContent.tsx    📌 FASE 3
+        │   │   ├── TabContainer.tsx        📌 FASE 3
+        │   │   ├── EmptyWorkspace.tsx      📌 FASE 3
+        │   │   └── TabUnderConstruction.tsx📌 FASE 3
+        │   │
+        │   ├── sidebars/           # Conteúdos RightSidebar
+        │   │   ├── SettingsContent.tsx     📌 FASE 4
+        │   │   ├── NotificationsContent.tsx📌 FASE 4
+        │   │   ├── SessionsContent.tsx     📌 FASE 4
+        │   │   └── StatsContent.tsx        📌 FASE 4
+        │   │
+        │   └── shared/             # Componentes reutilizáveis
+        │       ├── PageHeader.tsx          📌 FASE 5
+        │       ├── PageWrapper.tsx         📌 FASE 5
+        │       └── Breadcrumb.tsx          📌 FASE 5
+        │
+        ├── layouts/                # Layouts principais
+        │   ├── WorkspaceLayout.tsx         📌 FASE 1
+        │   ├── Header.tsx                  📌 FASE 1
+        │   ├── Sidebar.tsx                 📌 FASE 1
+        │   ├── MainContent.tsx             📌 FASE 1
+        │   ├── RightSidebar.tsx            📌 FASE 4
+        │   └── AuthLayout.tsx              📌 FASE 6
+        │
+        ├── pages/                  # Páginas do sistema
+        │   │
+        │   ├── auth/               # Autenticação
+        │   │   ├── LoginPage.tsx           📌 FASE 6
+        │   │   └── NotFoundPage.tsx        📌 FASE 5
+        │   │
+        │   ├── models/             # Páginas modelo (templates)
+        │   │   ├── ModeloListaPage.tsx     📌 FASE 5
+        │   │   ├── ModeloFormPage.tsx      📌 FASE 5
+        │   │   └── ModeloComplexoPage.tsx  📌 FASE 5
+        │   │
+        │   ├── cadastros/          # Módulo Cadastros
+        │   │   ├── clientes/
+        │   │   │   ├── ClientesListaPage.tsx      🔮 FUTURO
+        │   │   │   └── ClienteCadastroPage.tsx    🔮 FUTURO
+        │   │   ├── produtos/
+        │   │   │   ├── ProdutosListaPage.tsx      🔮 FUTURO
+        │   │   │   └── ProdutoCadastroPage.tsx    🔮 FUTURO
+        │   │   └── fornecedores/
+        │   │       ├── FornecedoresListaPage.tsx  🔮 FUTURO
+        │   │       └── FornecedorCadastroPage.tsx 🔮 FUTURO
+        │   │
+        │   ├── vendas/             # Módulo Vendas
+        │   │   └── pedidos/
+        │   │       ├── PedidosListaPage.tsx       🔮 FUTURO
+        │   │       └── PedidoCadastroPage.tsx     🔮 FUTURO
+        │   │
+        │   ├── producao/           # Módulo Produção
+        │   │   ├── ordens/
+        │   │   │   ├── OrdensListaPage.tsx        🔮 FUTURO
+        │   │   │   └── OrdemCadastroPage.tsx      🔮 FUTURO
+        │   │   └── kanban/
+        │   │       └── KanbanPage.tsx             🔮 FUTURO
+        │   │
+        │   ├── compras/            # Módulo Compras
+        │   │   └── requisicoes/
+        │   │       ├── RequisicoesListaPage.tsx   🔮 FUTURO
+        │   │       └── RequisicaoCadastroPage.tsx 🔮 FUTURO
+        │   │
+        │   └── engenharia/         # Módulo Engenharia
+        │       ├── estrutura/
+        │       │   └── EstruturaProdutoPage.tsx   🔮 FUTURO
+        │       └── roteiro/
+        │           └── RoteiroFabricacaoPage.tsx  🔮 FUTURO
+        │
+        ├── stores/                 # Zustand stores
+        │   ├── useAppStore.ts              ✅ Já existe (exemplo)
+        │   ├── tabsStore.ts                📌 FASE 2
+        │   ├── sidebarStore.ts             📌 FASE 2
+        │   ├── rightSidebarStore.ts        📌 FASE 2
+        │   ├── themeStore.ts               📌 FASE 2
+        │   ├── authStore.ts                📌 FASE 6
+        │   └── index.ts                    📌 FASE 2
+        │
+        ├── registries/             # Registry Pattern
+        │   ├── cadastrosRegistry.ts        📌 FASE 2
+        │   ├── vendasRegistry.ts           📌 FASE 2
+        │   ├── producaoRegistry.ts         📌 FASE 2
+        │   ├── comprasRegistry.ts          📌 FASE 2
+        │   ├── engenhariaRegistry.ts       📌 FASE 2
+        │   ├── modelsRegistry.ts           📌 FASE 5
+        │   └── index.ts                    📌 FASE 2
+        │       ├── getTabConfig()
+        │       └── getTabsByCategory()
+        │
+        ├── types/                  # TypeScript types
+        │   ├── tab.types.ts                📌 FASE 2
+        │   ├── registry.types.ts           📌 FASE 2
+        │   └── auth.types.ts               📌 FASE 6
+        │
+        ├── hooks/                  # Custom hooks
+        │   └── useKeyboardShortcuts.ts     📌 FASE 4
+        │
+        ├── lib/                    # Utilitários
+        │   └── utils.ts                    ✅ Já existe (shadcn)
+        │
+        ├── routes/                 # TanStack Router
+        │   ├── __root.tsx                  ✅ Já existe (atualizar FASE 1 e 6)
+        │   ├── index.tsx                   ✅ Atualizado FASE 1
+        │   ├── app.tsx                     ✅ Criado FASE 1
+        │   └── login.tsx                   📌 FASE 6
+        │
+        ├── styles/                 # Estilos
+        │   └── tailwind.css                ✅ Já existe
+        │
+        ├── App.tsx                         ✅ Já existe
+        ├── main.tsx                        ✅ Já existe
+        ├── routeTree.gen.ts                ✅ Gerado automaticamente
+        └── vite-env.d.ts                   ✅ Já existe
+```
+
+---
+
+## 📊 ESTATÍSTICAS POR FASE
+
+### ✅ **JÁ EXISTE (Setup Base)**
+- 15 arquivos base
+- 3 componentes shadcn/ui (button, card, input)
+- Estrutura de pastas criada
+
+### 📌 **FASE 1: Estrutura Visual**
+**Novos:** 5 arquivos
+- 4 layouts (WorkspaceLayout, Header, Sidebar, MainContent)
+- 1 rota (app.tsx)
+
+**Atualizados:** 2 arquivos
+- routes/__root.tsx
+- routes/index.tsx
+
+### 📌 **FASE 2: Lógica e Estado**
+**Novos:** 13 arquivos
+- 5 stores (tabs, sidebar, rightSidebar, theme, index)
+- 6 registries (5 módulos + models + index)
+- 2 types (tab.types, registry.types)
+
+### 📌 **FASE 3: Integração Funcional**
+**Novos:** 5 componentes workspace
+- TabsBar, WorkspaceContent, TabContainer, EmptyWorkspace, TabUnderConstruction
+
+**Atualizados:** 1 arquivo
+- layouts/Sidebar.tsx (conectar com stores)
+
+**shadcn:** 4 componentes
+- accordion, tooltip, dialog, alert-dialog
+
+### 📌 **FASE 4: Complementos**
+**Novos:** 6 arquivos
+- 1 layout (RightSidebar)
+- 4 sidebars (Settings, Notifications, Sessions, Stats)
+- 1 hook (useKeyboardShortcuts)
+
+**Atualizados:** 2 arquivos
+- layouts/Header.tsx (funcionalidades completas)
+- layouts/WorkspaceLayout.tsx (integrar RightSidebar)
+
+**shadcn:** 5 componentes
+- dropdown-menu, avatar, badge, popover, sheet, command
+
+### 📌 **FASE 5: Páginas Modelo**
+**Novos:** 7 arquivos
+- 3 shared components (PageHeader, PageWrapper, Breadcrumb)
+- 1 auth page (NotFoundPage)
+- 3 model pages (Lista, Form, Complexo)
+
+**Atualizados:** 1 arquivo
+- registries/modelsRegistry.ts (registrar páginas)
+
+**shadcn:** 6 componentes
+- breadcrumb, form, label, textarea, select, tabs, table
+
+### 📌 **FASE 6: Autenticação**
+**Novos:** 5 arquivos
+- 1 layout (AuthLayout)
+- 1 page (LoginPage)
+- 1 store (authStore)
+- 1 type (auth.types)
+- 1 rota (login.tsx)
+
+**Atualizados:** 2 arquivos
+- routes/__root.tsx (proteção)
+- layouts/Header.tsx (logout)
+
+---
+
+## 📈 RESUMO TOTAL
+
+| Categoria | Quantidade |
+|-----------|------------|
+| **Arquivos Existentes** | 15 |
+| **Arquivos Novos** | 44 |
+| **Arquivos Atualizados** | 8 |
+| **Componentes shadcn** | 21 |
+| **Total Final** | ~59 arquivos |
+
+---
+
+## 🎯 ESTRUTURA POR DOMÍNIO
+
+### 🎨 **UI/Apresentação**
+- `components/ui/` - shadcn/ui (21 componentes)
+- `components/workspace/` - Abas (5 componentes)
+- `components/sidebars/` - RightSidebar (4 conteúdos)
+- `components/shared/` - Reutilizáveis (3 componentes)
+- `layouts/` - Estruturas de página (6 layouts)
+
+### 📄 **Páginas**
+- `pages/auth/` - Autenticação (2 páginas)
+- `pages/models/` - Templates (3 páginas)
+- `pages/cadastros/` - CRUD Cadastros (futuro)
+- `pages/vendas/` - Vendas (futuro)
+- `pages/producao/` - Produção (futuro)
+- `pages/compras/` - Compras (futuro)
+- `pages/engenharia/` - Engenharia (futuro)
+
+### 🧠 **Lógica/Estado**
+- `stores/` - Zustand (6 stores)
+- `registries/` - Registry Pattern (6 registries)
+- `types/` - TypeScript (3 arquivos)
+- `hooks/` - Custom hooks (1 hook)
+
+### 🛣️ **Roteamento**
+- `routes/` - TanStack Router (4 rotas base)
+
+### 🎨 **Estilos**
+- `styles/` - Tailwind CSS (1 arquivo)
+
+---
+
+## 🔑 CONVENÇÕES
+
+### **Nomenclatura de Arquivos:**
+- Componentes: `PascalCase.tsx` (ex: `TabsBar.tsx`)
+- Stores: `camelCase.ts` (ex: `tabsStore.ts`)
+- Types: `kebab-case.types.ts` (ex: `tab.types.ts`)
+- Hooks: `useNome.ts` (ex: `useKeyboardShortcuts.ts`)
+
+### **Nomenclatura de Pastas:**
+- Módulos: `lowercase` (ex: `cadastros/`, `vendas/`)
+- Subdomínios: `lowercase` (ex: `clientes/`, `produtos/`)
+
+### **Organização por Setor:**
+```
+pages/
+├── cadastros/
+│   ├── clientes/
+│   │   ├── ClientesListaPage.tsx
+│   │   └── ClienteCadastroPage.tsx
+│   └── produtos/
+│       ├── ProdutosListaPage.tsx
+│       └── ProdutoCadastroPage.tsx
+└── vendas/
+    └── pedidos/
+        ├── PedidosListaPage.tsx
+        └── PedidoCadastroPage.tsx
+```
+
+### **Imports Aliases:**
+- `@/` → `src/`
+- `@components/` → `src/components/`
+- `@ui/` → `src/components/ui/`
+- `@stores` → `src/stores/`
+- `@types/` → `src/types/`
+- E outros conforme `tsconfig.paths.json`
+
+---
+
+## 🎨 PADRÕES DE CÓDIGO
+
+### **Componentes:**
+```tsx
+// Header com comentário descritivo
+/**
+ * NomeComponente - Descrição breve
+ * 
+ * Detalhes adicionais se necessário
+ */
+
+export function NomeComponente() {
+  // Código
+}
+```
+
+### **Stores:**
+```typescript
+import { create } from 'zustand';
+
+interface NomeState {
+  // Estado
+}
+
+export const useNomeStore = create<NomeState>((set) => ({
+  // Implementação
+}));
+```
+
+### **Registry:**
+```typescript
+import { TabRegistry } from '@types/registry.types';
+
+export const nomeRegistry: TabRegistry = {
+  'tipo-da-aba': {
+    defaultTitle: 'Título',
+    icon: IconeDoLucide,
+    component: ComponenteDaPagina,
+    category: 'nome-modulo'
+  }
+};
+```
+
+---
+
+## 📚 DOCUMENTAÇÃO
+
+### **Arquivos de Documentação:**
+- `docs/PLANO_DE_ACAO.md` - Plano completo com checkboxes
+- `docs/ESTRUTURA_PROJETO.md` - Este arquivo
+- `README.md` (raiz) - Visão geral do projeto
+
+### **Onde Documentar:**
+- Componentes complexos: JSDoc no topo do arquivo
+- Funções utilitárias: JSDoc inline
+- Stores: Comentário no arquivo descrevendo propósito
+- Types: Comentários inline quando necessário
+
+---
+
+## 🚀 PRÓXIMOS PASSOS APÓS FASE 6
+
+1. **Implementar CRUDs Reais:**
+   - Clientes (lista + cadastro)
+   - Produtos (lista + cadastro)
+   - Fornecedores (lista + cadastro)
+
+2. **Funcionalidades Específicas:**
+   - BOM (Bill of Materials) hierárquica
+   - Pedidos de Venda
+   - Ordens de Produção
+   - Kanban
+
+3. **Integração Backend:**
+   - API .NET
+   - Autenticação real (JWT)
+   - CRUD completo
+
+---
+
+**Data de Criação:** [preencher]  
+**Última Atualização:** [preencher]  
+**Versão:** 1.0 (Estrutura Planejada)
