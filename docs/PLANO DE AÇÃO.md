@@ -73,14 +73,14 @@ Criar stores Zustand e estrutura de tipos/registries.
 ### Subetapas:
 
 #### 2.1 - Types TypeScript
-- [ ] Criar `src/types/tab.types.ts`
-  - [ ] Interface `Tab` (id, type, title, icon, entityId, isDirty)
-  - [ ] Union type `TabType`
-  - [ ] Interface `TabMetadata`
+- [x] Criar `src/types/tab.types.ts`
+  - [x] Interface `Tab` (id, type, title, icon, entityId, isDirty)
+  - [x] Union type `TabType`
+  - [x] Interface `TabMetadata`
 
-- [ ] Criar `src/types/registry.types.ts`
-  - [ ] Interface `TabConfig`
-  - [ ] Interface `TabRegistry`
+- [x] Criar `src/types/registry.types.ts`
+  - [x] Interface `TabConfig`
+  - [x] Interface `TabRegistry`
 
 #### 2.2 - Stores Base
 - [ ] Criar `src/stores/tabsStore.ts`

@@ -149,8 +149,8 @@ pos_dev_web--tcc_front--arjsys/
         │       └── getTabsByCategory()    
         │    
         ├── types/     # TypeScript types    
-        │   ├── tab.types.ts                    📌 FASE 2
-        │   ├── registry.types.ts               📌 FASE 2
+        │   ├── tab.types.ts                    ✅
+        │   ├── registry.types.ts               ✅
         │   └── auth.types.ts                   📌 FASE 6
         │    
         ├── hooks/     # Custom hooks    

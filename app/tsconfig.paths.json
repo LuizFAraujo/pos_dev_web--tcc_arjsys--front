@@ -22,7 +22,9 @@
       "@stores/*": ["src/stores/*"],
       "@stores": ["src/stores/index.ts"],
       "@styles/*": ["src/styles/*"],
-      "@styles": ["src/styles/index.ts"]
+      "@styles": ["src/styles/index.ts"],
+      "@types/*": ["src/types/*"],
+      "@types": ["src/types/index.ts"],
     }
   }
 }
