@@ -83,23 +83,24 @@ Criar stores Zustand e estrutura de tipos/registries.
   - [x] Interface `TabRegistry`
 
 #### 2.2 - Stores Base
-- [ ] Criar `src/stores/tabsStore.ts`
-  - [ ] Estado: tabs[], activeTabId, closedHistory
-  - [ ] Funções: openTab, closeTab, setActiveTab, reopenLastTab
+- [x] Criar `src/stores/tabsStore.ts`
+  - [x] Estado: tabs[], activeTabId, closedHistory
+  - [x] Funções: openTab, closeTab, setActiveTab, reopenLastTab
 
-- [ ] Criar `src/stores/sidebarStore.ts`
-  - [ ] Estado: mode (normal/compact/closed), isPinned
-  - [ ] Funções: toggleMode, togglePin
+- [x] Criar `src/stores/sidebarStore.ts`
+  - [x] Estado: mode (normal/compact/closed), isPinned
+  - [x] Funções: toggleMode, setMode, togglePin
 
-- [ ] Criar `src/stores/rightSidebarStore.ts`
-  - [ ] Estado: openSidebar (null | 'settings' | 'notifications' | 'sessions' | 'stats')
-  - [ ] Funções: openSidebar(type), closeSidebar
+- [x] Criar `src/stores/rightSidebarStore.ts`
+  - [x] Estado: openSidebar (null | 'settings' | 'notifications' | 'sessions' | 'stats')
+  - [x] Funções: open(type), close, toggle
 
-- [ ] Criar `src/stores/themeStore.ts`
-  - [ ] Estado: theme (default/emerald/orange/purple), darkMode
-  - [ ] Funções: setTheme, toggleDarkMode
+- [x] Criar `src/stores/themeStore.ts`
+  - [x] Estado: theme (default/emerald/orange/purple), darkMode
+  - [x] Funções: setTheme, toggleDarkMode, applyDarkMode
+  - [x] Persistência com zustand/middleware
 
-- [ ] Criar `src/stores/index.ts` (exports)
+- [x] Criar `src/stores/index.ts` (exports)
 
 #### 2.3 - Registry Pattern Base
 - [ ] Criar `src/registries/cadastrosRegistry.ts` (vazio)
