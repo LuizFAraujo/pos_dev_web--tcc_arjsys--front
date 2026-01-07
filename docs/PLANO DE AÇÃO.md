@@ -103,15 +103,16 @@ Criar stores Zustand e estrutura de tipos/registries.
 - [x] Criar `src/stores/index.ts` (exports)
 
 #### 2.3 - Registry Pattern Base
-- [ ] Criar `src/registries/cadastrosRegistry.ts` (vazio)
-- [ ] Criar `src/registries/vendasRegistry.ts` (vazio)
-- [ ] Criar `src/registries/producaoRegistry.ts` (vazio)
-- [ ] Criar `src/registries/comprasRegistry.ts` (vazio)
-- [ ] Criar `src/registries/engenhariaRegistry.ts` (vazio)
-- [ ] Criar `src/registries/modelsRegistry.ts` (páginas modelo)
-- [ ] Criar `src/registries/index.ts`
-  - [ ] Função `getTabConfig(type: TabType)`
-  - [ ] Função `getTabsByCategory(category: string)`
+- [x] Criar `src/registries/cadastrosRegistry.ts` (vazio)
+- [x] Criar `src/registries/vendasRegistry.ts` (vazio)
+- [x] Criar `src/registries/producaoRegistry.ts` (vazio)
+- [x] Criar `src/registries/comprasRegistry.ts` (vazio)
+- [x] Criar `src/registries/engenhariaRegistry.ts` (vazio)
+- [x] Criar `src/registries/modelsRegistry.ts` (páginas modelo)
+- [x] Criar `src/registries/index.ts`
+  - [x] Função `getTabConfig(type: TabType)`
+  - [x] Função `getTabsByCategory(category: string)`
+  - [x] Função `getAllCategories()`
 
 **Tempo Estimado:** 1h 30min  
 **Commits:**
