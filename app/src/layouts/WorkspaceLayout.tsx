@@ -11,6 +11,7 @@
  */
 
 import { Header } from './Header';
+import { Sidebar } from './Sidebar';
 
 export function WorkspaceLayout() {
     return (
@@ -21,13 +22,7 @@ export function WorkspaceLayout() {
             {/* Container Principal: Sidebar + Content */}
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar Esquerda */}
-                <aside className="w-60 border-r border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800">
-                    <div className="p-4">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                            Sidebar Placeholder
-                        </span>
-                    </div>
-                </aside>
+                <Sidebar />
 
                 {/* Área de Conteúdo Principal */}
                 <main className="flex flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">

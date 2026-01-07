@@ -1,3 +1,4 @@
+<!-- markdownlint-disable-file -->
 # 🌳 ESTRUTURA DO PROJETO - ARJSYS FRONTEND
 
 **Versão:** Estrutura Final (após todas as 6 fases)  
@@ -9,17 +10,17 @@
 
 ```
 pos_dev_web--tcc_front--arjsys/
-├── package.json                    # Workspace root (scripts centralizados)
-├── pnpm-workspace.yaml             # Configuração workspace
+├── package.json               # Workspace root (scripts centralizados)
+├── pnpm-workspace.yaml        # Configuração workspace
 ├── README.md
 ├── .gitignore
 │
-├── docs/                           # Documentação do projeto
-│   ├── PLANO_DE_ACAO.md           ⭐ Este arquivo
-│   └── ESTRUTURA_PROJETO.md        ⭐ Este arquivo
+├── docs/                      # Documentação do projeto
+│   ├── PLANO_DE_ACAO.md
+│   └── ESTRUTURA_PROJETO.md
 │
-└── app/                            # Aplicação principal
-    ├── package.json                # Dependências do app
+└── app/                       # Aplicação principal
+    ├── package.json           # Dependências do app
     ├── pnpm-lock.yaml
     ├── index.html
     ├── vite.config.ts
@@ -27,17 +28,17 @@ pos_dev_web--tcc_front--arjsys/
     ├── tsconfig.app.json
     ├── tsconfig.node.json
     ├── tsconfig.paths.json
-    ├── components.json             # Configuração shadcn/ui
+    ├── components.json        # Configuração shadcn/ui
     │
-    ├── public/                     # Assets estáticos
+    ├── public/                # Assets estáticos
     │
     └── src/
         │
         ├── components/
-        │   ├── ui/                 # shadcn/ui components
-        │   │   ├── button.tsx      ✅ Instalado
-        │   │   ├── card.tsx        ✅ Instalado
-        │   │   ├── input.tsx       ✅ Instalado
+        │   ├── ui/     # shadcn/ui components
+        │   │   ├── button.tsx      ✅
+        │   │   ├── card.tsx        ✅
+        │   │   ├── input.tsx       ✅
         │   │   ├── accordion.tsx   📌 FASE 3
         │   │   ├── tooltip.tsx     📌 FASE 3
         │   │   ├── dialog.tsx      📌 FASE 3
@@ -56,44 +57,44 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── tabs.tsx        📌 FASE 5
         │   │   └── table.tsx       📌 FASE 5
         │   │
-        │   ├── workspace/          # Componentes do workspace
-        │   │   ├── TabsBar.tsx             📌 FASE 3
-        │   │   ├── WorkspaceContent.tsx    📌 FASE 3
-        │   │   ├── TabContainer.tsx        📌 FASE 3
-        │   │   ├── EmptyWorkspace.tsx      📌 FASE 3
-        │   │   └── TabUnderConstruction.tsx📌 FASE 3
-        │   │
-        │   ├── sidebars/           # Conteúdos RightSidebar
-        │   │   ├── SettingsContent.tsx     📌 FASE 4
-        │   │   ├── NotificationsContent.tsx📌 FASE 4
-        │   │   ├── SessionsContent.tsx     📌 FASE 4
-        │   │   └── StatsContent.tsx        📌 FASE 4
-        │   │
-        │   └── shared/             # Componentes reutilizáveis
-        │       ├── PageHeader.tsx          📌 FASE 5
-        │       ├── PageWrapper.tsx         📌 FASE 5
-        │       └── Breadcrumb.tsx          📌 FASE 5
+        │   ├── workspace/     # Componentes do workspace
+        │   │   ├── TabsBar.tsx                📌 FASE 3
+        │   │   ├── WorkspaceContent.tsx       📌 FASE 3
+        │   │   ├── TabContainer.tsx           📌 FASE 3
+        │   │   ├── EmptyWorkspace.tsx         📌 FASE 3
+        │   │   └── TabUnderConstruction.tsx   📌 FASE 3
+        │   │   
+        │   ├── sidebars/     # Conteúdos RightSidebar
+        │   │   ├── SettingsContent.tsx        📌 FASE 4
+        │   │   ├── NotificationsContent.tsx   📌 FASE 4
+        │   │   ├── SessionsContent.tsx        📌 FASE 4
+        │   │   └── StatsContent.tsx           📌 FASE 4
+        │   │   
+        │   └── shared/     # Componentes reutilizáveis
+        │       ├── PageHeader.tsx             📌 FASE 5
+        │       ├── PageWrapper.tsx            📌 FASE 5
+        │       └── Breadcrumb.tsx             📌 FASE 5
+        │   
+        ├── layouts/     # Layouts principais
+        │   ├── WorkspaceLayout.tsx            ✅
+        │   ├── Header.tsx                     ✅
+        │   ├── Sidebar.tsx                    ✅
+        │   ├── MainContent.tsx                📌 FASE 1
+        │   ├── RightSidebar.tsx               📌 FASE 4
+        │   └── AuthLayout.tsx                 📌 FASE 6
         │
-        ├── layouts/                # Layouts principais
-        │   ├── WorkspaceLayout.tsx         📌 FASE 1
-        │   ├── Header.tsx                  📌 FASE 1
-        │   ├── Sidebar.tsx                 📌 FASE 1
-        │   ├── MainContent.tsx             📌 FASE 1
-        │   ├── RightSidebar.tsx            📌 FASE 4
-        │   └── AuthLayout.tsx              📌 FASE 6
-        │
-        ├── pages/                  # Páginas do sistema
+        ├── pages/     # Páginas do sistema
         │   │
-        │   ├── auth/               # Autenticação
-        │   │   ├── LoginPage.tsx           📌 FASE 6
-        │   │   └── NotFoundPage.tsx        📌 FASE 5
+        │   ├── auth/     # Autenticação
+        │   │   ├── LoginPage.tsx              📌 FASE 6
+        │   │   └── NotFoundPage.tsx           📌 FASE 5
         │   │
-        │   ├── models/             # Páginas modelo (templates)
-        │   │   ├── ModeloListaPage.tsx     📌 FASE 5
-        │   │   ├── ModeloFormPage.tsx      📌 FASE 5
-        │   │   └── ModeloComplexoPage.tsx  📌 FASE 5
+        │   ├── models/     # Páginas modelo (templates)
+        │   │   ├── ModeloListaPage.tsx        📌 FASE 5
+        │   │   ├── ModeloFormPage.tsx         📌 FASE 5
+        │   │   └── ModeloComplexoPage.tsx     📌 FASE 5
         │   │
-        │   ├── cadastros/          # Módulo Cadastros
+        │   ├── cadastros/     # Módulo Cadastros
         │   │   ├── clientes/
         │   │   │   ├── ClientesListaPage.tsx      🔮 FUTURO
         │   │   │   └── ClienteCadastroPage.tsx    🔮 FUTURO
@@ -104,73 +105,73 @@ pos_dev_web--tcc_front--arjsys/
         │   │       ├── FornecedoresListaPage.tsx  🔮 FUTURO
         │   │       └── FornecedorCadastroPage.tsx 🔮 FUTURO
         │   │
-        │   ├── vendas/             # Módulo Vendas
+        │   ├── vendas/     # Módulo Vendas
         │   │   └── pedidos/
         │   │       ├── PedidosListaPage.tsx       🔮 FUTURO
         │   │       └── PedidoCadastroPage.tsx     🔮 FUTURO
         │   │
-        │   ├── producao/           # Módulo Produção
+        │   ├── producao/     # Módulo Produção
         │   │   ├── ordens/
         │   │   │   ├── OrdensListaPage.tsx        🔮 FUTURO
         │   │   │   └── OrdemCadastroPage.tsx      🔮 FUTURO
         │   │   └── kanban/
         │   │       └── KanbanPage.tsx             🔮 FUTURO
         │   │
-        │   ├── compras/            # Módulo Compras
+        │   ├── compras/     # Módulo Compras
         │   │   └── requisicoes/
         │   │       ├── RequisicoesListaPage.tsx   🔮 FUTURO
         │   │       └── RequisicaoCadastroPage.tsx 🔮 FUTURO
         │   │
-        │   └── engenharia/         # Módulo Engenharia
+        │   └── engenharia/     # Módulo Engenharia
         │       ├── estrutura/
         │       │   └── EstruturaProdutoPage.tsx   🔮 FUTURO
         │       └── roteiro/
         │           └── RoteiroFabricacaoPage.tsx  🔮 FUTURO
         │
-        ├── stores/                 # Zustand stores
-        │   ├── useAppStore.ts              ✅ Já existe (exemplo)
-        │   ├── tabsStore.ts                📌 FASE 2
-        │   ├── sidebarStore.ts             📌 FASE 2
-        │   ├── rightSidebarStore.ts        📌 FASE 2
-        │   ├── themeStore.ts               📌 FASE 2
-        │   ├── authStore.ts                📌 FASE 6
-        │   └── index.ts                    📌 FASE 2
+        ├── stores/     # Zustand stores
+        │   ├── useAppStore.ts                  ✅ (exemplo)
+        │   ├── tabsStore.ts                    📌 FASE 2
+        │   ├── sidebarStore.ts                 📌 FASE 2
+        │   ├── rightSidebarStore.ts            📌 FASE 2
+        │   ├── themeStore.ts                   📌 FASE 2
+        │   ├── authStore.ts                    📌 FASE 6
+        │   └── index.ts                        ✅
         │
-        ├── registries/             # Registry Pattern
-        │   ├── cadastrosRegistry.ts        📌 FASE 2
-        │   ├── vendasRegistry.ts           📌 FASE 2
-        │   ├── producaoRegistry.ts         📌 FASE 2
-        │   ├── comprasRegistry.ts          📌 FASE 2
-        │   ├── engenhariaRegistry.ts       📌 FASE 2
-        │   ├── modelsRegistry.ts           📌 FASE 5
-        │   └── index.ts                    📌 FASE 2
-        │       ├── getTabConfig()
-        │       └── getTabsByCategory()
-        │
-        ├── types/                  # TypeScript types
-        │   ├── tab.types.ts                📌 FASE 2
-        │   ├── registry.types.ts           📌 FASE 2
-        │   └── auth.types.ts               📌 FASE 6
-        │
-        ├── hooks/                  # Custom hooks
-        │   └── useKeyboardShortcuts.ts     📌 FASE 4
-        │
-        ├── lib/                    # Utilitários
-        │   └── utils.ts                    ✅ Já existe (shadcn)
-        │
-        ├── routes/                 # TanStack Router
-        │   ├── __root.tsx                  ✅ Já existe (atualizar FASE 1 e 6)
-        │   ├── index.tsx                   ✅ Atualizado FASE 1
-        │   ├── app.tsx                     ✅ Criado FASE 1
-        │   └── login.tsx                   📌 FASE 6
-        │
-        ├── styles/                 # Estilos
-        │   └── tailwind.css                ✅ Já existe
-        │
-        ├── App.tsx                         ✅ Já existe
-        ├── main.tsx                        ✅ Já existe
-        ├── routeTree.gen.ts                ✅ Gerado automaticamente
-        └── vite-env.d.ts                   ✅ Já existe
+        ├── registries/     # Registry Pattern
+        │   ├── cadastrosRegistry.ts            📌 FASE 2
+        │   ├── vendasRegistry.ts               📌 FASE 2
+        │   ├── producaoRegistry.ts             📌 FASE 2
+        │   ├── comprasRegistry.ts              📌 FASE 2
+        │   ├── engenhariaRegistry.ts           📌 FASE 2
+        │   ├── modelsRegistry.ts               📌 FASE 5
+        │   └── index.ts                        📌 FASE 2
+        │       ├── getTabConfig()    
+        │       └── getTabsByCategory()    
+        │    
+        ├── types/     # TypeScript types    
+        │   ├── tab.types.ts                    📌 FASE 2
+        │   ├── registry.types.ts               📌 FASE 2
+        │   └── auth.types.ts                   📌 FASE 6
+        │    
+        ├── hooks/     # Custom hooks    
+        │   └── useKeyboardShortcuts.ts         📌 FASE 4
+        │    
+        ├── lib/     # Utilitários    
+        │   └── utils.ts                        ✅
+        │    
+        ├── routes/     # TanStack Router    
+        │   ├── __root.tsx                      ✅
+        │   ├── index.tsx                       ✅
+        │   ├── app.tsx                         ✅
+        │   └── login.tsx                       📌 FASE 6
+        │    
+        ├── styles/     # Estilos    
+        │   └── tailwind.css                    ✅
+        │    
+        ├── App.tsx                             ✅
+        ├── main.tsx                            ✅
+        ├── routeTree.gen.ts                    ✅ Gerado automaticamente
+        └── vite-env.d.ts                       ✅
 ```
 
 ---

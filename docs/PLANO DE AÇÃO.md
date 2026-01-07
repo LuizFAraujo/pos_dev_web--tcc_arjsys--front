@@ -1,3 +1,4 @@
+<!-- markdownlint-disable-file -->
 # 🎯 PLANO DE AÇÃO - ARJSYS FRONTEND
 
 **Projeto:** Sistema ERP ArjSys  
@@ -35,18 +36,18 @@ Criar estrutura visual do layout sem lógica complexa.
 - [x] Integrar no TanStack Router (`/app`)
 
 #### 1.2 - Header Visual
-- [ ] Criar `src/layouts/Header.tsx`
-- [ ] Logo + Título (esquerda)
-- [ ] Espaço para search (centro)
-- [ ] Botões placeholder (direita)
-- [ ] Altura fixa 64px
+- [x] Criar `src/layouts/Header.tsx`
+- [x] Logo + Título (esquerda)
+- [x] Espaço para search (centro)
+- [x] Botões placeholder (direita)
+- [x] Altura fixa 64px
 
 #### 1.3 - Sidebar Visual
-- [ ] Criar `src/layouts/Sidebar.tsx`
-- [ ] Container fixo 240px
-- [ ] CATEGORIES const hardcoded
-- [ ] Menu placeholder (sem funcionalidade)
-- [ ] Estilos básicos
+- [x] Criar `src/layouts/Sidebar.tsx`
+- [x] Container fixo 240px
+- [x] CATEGORIES const hardcoded
+- [x] Menu placeholder (sem funcionalidade)
+- [x] Estilos básicos
 
 #### 1.4 - MainContent Container
 - [ ] Criar `src/layouts/MainContent.tsx`
