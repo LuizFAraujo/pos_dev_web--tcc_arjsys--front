@@ -50,10 +50,10 @@ Criar estrutura visual do layout sem lógica complexa.
 - [x] Estilos básicos
 
 #### 1.4 - MainContent Container
-- [ ] Criar `src/layouts/MainContent.tsx`
-- [ ] Container flex column
-- [ ] Área para TabsBar (placeholder)
-- [ ] Área para WorkspaceContent (placeholder)
+- [x] Criar `src/layouts/MainContent.tsx`
+- [x] Container flex column
+- [x] Área para TabsBar (placeholder)
+- [x] Área para WorkspaceContent (placeholder)
 
 #### 1.5 - Rota App
 - [x] Criar `src/routes/app.tsx`

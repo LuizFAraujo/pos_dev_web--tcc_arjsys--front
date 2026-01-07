@@ -12,6 +12,7 @@
 
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { MainContent } from './MainContent';
 
 export function WorkspaceLayout() {
     return (
@@ -25,13 +26,7 @@ export function WorkspaceLayout() {
                 <Sidebar />
 
                 {/* Área de Conteúdo Principal */}
-                <main className="flex flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
-                    <div className="p-4">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                            MainContent Placeholder
-                        </span>
-                    </div>
-                </main>
+                <MainContent />
             </div>
         </div>
     );
