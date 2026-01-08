@@ -158,14 +158,14 @@ Conectar layout com stores e implementar sistema de abas.
   - [x] Placeholder para páginas não implementadas
 
 #### 3.3 - Integrar MainContent
-- [ ] Atualizar `src/layouts/MainContent.tsx`
-- [ ] Incluir `<TabsBar />`
-- [ ] Incluir `<WorkspaceContent />`
+- [x] Atualizar `src/layouts/MainContent.tsx`
+- [x] Incluir `<TabsBar />`
+- [x] Incluir `<WorkspaceContent />`
 
 #### 3.4 - Modal de Confirmação
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add dialog alert-dialog`
-- [ ] Criar modal "Fechar aba com alterações?"
-- [ ] Integrar com tabsStore.closeTab()
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add dialog alert-dialog`
+- [x] Criar modal "Fechar aba com alterações?"
+- [x] Integrar com tabsStore.closeTab()
 
 **Tempo Estimado:** 2h 30min  
 **Commits:**

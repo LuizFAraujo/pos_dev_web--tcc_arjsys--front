@@ -13,21 +13,19 @@
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { MainContent } from './MainContent';
+import { ConfirmCloseDialog } from '@/components/workspace/ConfirmCloseDialog';
 
 export function WorkspaceLayout() {
     return (
         <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
-            {/* Header Fixo */}
             <Header />
 
-            {/* Container Principal: Sidebar + Content */}
             <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar Esquerda */}
                 <Sidebar />
-
-                {/* Área de Conteúdo Principal */}
                 <MainContent />
             </div>
+
+            <ConfirmCloseDialog />
         </div>
     );
 }

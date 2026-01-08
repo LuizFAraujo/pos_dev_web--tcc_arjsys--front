@@ -36,28 +36,29 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── components/
         │   ├── ui/     # shadcn/ui components
-        │   │   ├── avatar.tsx      📌 FASE 4
-        │   │   ├── accordion.tsx   ✅
-        │   │   ├── alert-dialog.tsx📌 FASE 3
-        │   │   ├── badge.tsx       📌 FASE 4
-        │   │   ├── button.tsx      ✅
-        │   │   ├── breadcrumb.tsx  📌 FASE 5
-        │   │   ├── card.tsx        ✅
-        │   │   ├── command.tsx     📌 FASE 4
-        │   │   ├── dialog.tsx      📌 FASE 3
-        │   │   ├── dropdown-menu.tsx📌 FASE 4
-        │   │   ├── form.tsx        📌 FASE 5
-        │   │   ├── input.tsx       ✅
-        │   │   ├── label.tsx       📌 FASE 5
-        │   │   ├── popover.tsx     📌 FASE 4
-        │   │   ├── select.tsx      📌 FASE 5
-        │   │   ├── sheet.tsx       📌 FASE 4
-        │   │   ├── table.tsx       📌 FASE 5
-        │   │   ├── tabs.tsx        📌 FASE 5
-        │   │   ├── textarea.tsx    📌 FASE 5
-        │   │   └── tooltip.tsx     📌 FASE 3
+        │   │   ├── avatar.tsx        📌 FASE 4
+        │   │   ├── accordion.tsx     ✅
+        │   │   ├── alert-dialog.tsx  ✅
+        │   │   ├── badge.tsx         📌 FASE 4
+        │   │   ├── button.tsx        ✅
+        │   │   ├── breadcrumb.tsx    📌 FASE 5
+        │   │   ├── card.tsx          ✅
+        │   │   ├── command.tsx       📌 FASE 4
+        │   │   ├── dialog.tsx        ✅
+        │   │   ├── dropdown-menu.tsx 📌 FASE 4
+        │   │   ├── form.tsx          📌 FASE 5
+        │   │   ├── input.tsx         ✅
+        │   │   ├── label.tsx         📌 FASE 5
+        │   │   ├── popover.tsx       📌 FASE 4
+        │   │   ├── select.tsx        📌 FASE 5
+        │   │   ├── sheet.tsx         📌 FASE 4
+        │   │   ├── table.tsx         📌 FASE 5
+        │   │   ├── tabs.tsx          📌 FASE 5
+        │   │   ├── textarea.tsx      📌 FASE 5
+        │   │   └── tooltip.tsx       📌 FASE 3
         │   │
         │   ├── workspace/     # Componentes do workspace
+        │   │   ├── ConfirmCloseDialog.tsx     ✅
         │   │   ├── EmptyWorkspace.tsx         ✅
         │   │   ├── TabContainer.tsx           ✅
         │   │   ├── TabsBar.tsx                ✅
