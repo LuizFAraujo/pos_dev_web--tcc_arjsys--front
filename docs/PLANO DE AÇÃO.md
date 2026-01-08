@@ -182,13 +182,13 @@ Header funcional, RightSidebar e Command Palette.
 ### Subetapas:
 
 #### 4.1 - Header Funcional
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add dropdown-menu avatar badge popover`
-- [ ] Atualizar `src/layouts/Header.tsx`
-  - [ ] Logo clicável (vai para workspace)
-  - [ ] Search bar (trigger Command Palette)
-  - [ ] Botões: Settings, Notifications, Sessions, Stats
-  - [ ] User menu dropdown (perfil, logout)
-  - [ ] Theme switcher
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add dropdown-menu avatar badge popover`
+- [x] Atualizar `src/layouts/Header.tsx`
+  - [x] Logo clicável (vai para /app)
+  - [x] Search bar (trigger Command Palette - placeholder)
+  - [x] Botões: Settings, Notifications, Sessions, Stats
+  - [x] User menu dropdown (perfil, logout)
+  - [x] Theme switcher (dark mode toggle)
 
 #### 4.2 - RightSidebar Base
 - [ ] Instalar shadcn: `pnpm dlx shadcn@latest add sheet`
