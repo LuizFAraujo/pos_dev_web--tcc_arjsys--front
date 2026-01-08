@@ -191,11 +191,15 @@ Header funcional, RightSidebar e Command Palette.
   - [x] Theme switcher (dark mode toggle)
 
 #### 4.2 - RightSidebar Base
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add sheet`
-- [ ] Criar `src/layouts/RightSidebar.tsx`
-  - [ ] Container sliding da direita
-  - [ ] Backdrop com click-outside
-  - [ ] Props: isOpen, onClose, title, width
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add sheet`
+- [x] Criar `src/layouts/RightSidebar.tsx`
+  - [x] Container sliding da direita
+  - [x] Backdrop com click-outside
+  - [x] Props: type, title, children
+  - [x] Largura responsiva (w-full sm:w-96)
+- [x] Atualizar `src/layouts/WorkspaceLayout.tsx`
+  - [x] Importar RightSidebar
+  - [x] Renderizar 4 instâncias com placeholders
 
 #### 4.3 - Conteúdos RightSidebar
 - [ ] Criar `src/components/sidebars/SettingsContent.tsx`
