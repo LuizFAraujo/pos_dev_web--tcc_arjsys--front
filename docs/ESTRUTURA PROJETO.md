@@ -36,33 +36,33 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── components/
         │   ├── ui/     # shadcn/ui components
-        │   │   ├── button.tsx      ✅
-        │   │   ├── card.tsx        ✅
-        │   │   ├── input.tsx       ✅
-        │   │   ├── accordion.tsx   📌 FASE 3
-        │   │   ├── tooltip.tsx     📌 FASE 3
-        │   │   ├── dialog.tsx      📌 FASE 3
-        │   │   ├── alert-dialog.tsx📌 FASE 3
-        │   │   ├── dropdown-menu.tsx📌 FASE 4
         │   │   ├── avatar.tsx      📌 FASE 4
+        │   │   ├── accordion.tsx   ✅
+        │   │   ├── alert-dialog.tsx📌 FASE 3
         │   │   ├── badge.tsx       📌 FASE 4
-        │   │   ├── popover.tsx     📌 FASE 4
-        │   │   ├── sheet.tsx       📌 FASE 4
-        │   │   ├── command.tsx     📌 FASE 4
+        │   │   ├── button.tsx      ✅
         │   │   ├── breadcrumb.tsx  📌 FASE 5
+        │   │   ├── card.tsx        ✅
+        │   │   ├── command.tsx     📌 FASE 4
+        │   │   ├── dialog.tsx      📌 FASE 3
+        │   │   ├── dropdown-menu.tsx📌 FASE 4
         │   │   ├── form.tsx        📌 FASE 5
+        │   │   ├── input.tsx       ✅
         │   │   ├── label.tsx       📌 FASE 5
-        │   │   ├── textarea.tsx    📌 FASE 5
+        │   │   ├── popover.tsx     📌 FASE 4
         │   │   ├── select.tsx      📌 FASE 5
+        │   │   ├── sheet.tsx       📌 FASE 4
+        │   │   ├── table.tsx       📌 FASE 5
         │   │   ├── tabs.tsx        📌 FASE 5
-        │   │   └── table.tsx       📌 FASE 5
+        │   │   ├── textarea.tsx    📌 FASE 5
+        │   │   └── tooltip.tsx     📌 FASE 3
         │   │
         │   ├── workspace/     # Componentes do workspace
-        │   │   ├── TabsBar.tsx                📌 FASE 3
-        │   │   ├── WorkspaceContent.tsx       📌 FASE 3
-        │   │   ├── TabContainer.tsx           📌 FASE 3
-        │   │   ├── EmptyWorkspace.tsx         📌 FASE 3
-        │   │   └── TabUnderConstruction.tsx   📌 FASE 3
+        │   │   ├── EmptyWorkspace.tsx         ✅
+        │   │   ├── TabContainer.tsx           ✅
+        │   │   ├── TabsBar.tsx                ✅
+        │   │   ├── TabUnderConstruction.tsx   ✅
+        │   │   └── WorkspaceContent.tsx       ✅
         │   │   
         │   ├── sidebars/     # Conteúdos RightSidebar
         │   │   ├── SettingsContent.tsx        📌 FASE 4

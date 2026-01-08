@@ -136,26 +136,26 @@ Conectar layout com stores e implementar sistema de abas.
 - [x] Accordion para grupos (shadcn accordion instalado)
 
 #### 3.2 - Sistema de Abas
-- [ ] Criar `src/components/workspace/TabsBar.tsx`
-  - [ ] Renderizar lista de abas (tabs[])
-  - [ ] Destacar aba ativa
-  - [ ] Botão close em cada aba
-  - [ ] Click ativa aba
+- [x] Criar `src/components/workspace/TabsBar.tsx`
+  - [x] Renderizar lista de abas (tabs[])
+  - [x] Destacar aba ativa
+  - [x] Botão close em cada aba
+  - [x] Click ativa aba
 
-- [ ] Criar `src/components/workspace/WorkspaceContent.tsx`
-  - [ ] Buscar config da aba ativa no Registry
-  - [ ] Renderizar componente dinamicamente
-  - [ ] Placeholder para não implementado
+- [x] Criar `src/components/workspace/WorkspaceContent.tsx`
+  - [x] Buscar config da aba ativa no Registry
+  - [x] Renderizar componente dinamicamente
+  - [x] Placeholder para não implementado
 
-- [ ] Criar `src/components/workspace/TabContainer.tsx`
-  - [ ] Wrapper para páginas
-  - [ ] Prover contexto (tabId, entityId)
+- [x] Criar `src/components/workspace/TabContainer.tsx`
+  - [x] Wrapper para páginas
+  - [x] Prover contexto (tabId, entityId)
 
-- [ ] Criar `src/components/workspace/EmptyWorkspace.tsx`
-  - [ ] Exibir quando nenhuma aba aberta
+- [x] Criar `src/components/workspace/EmptyWorkspace.tsx`
+  - [x] Exibir quando nenhuma aba aberta
 
-- [ ] Criar `src/components/workspace/TabUnderConstruction.tsx`
-  - [ ] Placeholder para páginas não implementadas
+- [x] Criar `src/components/workspace/TabUnderConstruction.tsx`
+  - [x] Placeholder para páginas não implementadas
 
 #### 3.3 - Integrar MainContent
 - [ ] Atualizar `src/layouts/MainContent.tsx`
