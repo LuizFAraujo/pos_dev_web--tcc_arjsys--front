@@ -130,13 +130,10 @@ Conectar layout com stores e implementar sistema de abas.
 ### Subetapas:
 
 #### 3.1 - Sidebar Funcional
-- [ ] Atualizar `src/layouts/Sidebar.tsx`
-- [ ] Integrar com `sidebarStore` (mode, toggleMode)
-- [ ] Integrar com `tabsStore` (openTab ao clicar)
-- [ ] Buscar itens do Registry via `getTabsByCategory()`
-- [ ] Accordion para grupos (shadcn: `pnpm dlx shadcn@latest add accordion`)
-- [ ] Modo compact (64px - só ícones)
-- [ ] Tooltips no modo compact (shadcn: `pnpm dlx shadcn@latest add tooltip`)
+- [x] Atualizar `src/layouts/Sidebar.tsx`
+- [x] Integrar com `tabsStore` (openTab ao clicar)
+- [x] Buscar itens do Registry via `getTabsByCategory()`
+- [x] Accordion para grupos (shadcn accordion instalado)
 
 #### 3.2 - Sistema de Abas
 - [ ] Criar `src/components/workspace/TabsBar.tsx`
@@ -234,6 +231,13 @@ Header funcional, RightSidebar e Command Palette.
 - [ ] Adicionar RightSidebar (4 instâncias)
 - [ ] Adicionar CommandPalette
 - [ ] Conectar com rightSidebarStore
+
+#### 4.6 - Sidebar Avançada (Opcional)
+- [ ] Integrar com `sidebarStore` (mode, toggleMode)
+- [ ] Implementar modo compact (64px - só ícones)
+- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add tooltip`
+- [ ] Tooltips no modo compact
+- [ ] Botão toggle entre modos
 
 **Tempo Estimado:** 2 horas  
 **Commits:**
