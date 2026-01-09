@@ -43,7 +43,7 @@ export function RightSidebar({ type, title, children }: RightSidebarProps) {
                 <SheetHeader>
                     <SheetTitle>{title}</SheetTitle>
                 </SheetHeader>
-                <div className="mt-6">
+                <div className="mt-6 px-4">
                     {children}
                 </div>
             </SheetContent>

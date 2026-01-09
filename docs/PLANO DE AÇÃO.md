@@ -202,21 +202,21 @@ Header funcional, RightSidebar e Command Palette.
   - [x] Renderizar 4 instâncias com placeholders
 
 #### 4.3 - Conteúdos RightSidebar
-- [ ] Criar `src/components/sidebars/SettingsContent.tsx`
-  - [ ] Theme picker
-  - [ ] Opções de sidebar
+- [x] Criar `src/components/sidebars/SettingsContent.tsx`
+  - [x] Theme picker
+  - [x] Opções de sidebar
 
-- [ ] Criar `src/components/sidebars/NotificationsContent.tsx`
-  - [ ] Lista de notificações (mock)
-  - [ ] Badges de contagem
+- [x] Criar `src/components/sidebars/NotificationsContent.tsx`
+  - [x] Lista de notificações (mock)
+  - [x] Badges de contagem
 
-- [ ] Criar `src/components/sidebars/SessionsContent.tsx`
-  - [ ] Lista de sessões ativas
-  - [ ] Botão logout
+- [x] Criar `src/components/sidebars/SessionsContent.tsx`
+  - [x] Lista de sessões ativas
+  - [x] Botão logout
 
-- [ ] Criar `src/components/sidebars/StatsContent.tsx`
-  - [ ] Estatísticas de uso
-  - [ ] Abas abertas, tempo de sessão
+- [x] Criar `src/components/sidebars/StatsContent.tsx`
+  - [x] Estatísticas de uso
+  - [x] Abas abertas, tempo de sessão
 
 #### 4.4 - Command Palette
 - [ ] Instalar shadcn: `pnpm dlx shadcn@latest add command`

@@ -17,6 +17,10 @@ import { Sidebar } from './Sidebar';
 import { MainContent } from './MainContent';
 import { RightSidebar } from './RightSidebar';
 import { ConfirmCloseDialog } from '@/components/workspace/ConfirmCloseDialog';
+import { SettingsContent } from '@/components/sidebars/SettingsContent';
+import { NotificationsContent } from '@/components/sidebars/NotificationsContent';
+import { SessionsContent } from '@/components/sidebars/SessionsContent';
+import { StatsContent } from '@/components/sidebars/StatsContent';
 
 export function WorkspaceLayout() {
     return (
@@ -28,32 +32,22 @@ export function WorkspaceLayout() {
                 <MainContent />
             </div>
 
-            {/* Modal de confirmação */}
             <ConfirmCloseDialog />
 
-            {/* RightSidebars - Placeholder temporário */}
             <RightSidebar type="settings" title="Configurações">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Conteúdo de configurações será implementado na Fase 4.3
-                </p>
+                <SettingsContent />
             </RightSidebar>
 
             <RightSidebar type="notifications" title="Notificações">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Conteúdo de notificações será implementado na Fase 4.3
-                </p>
+                <NotificationsContent />
             </RightSidebar>
 
             <RightSidebar type="sessions" title="Sessões Ativas">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Conteúdo de sessões será implementado na Fase 4.3
-                </p>
+                <SessionsContent />
             </RightSidebar>
 
             <RightSidebar type="stats" title="Estatísticas">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Conteúdo de estatísticas será implementado na Fase 4.3
-                </p>
+                <StatsContent />
             </RightSidebar>
         </div>
     );
