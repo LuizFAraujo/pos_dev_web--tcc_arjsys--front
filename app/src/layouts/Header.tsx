@@ -19,9 +19,9 @@
  * - Integração com rightSidebarStore
  * - Integração com themeStore
  * - Links funcionais
- * - Placeholders para Command Palette e Logout (Fases 4.4 e 6)
+ * - Command Palette funcional (Fase 4.4)
+ * - Placeholder para Logout (Fase 6)
  */
-
 
 import {
     Sparkles, Search, Settings, Bell, Clock,
@@ -36,16 +36,21 @@ import {
 import { Avatar, AvatarFallback } from '@ui/avatar';
 import { Badge } from '@ui/badge';
 
-export function Header() {
+interface HeaderProps {
+    /** Callback para abrir Command Palette */
+    onOpenCommandPalette?: () => void;
+}
+
+export function Header({ onOpenCommandPalette }: HeaderProps = {}) {
     const openRightSidebar = useRightSidebarStore((state) => state.open);
     const darkMode = useThemeStore((state) => state.darkMode);
     const toggleDarkMode = useThemeStore((state) => state.toggleDarkMode);
 
     /**
-     * Abre Command Palette (será implementado na 4.4)
+     * Abre Command Palette
      */
     const handleSearchClick = () => {
-        console.log('Command Palette (Ctrl+K) - Será implementado na Fase 4.4');
+        onOpenCommandPalette?.();
     };
 
     /**

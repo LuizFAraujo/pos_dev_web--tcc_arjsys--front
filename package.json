@@ -10,7 +10,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "@tailwindcss/oxide"
+      "@tailwindcss/oxide",
+      "msw"
     ]
   },
   "dependencies": {

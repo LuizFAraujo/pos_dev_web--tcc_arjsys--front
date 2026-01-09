@@ -219,17 +219,22 @@ Header funcional, RightSidebar e Command Palette.
   - [x] Abas abertas, tempo de sessão
 
 #### 4.4 - Command Palette
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add command`
-- [ ] Criar `src/components/ui/CommandPalette.tsx`
-  - [ ] Busca global de páginas
-  - [ ] Keyboard navigation
-  - [ ] Integrar com Registry
-  - [ ] Atalho Ctrl+K
-
-- [ ] Criar `src/hooks/useKeyboardShortcuts.ts`
-  - [ ] Hook para atalhos globais
-  - [ ] Ctrl+K → Command Palette
-  - [ ] Ctrl+Shift+T → Reabrir última aba
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add command`
+- [x] Criar `src/components/workspace/CommandPalette.tsx`
+  - [x] Busca global de páginas
+  - [x] Keyboard navigation
+  - [x] Integrar com Registry
+  - [x] Agrupamento por categoria
+- [x] Criar `src/hooks/useKeyboardShortcuts.ts`
+  - [x] Hook para atalhos globais
+  - [x] Ctrl+K → Command Palette
+  - [x] Ctrl+Shift+T → Reabrir última aba
+- [x] Atualizar Header.tsx
+  - [x] Callback onOpenCommandPalette
+  - [x] Click na busca abre palette
+- [x] Atualizar WorkspaceLayout.tsx
+  - [x] Renderizar CommandPalette
+  - [x] Registrar atalhos de teclado
 
 #### 4.5 - Integrar no WorkspaceLayout
 - [ ] Adicionar RightSidebar (4 instâncias)
