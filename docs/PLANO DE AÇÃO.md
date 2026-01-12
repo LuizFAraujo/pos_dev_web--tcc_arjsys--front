@@ -298,15 +298,14 @@ Criar 3 páginas modelo + NotFound para servir de template.
   - [x] Registrar no TanStack Router
 
 #### 5.3 - Página Modelo A (Lista Simples)
-- [ ] Criar `src/pages/models/ModeloListaPage.tsx`
-  - [ ] PageHeader com título
-  - [ ] Lista de items (mock data)
-  - [ ] Scroll vertical
-  - [ ] Botão de ação (adicionar)
-
-- [ ] Registrar em `src/registries/modelsRegistry.ts`
-  - [ ] type: 'modelo-lista'
-  - [ ] defaultTitle: 'Modelo: Lista Simples'
+- [x] Criar `src/pages/models/ModeloListaPage.tsx`
+  - [x] PageHeader com título
+  - [x] Lista de items (mock data)
+  - [x] Scroll vertical
+  - [x] Botão de ação (adicionar)
+- [x] Registrar em `src/registries/modelsRegistry.ts`
+  - [x] type: 'modelo-lista'
+  - [x] defaultTitle: 'Modelo: Lista Simples'
 
 #### 5.4 - Página Modelo B (Formulário)
 - [ ] Instalar shadcn: `pnpm dlx shadcn@latest add form label textarea select`
@@ -423,25 +422,27 @@ Sistema de login e proteção de rotas.
 - [x] Rota /app funciona
 
 ### Fase 2 Concluída:
-- [ ] Todos os stores criados
-- [ ] Types compilam sem erros
-- [ ] Registries exportam corretamente
+- [x] Todos os stores criados
+- [x] Types compilam sem erros
+- [x] Registries exportam corretamente
 
 ### Fase 3 Concluída:
-- [ ] Click no menu abre aba
-- [ ] Múltiplas abas funcionam
-- [ ] Close tab funciona
-- [ ] Sidebar collapse funciona
+- [x] Click no menu abre aba (funcional, aguardando páginas)
+- [x] Múltiplas abas funcionam
+- [x] Close tab funciona
+- [x] Modal confirmação funciona
 
 ### Fase 4 Concluída:
-- [ ] Header totalmente funcional
-- [ ] RightSidebar abre/fecha
-- [ ] Command Palette funciona (Ctrl+K)
-- [ ] Todos os atalhos funcionam
+- [x] Header totalmente funcional
+- [x] RightSidebar abre/fecha
+- [x] Command Palette funciona (Ctrl+K)
+- [x] Todos os atalhos funcionam
+- [x] Sidebar avançada (3 modos + pin + persistência)
 
 ### Fase 5 Concluída:
-- [ ] 3 páginas modelo funcionam 100%
+- [ ] Componentes reutilizáveis criados
 - [ ] NotFound funciona
+- [ ] 3 páginas modelo funcionam 100%
 - [ ] Todas as funcionalidades testadas
 - [ ] Sistema = template completo
 
