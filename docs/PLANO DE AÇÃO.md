@@ -281,22 +281,21 @@ Criar 3 páginas modelo + NotFound para servir de template.
 ### Subetapas:
 
 #### 5.1 - Componentes Reutilizáveis
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add breadcrumb`
-- [ ] Criar `src/components/shared/PageHeader.tsx`
-  - [ ] Título + descrição
-  - [ ] Breadcrumbs
-  - [ ] Slot para botões de ação
-
-- [ ] Criar `src/components/shared/PageWrapper.tsx`
-  - [ ] Wrapper padrão para páginas
-  - [ ] Padding consistente
-  - [ ] Scroll isolado
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add breadcrumb`
+- [x] Criar `src/components/shared/PageHeader.tsx`
+  - [x] Título + descrição
+  - [x] Breadcrumbs
+  - [x] Slot para botões de ação
+- [x] Criar `src/components/shared/PageWrapper.tsx`
+  - [x] Wrapper padrão para páginas
+  - [x] Padding consistente
+  - [x] Scroll isolado
 
 #### 5.2 - NotFound Page
-- [ ] Criar `src/pages/auth/NotFoundPage.tsx`
-  - [ ] Erro 404 estilizado
-  - [ ] Botão voltar para workspace
-  - [ ] Registrar no TanStack Router
+- [x] Criar `src/pages/auth/NotFoundPage.tsx`
+  - [x] Erro 404 estilizado
+  - [x] Botão voltar para workspace
+  - [x] Registrar no TanStack Router
 
 #### 5.3 - Página Modelo A (Lista Simples)
 - [ ] Criar `src/pages/models/ModeloListaPage.tsx`
