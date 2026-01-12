@@ -236,17 +236,34 @@ Header funcional, RightSidebar e Command Palette.
   - [x] Renderizar CommandPalette
   - [x] Registrar atalhos de teclado
 
-#### 4.5 - Integrar no WorkspaceLayout
-- [ ] Adicionar RightSidebar (4 instâncias)
-- [ ] Adicionar CommandPalette
-- [ ] Conectar com rightSidebarStore
+#### 4.5 - Sidebar Avançada
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add tooltip`
+- [x] Atualizar sidebarStore:
+  - [x] Modos: normal, compact, closed
+  - [x] Pin: isPinned, togglePin
+  - [x] Toggle principal: toggle()
+  - [x] Persistência com zustand/middleware
+- [x] Botão hambúrguer no Header (já existia)
+- [x] Comportamento toggle baseado em pin:
+  - [x] Pinado: normal ↔ compact (ícones)
+  - [x] Não pinado: normal ↔ closed (oculto)
+- [x] Modo compact:
+  - [x] 64px com ícones
+  - [x] Tooltips ao hover
+  - [x] Sem header/subheader
+- [x] Modo normal:
+  - [x] 240px completo
+  - [x] Subheader "Menu" com 3 botões:
+    - [x] Pin (fixar/desafixar)
+    - [x] ChevronsRight (collapse all - placeholder Fase 5.x)
+    - [x] ChevronsDown (expand all - placeholder Fase 5.x)
+  - [x] Sem header vazio extra
+- [x] Modo closed:
+  - [x] 0px completamente oculto
+  - [x] Sem botões flutuantes
+- [x] Transições suaves (300ms ease-in-out)
+- [x] Estado persistido no localStorage
 
-#### 4.6 - Sidebar Avançada (Opcional)
-- [ ] Integrar com `sidebarStore` (mode, toggleMode)
-- [ ] Implementar modo compact (64px - só ícones)
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add tooltip`
-- [ ] Tooltips no modo compact
-- [ ] Botão toggle entre modos
 
 **Tempo Estimado:** 2 horas  
 **Commits:**

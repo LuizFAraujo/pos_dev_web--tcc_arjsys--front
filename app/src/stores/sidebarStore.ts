@@ -1,12 +1,25 @@
 /**
- * sidebarStore.ts - Store de estado da sidebar
+ * sidebarStore.ts - Store para gerenciar estado da sidebar esquerda
  * 
- * Gerencia o estado da sidebar esquerda:
- * - Modo de exibição (normal, compact, closed)
- * - Estado de fixação (pinned)
+ * Controla visibilidade e comportamento da sidebar principal.
+ * Estado persistido no localStorage.
+ * 
+ * Modos:
+ * - normal: sidebar visível completa (240px)
+ * - compact: sidebar compacta com ícones (64px) - só quando pinado
+ * - closed: sidebar oculta (0px) - só quando não pinado
+ * 
+ * Pin (fixar):
+ * - isPinned true: sidebar sempre visível (normal/compact)
+ * - isPinned false: sidebar pode ser fechada (normal/closed)
+ * 
+ * Toggle (hambúrguer no Header):
+ * - Pinado: normal ↔ compact
+ * - Não pinado: normal ↔ closed
  */
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 type SidebarMode = 'normal' | 'compact' | 'closed';
 
@@ -14,37 +27,43 @@ interface SidebarState {
     /** Modo atual da sidebar */
     mode: SidebarMode;
 
-    /** Se a sidebar está fixada (não fecha ao perder foco) */
+    /** Se sidebar está fixada */
     isPinned: boolean;
 
-    /** Alternar modo da sidebar */
-    toggleMode: () => void;
-
-    /** Definir modo específico */
+    /** Define modo específico */
     setMode: (mode: SidebarMode) => void;
 
-    /** Alternar fixação */
+    /** Alterna pin */
     togglePin: () => void;
+
+    /** Toggle principal (abre/fecha sidebar) - controlado pelo hambúrguer no Header */
+    toggle: () => void;
 }
 
-export const useSidebarStore = create<SidebarState>((set) => ({
-    mode: 'normal',
-    isPinned: true,
+export const useSidebarStore = create<SidebarState>()(
+    persist(
+        (set, get) => ({
+            mode: 'normal',
+            isPinned: false,  // ← Padrão: não pinado
 
-    toggleMode: () => {
-        set((state) => {
-            const modes: SidebarMode[] = ['normal', 'compact', 'closed'];
-            const currentIndex = modes.indexOf(state.mode);
-            const nextIndex = (currentIndex + 1) % modes.length;
-            return { mode: modes[nextIndex] };
-        });
-    },
+            setMode: (mode) => set({ mode }),
 
-    setMode: (mode) => {
-        set({ mode });
-    },
+            togglePin: () => set((state) => ({ isPinned: !state.isPinned })),
 
-    togglePin: () => {
-        set((state) => ({ isPinned: !state.isPinned }));
-    },
-}));
+            toggle: () => {
+                const { mode, isPinned } = get();
+
+                if (mode === 'closed' || mode === 'compact') {
+                    // Abre sidebar para modo normal
+                    set({ mode: 'normal' });
+                } else {
+                    // Fecha sidebar (compact se pinado, closed se não pinado)
+                    set({ mode: isPinned ? 'compact' : 'closed' });
+                }
+            },
+        }),
+        {
+            name: 'sidebar-storage',  // ← Nome no localStorage
+        }
+    )
+);

@@ -61,7 +61,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── table.tsx         📌 FASE 5
         │   │   ├── tabs.tsx          📌 FASE 5
         │   │   ├── textarea.tsx      📌 FASE 5
-        │   │   └── tooltip.tsx       📌 FASE 3
+        │   │   └── tooltip.tsx       ✅
         │   │
         │   ├── workspace/     # Componentes do workspace
         │   │   ├── CommandPalette.tsx.tsx      ✅

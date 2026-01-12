@@ -5,6 +5,7 @@
  * Integrado com stores para funcionalidades completas.
  * 
  * Estrutura:
+ * - Botão hambúrguer (toggle sidebar)
  * - Logo + Título (esquerda) - clicável para /app
  * - Busca (centro) - abre Command Palette (Ctrl+K)
  * - Botões de ação (direita):
@@ -16,6 +17,7 @@
  *   - User Menu: dropdown com perfil e logout
  * 
  * Funcionalidades:
+ * - Integração com sidebarStore (toggle)
  * - Integração com rightSidebarStore
  * - Integração com themeStore
  * - Links funcionais
@@ -23,16 +25,10 @@
  * - Placeholder para Logout (Fase 6)
  */
 
-import {
-    Sparkles, Search, Settings, Bell, Clock,
-    BarChart3, User, LogOut, Moon, Sun
-} from 'lucide-react';
+import { Sparkles, Search, Settings, Bell, Clock, BarChart3, User, LogOut, Moon, Sun, Menu } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import { useRightSidebarStore, useThemeStore } from '@stores';
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-    DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@ui/dropdown-menu';
+import { useRightSidebarStore, useThemeStore, useSidebarStore } from '@stores';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from '@ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@ui/avatar';
 import { Badge } from '@ui/badge';
 
@@ -45,6 +41,7 @@ export function Header({ onOpenCommandPalette }: HeaderProps = {}) {
     const openRightSidebar = useRightSidebarStore((state) => state.open);
     const darkMode = useThemeStore((state) => state.darkMode);
     const toggleDarkMode = useThemeStore((state) => state.toggleDarkMode);
+    const toggleSidebar = useSidebarStore((state) => state.toggle);
 
     /**
      * Abre Command Palette
@@ -63,20 +60,32 @@ export function Header({ onOpenCommandPalette }: HeaderProps = {}) {
     return (
         <header className="h-16 border-b border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800">
             <div className="flex h-full items-center justify-between px-4">
-                {/* Logo + Título */}
-                <Link to="/app" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-slate-700 to-slate-900 shadow-md">
-                        <Sparkles className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                            ArjSys
-                        </h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Sistema ERP
-                        </p>
-                    </div>
-                </Link>
+                {/* Hambúrguer + Logo + Título */}
+                <div className="flex items-center gap-3">
+                    {/* Botão Hambúrguer */}
+                    <button
+                        onClick={toggleSidebar}
+                        className="h-9 w-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+                        title="Toggle menu"
+                    >
+                        <Menu className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    </button>
+
+                    {/* Logo */}
+                    <Link to="/app" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-slate-700 to-slate-900 shadow-md">
+                            <Sparkles className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                ArjSys
+                            </h1>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Sistema ERP
+                            </p>
+                        </div>
+                    </Link>
+                </div>
 
                 {/* Área Central - Busca */}
                 <div className="flex-1 max-w-md mx-8">
