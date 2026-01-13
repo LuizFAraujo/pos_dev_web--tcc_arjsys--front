@@ -5,10 +5,11 @@
  * de novas funcionalidades do sistema.
  */
 
-import { FileText, FileEdit } from 'lucide-react';
+import { FileText, FileEdit, Layout } from 'lucide-react';
 import type { TabRegistry } from '@/types/registry.types';
 import { ModeloListaPage } from '@/pages/models/ModeloListaPage';
 import { ModeloFormPage } from '@/pages/models/ModeloFormPage';
+import { ModeloComplexoPage } from '@/pages/models/ModeloComplexoPage';
 
 export const modelsRegistry: TabRegistry = {
     'modelo-lista': {
@@ -21,6 +22,12 @@ export const modelsRegistry: TabRegistry = {
         component: ModeloFormPage,
         icon: FileEdit,
         defaultTitle: 'Modelo: Formulário',
+        category: 'models',
+    },
+    'modelo-complexo': {
+        component: ModeloComplexoPage,
+        icon: Layout,
+        defaultTitle: 'Modelo: Página Complexa',
         category: 'models',
     },
 };

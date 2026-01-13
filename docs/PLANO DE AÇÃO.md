@@ -308,29 +308,27 @@ Criar 3 páginas modelo + NotFound para servir de template.
   - [x] defaultTitle: 'Modelo: Lista Simples'
 
 #### 5.4 - Página Modelo B (Formulário)
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add form label textarea select`
-- [ ] Criar `src/pages/models/ModeloFormPage.tsx`
-  - [ ] PageHeader
-  - [ ] Formulário completo (vários campos)
-  - [ ] Botão abrir RightSidebar (settings)
-  - [ ] Validação básica
-
-- [ ] Registrar em `modelsRegistry.ts`
-  - [ ] type: 'modelo-form'
-  - [ ] defaultTitle: 'Modelo: Formulário'
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add form label input textarea select`
+- [x] Criar `src/pages/models/ModeloFormPage.tsx`
+  - [x] PageHeader
+  - [x] Formulário completo (vários campos)
+  - [x] Botão abrir RightSidebar (settings)
+  - [x] Validação básica
+- [x] Registrar em `modelsRegistry.ts`
+  - [x] type: 'modelo-form'
+  - [x] defaultTitle: 'Modelo: Formulário'
 
 #### 5.5 - Página Modelo C (Complexa)
-- [ ] Instalar shadcn: `pnpm dlx shadcn@latest add tabs table`
-- [ ] Criar `src/pages/models/ModeloComplexoPage.tsx`
-  - [ ] PageHeader
-  - [ ] Tabs internas (shadcn)
-  - [ ] Tabela de dados
-  - [ ] Gráfico simples
-  - [ ] Múltiplas seções
-
-- [ ] Registrar em `modelsRegistry.ts`
-  - [ ] type: 'modelo-complexo'
-  - [ ] defaultTitle: 'Modelo: Página Complexa'
+- [x] Instalar shadcn: `pnpm dlx shadcn@latest add tabs table`
+- [x] Criar `src/pages/models/ModeloComplexoPage.tsx`
+  - [x] PageHeader
+  - [x] Tabs internas (shadcn)
+  - [x] Tabela de dados
+  - [x] Cards com estatísticas
+  - [x] Múltiplas seções
+- [x] Registrar em `modelsRegistry.ts`
+  - [x] type: 'modelo-complexo'
+  - [x] defaultTitle: 'Modelo: Página Complexa'
 
 #### 5.6 - Testar Fluxo Completo
 - [ ] Abrir cada página modelo pelo Sidebar
