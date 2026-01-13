@@ -18,17 +18,18 @@
  * - Tooltips no modo compact
  * - Transições suaves (300ms)
  * 
- * TODO Fase 5.x:
+ * TODO :
  * - Implementar botões expand/collapse all accordions
  */
 
 import { useMemo } from 'react';
-import { ChevronRight, Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronsRight, ChevronsDown } from 'lucide-react';
+import { ChevronRight, Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronsRight, ChevronsDown, FileCode2 } from 'lucide-react';
 import { useTabsStore, useSidebarStore } from '@stores';
 import { getTabsByCategory } from '@/registries';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/tooltip';
 
+// Categorias do sistema
 // Categorias do sistema
 const CATEGORIES = [
     { id: 'cadastros', label: 'CADASTROS', icon: Users },
@@ -36,6 +37,7 @@ const CATEGORIES = [
     { id: 'producao', label: 'PRODUÇÃO', icon: Package },
     { id: 'compras', label: 'COMPRAS', icon: Truck },
     { id: 'engenharia', label: 'ENGENHARIA', icon: Wrench },
+    { id: 'models', label: 'MODELOS', icon: FileCode2 },
 ] as const;
 
 export function Sidebar() {

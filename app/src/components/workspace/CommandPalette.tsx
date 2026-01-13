@@ -14,16 +14,9 @@
 
 import { useState, useMemo } from 'react';
 import { Search, FileText } from 'lucide-react';
-import {
-    CommandDialog,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@ui/command';
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@ui/command';
 import { useTabsStore } from '@stores';
-import { getTabsByCategory, getAllCategories } from '@/registries';
+import { getAllCategories } from '@/registries';
 import type { TabType } from '@/types/tab.types';
 
 interface CommandPaletteProps {
@@ -44,17 +37,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     const allPages = useMemo(() => {
         const categories = getAllCategories();
 
-        return categories.map((category) => {
-            const tabs = getTabsByCategory(category);
-            const items = Object.entries(tabs).map(([type, config]) => ({
+        return Object.entries(categories).map(([categoryId, categoryTabs]) => {
+            const items = Object.entries(categoryTabs).map(([type, config]) => ({
                 type: type as TabType,
                 title: config?.defaultTitle || type,
                 icon: config?.icon || FileText,
-                category,
+                category: categoryId,
             }));
 
             return {
-                category,
+                category: categoryId,
                 items,
             };
         }).filter(group => group.items.length > 0);

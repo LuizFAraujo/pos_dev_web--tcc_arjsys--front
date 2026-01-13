@@ -1,12 +1,12 @@
 /**
- * registries/index.ts - Registry Pattern principal
+ * index.ts - Registry centralizado
  * 
- * Centraliza todos os registries de módulos e fornece
- * funções helper para buscar configurações de abas.
+ * Exporta funções para buscar configurações de abas
+ * de todos os registries do sistema.
  */
 
 import type { TabType } from '@/types/tab.types';
-import type { TabConfig, TabRegistry } from '@/types/registry.types';
+import type { TabConfig } from '@/types/registry.types';
 import { cadastrosRegistry } from './cadastrosRegistry';
 import { vendasRegistry } from './vendasRegistry';
 import { producaoRegistry } from './producaoRegistry';
@@ -15,68 +15,51 @@ import { engenhariaRegistry } from './engenhariaRegistry';
 import { modelsRegistry } from './modelsRegistry';
 
 /**
- * Registry global - união de todos os registries de módulos
- */
-const globalRegistry: TabRegistry = {
-    ...cadastrosRegistry,
-    ...vendasRegistry,
-    ...producaoRegistry,
-    ...comprasRegistry,
-    ...engenhariaRegistry,
-    ...modelsRegistry,
-};
-
-/**
- * getTabConfig - Busca configuração de uma aba pelo tipo
- * 
- * @param type - Tipo da aba
- * @returns Configuração da aba ou undefined se não encontrado
+ * Busca configuração de uma aba pelo seu tipo
  */
 export function getTabConfig(type: TabType): TabConfig | undefined {
-    return globalRegistry[type];
+    return (
+        cadastrosRegistry[type] ||
+        vendasRegistry[type] ||
+        producaoRegistry[type] ||
+        comprasRegistry[type] ||
+        engenhariaRegistry[type] ||
+        modelsRegistry[type]
+    );
 }
 
 /**
- * getTabsByCategory - Busca todas as abas de uma categoria
- * 
- * @param category - Nome da categoria
- * @returns Registry filtrado com abas da categoria
+ * Busca todas as abas de uma categoria específica
  */
-export function getTabsByCategory(category: string): TabRegistry {
-    const filtered: TabRegistry = {};
-
-    Object.entries(globalRegistry).forEach(([type, config]) => {
-        if (config && config.category === category) {
-            filtered[type as TabType] = config;
-        }
-    });
-
-    return filtered;
+export function getTabsByCategory(category: string): Record<string, TabConfig> {
+    switch (category) {
+        case 'cadastros':
+            return cadastrosRegistry;
+        case 'vendas':
+            return vendasRegistry;
+        case 'producao':
+            return producaoRegistry;
+        case 'compras':
+            return comprasRegistry;
+        case 'engenharia':
+            return engenhariaRegistry;
+        case 'models':
+            return modelsRegistry;
+        default:
+            return {};
+    }
 }
 
 /**
- * getAllCategories - Retorna lista de todas as categorias disponíveis
- * 
- * @returns Array com nomes das categorias
+ * Retorna todas as categorias com suas abas
  */
-export function getAllCategories(): string[] {
-    const categories = new Set<string>();
-
-    Object.values(globalRegistry).forEach((config) => {
-        if (config) {
-            categories.add(config.category);
-        }
-    });
-
-    return Array.from(categories);
+export function getAllCategories() {
+    return {
+        cadastros: cadastrosRegistry,
+        vendas: vendasRegistry,
+        producao: producaoRegistry,
+        compras: comprasRegistry,
+        engenharia: engenhariaRegistry,
+        models: modelsRegistry,
+    };
 }
-
-// Exports dos registries individuais (para uso interno)
-export {
-    cadastrosRegistry,
-    vendasRegistry,
-    producaoRegistry,
-    comprasRegistry,
-    engenhariaRegistry,
-    modelsRegistry,
-};

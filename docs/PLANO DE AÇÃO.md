@@ -60,9 +60,6 @@ Criar estrutura visual do layout sem lógica complexa.
 - [x] Usar WorkspaceLayout
 - [x] Configurar redirecionamento de `/` para `/app`
 
-**Tempo Estimado:** 1 hora  
-**Commit:** "FEATURE: Layout base (Header + Sidebar + WorkspaceLayout)"
-
 ---
 
 ## **FASE 2: LÓGICA E ESTADO** 🐻
@@ -114,12 +111,6 @@ Criar stores Zustand e estrutura de tipos/registries.
   - [x] Função `getTabsByCategory(category: string)`
   - [x] Função `getAllCategories()`
 
-**Tempo Estimado:** 1h 30min  
-**Commits:**
-- "CONFIG: Types TypeScript para sistema de abas"
-- "FEATURE: Stores Zustand (tabs, sidebar, rightSidebar, theme)"
-- "CONFIG: Registry Pattern base com 6 registries"
-
 ---
 
 ## **FASE 3: INTEGRAÇÃO FUNCIONAL** ⚡
@@ -166,11 +157,6 @@ Conectar layout com stores e implementar sistema de abas.
 - [x] Instalar shadcn: `pnpm dlx shadcn@latest add dialog alert-dialog`
 - [x] Criar modal "Fechar aba com alterações?"
 - [x] Integrar com tabsStore.closeTab()
-
-**Tempo Estimado:** 2h 30min  
-**Commits:**
-- "FEATURE: Sidebar funcional com navegação e Registry"
-- "FEATURE: Sistema de abas (TabsBar + WorkspaceContent)"
 
 ---
 
@@ -264,13 +250,6 @@ Header funcional, RightSidebar e Command Palette.
 - [x] Transições suaves (300ms ease-in-out)
 - [x] Estado persistido no localStorage
 
-
-**Tempo Estimado:** 2 horas  
-**Commits:**
-- "FEATURE: Header funcional completo"
-- "FEATURE: RightSidebar com 4 conteúdos"
-- "FEATURE: Command Palette (Ctrl+K)"
-
 ---
 
 ## **FASE 5: PÁGINAS MODELO** 📄
@@ -331,18 +310,14 @@ Criar 3 páginas modelo + NotFound para servir de template.
   - [x] defaultTitle: 'Modelo: Página Complexa'
 
 #### 5.6 - Testar Fluxo Completo
-- [ ] Abrir cada página modelo pelo Sidebar
-- [ ] Testar múltiplas instâncias
-- [ ] Testar close/reopen
-- [ ] Testar responsividade
-- [ ] Testar RightSidebar
-- [ ] Testar Command Palette
-
-**Tempo Estimado:** 2h 30min  
-**Commits:**
-- "FEATURE: Componentes reutilizáveis (PageHeader, PageWrapper)"
-- "FEATURE: NotFoundPage (404)"
-- "FEATURE: 3 páginas modelo completas (lista, form, complexo)"
+- [x] Adicionar categoria MODELOS na sidebar
+- [x] Integrar modelsRegistry no index.ts
+- [x] Abrir cada página modelo pelo Sidebar
+- [x] Testar múltiplas instâncias
+- [x] Testar close/reopen
+- [x] Testar responsividade
+- [x] Testar RightSidebar
+- [x] Testar Command Palette
 
 ---
 
@@ -390,25 +365,18 @@ Sistema de login e proteção de rotas.
 - [ ] Limpar stores ao fazer logout
 - [ ] Redirect para /login
 
-**Tempo Estimado:** 1h 30min  
-**Commits:**
-- "FEATURE: Auth store e types"
-- "FEATURE: Login page e proteção de rotas"
-- "FEATURE: Logout e limpeza de sessão"
-
 ---
-
 ## 📊 RESUMO DO PLANO
 
-| Fase | Foco | Tempo | Arquivos | Commits |
-|------|------|-------|----------|---------|
-| 1 | Layout Visual | 1h | 5 arquivos | 1 |
-| 2 | Stores + Types | 1h30 | 12 arquivos | 3 |
-| 3 | Sistema Abas | 2h30 | 7 arquivos | 2 |
-| 4 | Complementos | 2h | 8 arquivos | 3 |
-| 5 | Páginas Modelo | 2h30 | 7 arquivos | 3 |
-| 6 | Autenticação | 1h30 | 5 arquivos | 3 |
-| **TOTAL** | | **11h30** | **~44 arquivos** | **15 commits** |
+| Fase | Foco | Status | Arquivos | Commits |
+|------|------|--------|----------|---------|
+| 1 | Layout Visual | ✅ Concluída | 5 arquivos | 1 |
+| 2 | Stores + Types | ✅ Concluída | 12 arquivos | 3 |
+| 3 | Sistema Abas | ✅ Concluída | 7 arquivos | 2 |
+| 4 | Complementos | ✅ Concluída | 8 arquivos | 4 |
+| 5 | Páginas Modelo | ✅ Concluída | 10 arquivos | 6 |
+| 6 | Autenticação | 🔜 Próxima | ~5 arquivos | ~3 |
+| **TOTAL** | | **83%** | **~47 arquivos** | **19 commits** |
 
 ---
 
@@ -438,11 +406,11 @@ Sistema de login e proteção de rotas.
 - [x] Sidebar avançada (3 modos + pin + persistência)
 
 ### Fase 5 Concluída:
-- [ ] Componentes reutilizáveis criados
-- [ ] NotFound funciona
-- [ ] 3 páginas modelo funcionam 100%
-- [ ] Todas as funcionalidades testadas
-- [ ] Sistema = template completo
+- [x] Componentes reutilizáveis criados
+- [x] NotFound funciona
+- [x] 3 páginas modelo funcionam 100%
+- [x] Todas as funcionalidades testadas
+- [x] Sistema = template completo
 
 ### Fase 6 Concluída:
 - [ ] Login/logout funciona
