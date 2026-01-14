@@ -352,15 +352,14 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] Validar rotação: → (fechado) ↓ (aberto)
 
 #### 5.7.2 - Ajustes Visuais
-- [ ] Reduzir altura PageHeader
-  - [ ] Ajustar padding (py-4 → py-3)
-  - [ ] Reduzir espaçamento breadcrumbs (mb-2 → mb-1)
-  - [ ] Otimizar espaçamento título/descrição
+- [x] Reduzir altura PageHeader
+  - [x] Ajustar padding (py-4 → py-2)
+  - [x] Reduzir espaçamento breadcrumbs (mb-2 → mb-1)
+  - [x] Espaçamento título/descrição mantido (mt-1)
 
-- [ ] Reduzir altura TabsBar
-  - [ ] Reduzir altura da aba (h-12 → h-10)
-  - [ ] Ajustar padding interno
-  - [ ] Ajustar tamanho de ícones
+- [x] Reduzir altura TabsBar
+  - [x] Reduzir padding interno (py-2.5 → py-2)
+  - [x] Tamanho de ícones mantido (h-4 w-4)
 
 #### 5.7.3 - RightSidebar de Página
 - [ ] Criar componente PageRightSidebar
@@ -539,12 +538,13 @@ Sistema de login e proteção de rotas.
 - [x] Estado isolado entre abas funcionando (useTabState + useTabForm)
 - [x] Scroll isolado e condicional em todas áreas (body/root overflow-hidden + min-w-0)
 - [x] Accordion sem seta duplicada (ChevronRight com rotate-90)
-- [ ] Alturas ajustadas (PageHeader + TabsBar)
+- [x] Alturas ajustadas (PageHeader py-2 + TabsBar py-2)
 - [ ] PageRightSidebar funcional
 - [ ] Busca na sidebar operacional
 - [ ] Sistema de favoritos implementado
 - [ ] Sistema de recentes implementado
 - [x] Correções críticas testadas e validadas (5.7.1 completa)
+- [x] Ajustes visuais testados e validados (5.7.2 completa)
 
 ### Fase 6 Concluída:
 - [ ] Login/logout funciona

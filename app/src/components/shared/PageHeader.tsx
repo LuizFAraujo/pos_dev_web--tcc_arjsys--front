@@ -8,6 +8,7 @@
  * - Breadcrumbs de navegação
  * - Slot para botões de ação (direita)
  * - Layout responsivo
+ * - Altura otimizada (py-3 ao invés de py-4)
  */
 
 import type { ReactNode } from 'react';
@@ -38,10 +39,10 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, breadcrumbs, actions }: PageHeaderProps) {
     return (
         <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <div className="px-6 py-4">
+            <div className="px-6 py-2">
                 {/* Breadcrumbs */}
                 {breadcrumbs && breadcrumbs.length > 0 && (
-                    <Breadcrumb className="mb-2">
+                    <Breadcrumb className="mb-1">
                         <BreadcrumbList>
                             {breadcrumbs.map((item, index) => (
                                 <div key={index} className="flex items-center">
