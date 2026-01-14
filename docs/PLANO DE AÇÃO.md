@@ -362,21 +362,25 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] Tamanho de ícones mantido (h-4 w-4)
 
 #### 5.7.3 - RightSidebar de Página
-- [ ] Criar componente PageRightSidebar
-  - [ ] Arquivo: `src/components/shared/PageRightSidebar.tsx`
-  - [ ] Baseado em RightSidebar.tsx
-  - [ ] Altura limitada à área da página
-  - [ ] Mesmas funcionalidades (backdrop, ESC, click-outside)
+- [x] Criar componente PageRightSidebar
+  - [x] Arquivo: `src/components/shared/PageRightSidebar.tsx`
+  - [x] Baseado em RightSidebar.tsx
+  - [x] Altura limitada à área da página (absolute + relative no PageWrapper)
+  - [x] Mesmas funcionalidades (backdrop, ESC, click-outside)
 
-- [ ] Criar store para RightSidebar de página
-  - [ ] Arquivo: `src/stores/pageRightSidebarStore.ts`
-  - [ ] Estado separado do rightSidebarStore global
-  - [ ] Gerenciamento por página/aba
+- [x] Criar store para RightSidebar de página
+  - [x] Arquivo: `src/stores/pageRightSidebarStore.ts`
+  - [x] Estado separado do rightSidebarStore global
+  - [x] Gerenciamento por página/aba
+  - [x] Export no `src/stores/index.ts`
 
-- [ ] Integrar no ModeloFormPage
-  - [ ] Substituir botão global por PageRightSidebar
-  - [ ] Testar abertura/fechamento
-  - [ ] Validar altura limitada
+- [x] Integrar no ModeloFormPage
+  - [x] Substituir botão global por PageRightSidebar
+  - [x] Testar abertura/fechamento
+  - [x] Validar altura limitada (abaixo das abas)
+
+- [x] Ajustes de padding
+  - [x] WorkspaceContent: p-3 → p-2 (otimizar espaço)
 
 #### 5.7.4 - Sidebar Avançada: Busca
 - [ ] Campo de busca no topo
@@ -429,6 +433,26 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [ ] Adicionar a recentes ao abrir aba
   - [ ] Manter ordem cronológica (mais recente primeiro)
   - [ ] Remover duplicatas
+
+#### 5.7.7 - PageRightSidebar: Variantes (Overlay vs Push)
+- [ ] Adicionar prop `variant` ao PageRightSidebar
+  - [ ] Tipo: `'overlay' | 'push'`
+  - [ ] Default: `'overlay'` (comportamento atual)
+
+- [ ] Implementar variante Push
+  - [ ] Layout flex row na página
+  - [ ] Sidebar empurra conteúdo responsivamente
+  - [ ] Sem backdrop (sidebar faz parte do layout)
+  - [ ] Transição suave de largura
+
+- [ ] Atualizar ModeloFormPage com 2 botões
+  - [ ] Botão 1: "Config Overlay" (passa por cima)
+  - [ ] Botão 2: "Config Push" (empurra conteúdo)
+  - [ ] Demonstrar ambos comportamentos
+
+- [ ] Ajustar PageWrapper para suportar Push
+  - [ ] Flex layout quando sidebar push ativo
+  - [ ] Redimensionamento responsivo do conteúdo
 
 **Tempo Estimado:** 3-4 horas  
 **Commits:**
@@ -538,13 +562,15 @@ Sistema de login e proteção de rotas.
 - [x] Estado isolado entre abas funcionando (useTabState + useTabForm)
 - [x] Scroll isolado e condicional em todas áreas (body/root overflow-hidden + min-w-0)
 - [x] Accordion sem seta duplicada (ChevronRight com rotate-90)
-- [x] Alturas ajustadas (PageHeader py-2 + TabsBar py-2)
-- [ ] PageRightSidebar funcional
+- [x] Alturas ajustadas (PageHeader py-3 + TabsBar py-2)
+- [x] PageRightSidebar funcional (overlay com altura limitada)
+- [ ] PageRightSidebar variantes (overlay + push)
 - [ ] Busca na sidebar operacional
 - [ ] Sistema de favoritos implementado
 - [ ] Sistema de recentes implementado
 - [x] Correções críticas testadas e validadas (5.7.1 completa)
 - [x] Ajustes visuais testados e validados (5.7.2 completa)
+- [x] PageRightSidebar overlay testado e validado (5.7.3 completa)
 
 ### Fase 6 Concluída:
 - [ ] Login/logout funciona

@@ -1,11 +1,14 @@
 /**
  * ModeloFormPage.tsx - Página modelo de formulário
+ * 
+ * ISOLAMENTO DE ESTADO: Usa useTabForm para manter dados independentes por aba
  */
 
 import { Save, X, Settings } from 'lucide-react';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { useRightSidebarStore } from '@stores';
+import { usePageRightSidebarStore } from '@stores';
+import { PageRightSidebar } from '@/components/shared/PageRightSidebar';
 import { Label } from '@ui/label';
 import { Input } from '@ui/input';
 import { Textarea } from '@ui/textarea';
@@ -28,7 +31,7 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
         observacoes: '',
     });
 
-    const openRightSidebar = useRightSidebarStore((state) => state.open);
+    const openPageSidebar = usePageRightSidebarStore((state) => state.open);
 
     const handleSave = () => {
         console.log(`[Aba ${tab.id}] Salvando:`, values);
@@ -39,7 +42,7 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
     };
 
     const handleOpenSettings = () => {
-        openRightSidebar('settings');
+        openPageSidebar('settings');
     };
 
     return (
@@ -62,7 +65,6 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
                 }
             />
 
-            {/* Content - SEM overflow aqui! */}
             <div className="p-6">
                 <div className="max-w-2xl mx-auto">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-6">
@@ -114,8 +116,8 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="categoria">Categoria *</Label>
-                                <Select 
-                                    value={values.categoria} 
+                                <Select
+                                    value={values.categoria}
                                     onValueChange={(val) => setValue('categoria', val)}
                                 >
                                     <SelectTrigger>
@@ -131,8 +133,8 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status *</Label>
-                                <Select 
-                                    value={values.status} 
+                                <Select
+                                    value={values.status}
                                     onValueChange={(val) => setValue('status', val)}
                                 >
                                     <SelectTrigger>
@@ -179,6 +181,18 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Page Right Sidebar */}
+            <PageRightSidebar type="settings" title="Configurações da Página">
+                <div className="space-y-4">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                        Este é um sidebar específico da página, limitado à altura da área de conteúdo.
+                    </p>
+                    <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                        <p className="text-sm">Exemplo de conteúdo do sidebar</p>
+                    </div>
+                </div>
+            </PageRightSidebar>
         </PageWrapper>
     );
 }

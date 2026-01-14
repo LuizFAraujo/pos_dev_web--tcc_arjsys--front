@@ -9,3 +9,4 @@ export { useTabsStore } from './tabsStore';
 export { useSidebarStore } from './sidebarStore';
 export { useRightSidebarStore } from './rightSidebarStore';
 export { useThemeStore } from './themeStore';
+export { usePageRightSidebarStore } from './pageRightSidebarStore';

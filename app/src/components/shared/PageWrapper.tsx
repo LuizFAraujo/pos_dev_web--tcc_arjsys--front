@@ -22,7 +22,7 @@ interface PageWrapperProps {
 
 export function PageWrapper({ children, className = '' }: PageWrapperProps) {
     return (
-        <div className={`flex flex-1 flex-col ${className}`}>
+        <div className={`flex flex-1 flex-col relative ${className}`}>
             {/* ← SEM overflow-y-auto aqui */}
             {children}
         </div>
