@@ -18,18 +18,17 @@
  * - Tooltips no modo compact
  * - Transições suaves (300ms)
  * 
- * TODO :
+ * TODO:
  * - Implementar botões expand/collapse all accordions
  */
 
 import { useMemo } from 'react';
-import { ChevronRight, Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronsRight, ChevronsDown, FileCode2 } from 'lucide-react';
+import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2 } from 'lucide-react';
 import { useTabsStore, useSidebarStore } from '@stores';
 import { getTabsByCategory } from '@/registries';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/tooltip';
 
-// Categorias do sistema
 // Categorias do sistema
 const CATEGORIES = [
     { id: 'cadastros', label: 'CADASTROS', icon: Users },
@@ -91,15 +90,9 @@ export function Sidebar() {
     // Modo compact (64px - só ícones)
     if (mode === 'compact') {
         return (
-
-
-
             <aside className="w-16 border-r border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out">
-
-                {/* <div className="h-16 border-b border-slate-200 dark:border-slate-800" /> */}
-
                 {/* Categorias com tooltips */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
                     <TooltipProvider delayDuration={300}>
                         {CATEGORIES.map((category) => {
                             const Icon = category.icon;
@@ -138,9 +131,6 @@ export function Sidebar() {
     // Modo normal (240px)
     return (
         <aside className="w-60 border-r border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out">
-            {/* Header vazio (alinha com Header principal) */}
-            {/* <div className="h-16 border-b border-slate-200 dark:border-slate-800" /> */}
-
             {/* Subheader com botões */}
             <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -163,7 +153,7 @@ export function Sidebar() {
                         className="h-7 w-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors text-slate-600 dark:text-slate-400"
                         title="Recolher todos"
                     >
-                        <ChevronsRight className="h-4 w-4" />  {/* ← Setas duplas direita */}
+                        <ChevronsRight className="h-4 w-4" />
                     </button>
                     {/* Botão Expand All */}
                     <button
@@ -171,13 +161,13 @@ export function Sidebar() {
                         className="h-7 w-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors text-slate-600 dark:text-slate-400"
                         title="Expandir todos"
                     >
-                        <ChevronsDown className="h-4 w-4" />  {/* ← Setas duplas baixo */}
+                        <ChevronsDown className="h-4 w-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-2">
+            {/* Scrollable Content - CORRIGIDO: Adicionado scrollbar-thin */}
+            <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
                 <Accordion type="multiple" className="w-full">
                     {CATEGORIES.map((category) => {
                         const Icon = category.icon;
@@ -201,15 +191,15 @@ export function Sidebar() {
 
                         return (
                             <AccordionItem key={category.id} value={category.id} className="border-none">
-                                <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&[data-state=open]>svg]:rotate-90">
-                                    <div className="flex items-center gap-2 flex-1">
+                                <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&>div>svg:last-child]:data-[state=open]:rotate-90">
+                                    <div className="flex items-center gap-2 w-full">
                                         <Icon className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
                                         <span className="flex-1 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 text-left">
                                             {category.label}
                                         </span>
-                                        <span className="text-xs text-slate-400">({tabEntries.length})</span>
+                                        <span className="text-xs text-slate-400 mr-1">({tabEntries.length})</span>
+                                        <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" />
                                     </div>
-                                    <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" />
                                 </AccordionTrigger>
 
                                 <AccordionContent className="pb-0 pt-1">

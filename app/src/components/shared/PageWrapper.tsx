@@ -5,7 +5,7 @@
  * 
  * Funcionalidades:
  * - Padding consistente
- * - Scroll isolado
+ * - Scroll isolado (overflow-auto)
  * - Flex column layout
  * - Suporte dark mode
  */
@@ -22,7 +22,8 @@ interface PageWrapperProps {
 
 export function PageWrapper({ children, className = '' }: PageWrapperProps) {
     return (
-        <div className={`flex flex-1 flex-col overflow-hidden ${className}`}>
+        <div className={`flex flex-1 flex-col ${className}`}>
+            {/* ← SEM overflow-y-auto aqui */}
             {children}
         </div>
     );

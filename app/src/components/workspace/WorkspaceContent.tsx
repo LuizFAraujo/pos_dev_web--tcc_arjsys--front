@@ -1,46 +1,50 @@
 /**
- * WorkspaceContent.tsx - Renderizador de conteúdo das abas
+ * WorkspaceContent.tsx - Renderizador dinâmico de conteúdo das abas
  * 
- * Renderiza dinamicamente o componente da aba ativa.
- * Busca a configuração no Registry e renderiza o componente correspondente.
+ * Renderiza o componente da aba ativa baseado no Registry Pattern.
+ * Cada aba é uma instância completamente independente com key única.
+ * 
+ * Funcionalidades:
+ * - Busca configuração no registry
+ * - Renderiza componente dinamicamente
+ * - Fallback para aba vazia ou em construção
+ * - Isolamento total de estado via key prop
+ * - Scroll isolado por aba
  */
 
 import { useTabsStore } from '@stores';
 import { getTabConfig } from '@/registries';
 import { EmptyWorkspace } from './EmptyWorkspace';
 import { TabUnderConstruction } from './TabUnderConstruction';
-import { TabContainer } from './TabContainer';
 
 export function WorkspaceContent() {
     const tabs = useTabsStore((state) => state.tabs);
     const activeTabId = useTabsStore((state) => state.activeTabId);
 
-    // Pega a aba ativa
+    // Busca aba ativa
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
-    // Se não tem abas abertas
+    // Se não tem aba ativa, mostra workspace vazio
     if (!activeTab) {
         return <EmptyWorkspace />;
     }
 
-    // Busca a configuração da aba no registry
-    const tabConfig = getTabConfig(activeTab.type);
+    // Busca configuração da aba no registry
+    const config = getTabConfig(activeTab.type);
 
-    // Se não encontrou configuração (página não implementada)
-    if (!tabConfig) {
-        return (
-            <TabContainer tabId={activeTab.id}>
-                <TabUnderConstruction tabType={activeTab.type} />
-            </TabContainer>
-        );
+    // Se não encontrou config, mostra em construção
+    if (!config) {
+        return <TabUnderConstruction type={String(activeTab.type)} />;
     }
 
-    // Renderiza o componente da aba
-    const Component = tabConfig.component;
+    const PageComponent = config.component;
 
+    // Renderiza com key única, tab como prop e scroll isolado
     return (
-        <TabContainer tabId={activeTab.id}>
-            <Component />
-        </TabContainer>
+        <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin p-3">
+                <PageComponent key={activeTab.id} tab={activeTab} />
+            </div>
+        </div>
     );
 }

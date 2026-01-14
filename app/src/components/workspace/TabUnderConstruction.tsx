@@ -7,11 +7,10 @@
 import { Construction } from 'lucide-react';
 
 interface TabUnderConstructionProps {
-    /** Tipo da aba que não foi encontrada */
-    tabType: string;
+    type: string;
 }
 
-export function TabUnderConstruction({ tabType }: TabUnderConstructionProps) {
+export function TabUnderConstruction({ type }: TabUnderConstructionProps) {
     return (
         <div className="flex flex-1 items-center justify-center p-8">
             <div className="text-center max-w-md">
@@ -25,7 +24,7 @@ export function TabUnderConstruction({ tabType }: TabUnderConstructionProps) {
                     Esta funcionalidade ainda não foi implementada.
                 </p>
                 <code className="text-xs bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded text-slate-600 dark:text-slate-400">
-                    {tabType}
+                    {type}
                 </code>
             </div>
         </div>

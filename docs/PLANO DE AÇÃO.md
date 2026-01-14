@@ -321,6 +321,127 @@ Criar 3 páginas modelo + NotFound para servir de template.
 
 ---
 
+## **FASE 5.7: REFINAMENTOS E CORREÇÕES** 🔧
+
+### Objetivo:
+Corrigir problemas identificados e implementar features avançadas da sidebar.
+
+### Subetapas:
+
+#### 5.7.1 - Correções Críticas
+- [x] Isolamento de estado entre abas
+  - [x] Criar `src/hooks/useTabState.ts` (estado isolado por tabId via Map global)
+  - [x] Criar `src/hooks/useTabForm.ts` (gerenciamento de formulários completos)
+  - [x] Atualizar `WorkspaceContent.tsx` para passar prop `tab`
+  - [x] Atualizar `ModeloFormPage.tsx` para receber prop `tab` e usar `useTabForm`
+  - [x] Garantir instâncias totalmente independentes via key única
+  - [x] Testar múltiplas abas da mesma página
+  - [x] Validar preservação de dados ao trocar abas
+
+- [x] Scroll isolado e condicional
+  - [x] `tailwind.css`: adicionar `overflow-hidden` no body e #root
+  - [x] `MainContent.tsx`: adicionar `min-w-0` crítico
+  - [x] `WorkspaceContent.tsx`: único `overflow-y-auto` com `scrollbar-thin`
+  - [x] `ModeloFormPage.tsx`: remover `overflow-y-auto` duplicado
+  - [x] Testar scroll único sem navbar sumindo
+  - [x] Validar scrollbar aparece apenas no conteúdo
+
+- [x] Corrigir accordion duas setas
+  - [x] `accordion.tsx`: trocar `ChevronDownIcon` por `ChevronRight`
+  - [x] `accordion.tsx`: corrigir rotação de `-rotate-90` para `rotate-90`
+  - [x] Validar rotação: → (fechado) ↓ (aberto)
+
+#### 5.7.2 - Ajustes Visuais
+- [ ] Reduzir altura PageHeader
+  - [ ] Ajustar padding (py-4 → py-3)
+  - [ ] Reduzir espaçamento breadcrumbs (mb-2 → mb-1)
+  - [ ] Otimizar espaçamento título/descrição
+
+- [ ] Reduzir altura TabsBar
+  - [ ] Reduzir altura da aba (h-12 → h-10)
+  - [ ] Ajustar padding interno
+  - [ ] Ajustar tamanho de ícones
+
+#### 5.7.3 - RightSidebar de Página
+- [ ] Criar componente PageRightSidebar
+  - [ ] Arquivo: `src/components/shared/PageRightSidebar.tsx`
+  - [ ] Baseado em RightSidebar.tsx
+  - [ ] Altura limitada à área da página
+  - [ ] Mesmas funcionalidades (backdrop, ESC, click-outside)
+
+- [ ] Criar store para RightSidebar de página
+  - [ ] Arquivo: `src/stores/pageRightSidebarStore.ts`
+  - [ ] Estado separado do rightSidebarStore global
+  - [ ] Gerenciamento por página/aba
+
+- [ ] Integrar no ModeloFormPage
+  - [ ] Substituir botão global por PageRightSidebar
+  - [ ] Testar abertura/fechamento
+  - [ ] Validar altura limitada
+
+#### 5.7.4 - Sidebar Avançada: Busca
+- [ ] Campo de busca no topo
+  - [ ] Input com ícone de busca
+  - [ ] Botão X para limpar
+  - [ ] Placeholder "Buscar..."
+
+- [ ] Filtragem em tempo real
+  - [ ] Filtrar por nome de página
+  - [ ] Manter agrupamento por categoria
+  - [ ] Exibir "Nenhum resultado" quando vazio
+
+- [ ] Resultados da busca
+  - [ ] Mostrar categoria de cada item
+  - [ ] Manter ícones
+  - [ ] Click abre página
+
+#### 5.7.5 - Sidebar Avançada: Favoritos
+- [ ] Criar favoritesStore
+  - [ ] Arquivo: `src/stores/favoritesStore.ts`
+  - [ ] Estado: array de tipos favoritos
+  - [ ] Funções: addFavorite, removeFavorite, isFavorite
+  - [ ] Persistência em localStorage
+
+- [ ] Seção FAVORITOS
+  - [ ] Exibir no topo da sidebar
+  - [ ] Contador de favoritos
+  - [ ] Ícone estrela amarela
+  - [ ] Botão X vermelho para remover
+
+- [ ] Botão favoritar
+  - [ ] Adicionar estrela em cada item da sidebar
+  - [ ] Toggle ao clicar
+  - [ ] Feedback visual (amarelo quando favoritado)
+
+#### 5.7.6 - Sidebar Avançada: Recentes
+- [ ] Criar recentsStore
+  - [ ] Arquivo: `src/stores/recentsStore.ts`
+  - [ ] Estado: array de acessos recentes (limite 10)
+  - [ ] Funções: addRecent, clearRecents
+  - [ ] Persistência em localStorage
+
+- [ ] Seção RECENTES
+  - [ ] Exibir após FAVORITOS
+  - [ ] Contador de recentes
+  - [ ] Ícone relógio
+  - [ ] Botão lixeira para limpar histórico
+
+- [ ] Integração com abas
+  - [ ] Adicionar a recentes ao abrir aba
+  - [ ] Manter ordem cronológica (mais recente primeiro)
+  - [ ] Remover duplicatas
+
+**Tempo Estimado:** 3-4 horas  
+**Commits:**
+- "FIX: Correções críticas (isolamento estado + scroll + accordion)"
+- "REFACTOR: Ajustes visuais (PageHeader + TabsBar)"
+- "FEATURE: RightSidebar de página"
+- "FEATURE: Busca na sidebar"
+- "FEATURE: Sistema de favoritos"
+- "FEATURE: Sistema de recentes"
+
+---
+
 ## **FASE 6: AUTENTICAÇÃO** 🔐
 
 ### Objetivo:
@@ -366,6 +487,7 @@ Sistema de login e proteção de rotas.
 - [ ] Redirect para /login
 
 ---
+
 ## 📊 RESUMO DO PLANO
 
 | Fase | Foco | Status | Arquivos | Commits |
@@ -375,8 +497,9 @@ Sistema de login e proteção de rotas.
 | 3 | Sistema Abas | ✅ Concluída | 7 arquivos | 2 |
 | 4 | Complementos | ✅ Concluída | 8 arquivos | 4 |
 | 5 | Páginas Modelo | ✅ Concluída | 10 arquivos | 6 |
+| 5.7 | Refinamentos | 🔄 Atual | ~8 arquivos | ~6 |
 | 6 | Autenticação | 🔜 Próxima | ~5 arquivos | ~3 |
-| **TOTAL** | | **83%** | **~47 arquivos** | **19 commits** |
+| **TOTAL** | | **77%** | **~55 arquivos** | **25 commits** |
 
 ---
 
@@ -411,6 +534,17 @@ Sistema de login e proteção de rotas.
 - [x] 3 páginas modelo funcionam 100%
 - [x] Todas as funcionalidades testadas
 - [x] Sistema = template completo
+
+### Fase 5.7 Concluída:
+- [x] Estado isolado entre abas funcionando (useTabState + useTabForm)
+- [x] Scroll isolado e condicional em todas áreas (body/root overflow-hidden + min-w-0)
+- [x] Accordion sem seta duplicada (ChevronRight com rotate-90)
+- [ ] Alturas ajustadas (PageHeader + TabsBar)
+- [ ] PageRightSidebar funcional
+- [ ] Busca na sidebar operacional
+- [ ] Sistema de favoritos implementado
+- [ ] Sistema de recentes implementado
+- [x] Correções críticas testadas e validadas (5.7.1 completa)
 
 ### Fase 6 Concluída:
 - [ ] Login/logout funciona

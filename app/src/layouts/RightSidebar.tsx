@@ -39,7 +39,7 @@ export function RightSidebar({ type, title, children }: RightSidebarProps) {
 
     return (
         <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
-            <SheetContent side="right" className="w-full sm:w-96 sm:max-w-96">
+            <SheetContent side="right" className="w-full sm:w-96 sm:max-w-96 overflow-y-auto">
                 <SheetHeader>
                     <SheetTitle>{title}</SheetTitle>
                 </SheetHeader>

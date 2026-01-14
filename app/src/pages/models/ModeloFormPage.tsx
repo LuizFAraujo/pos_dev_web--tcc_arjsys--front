@@ -1,16 +1,5 @@
 /**
  * ModeloFormPage.tsx - Página modelo de formulário
- * 
- * Template de página com formulário completo.
- * Serve como exemplo de implementação para outras páginas do sistema.
- * 
- * Funcionalidades:
- * - PageHeader com título e ações
- * - Formulário completo com validação
- * - Vários tipos de campos
- * - Botões salvar/cancelar
- * - Integração com RightSidebar
- * - Dark mode
  */
 
 import { Save, X, Settings } from 'lucide-react';
@@ -21,16 +10,32 @@ import { Label } from '@ui/label';
 import { Input } from '@ui/input';
 import { Textarea } from '@ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/select';
+import { useTabForm } from '@/hooks/useTabForm';
+import type { Tab } from '@/types/tab.types';
 
-export function ModeloFormPage() {
+interface ModeloFormPageProps {
+    tab: Tab;
+}
+
+export function ModeloFormPage({ tab }: ModeloFormPageProps) {
+    const { values, setValue, resetForm } = useTabForm(tab, {
+        nome: '',
+        email: '',
+        telefone: '',
+        cpfCnpj: '',
+        categoria: '',
+        status: '',
+        observacoes: '',
+    });
+
     const openRightSidebar = useRightSidebarStore((state) => state.open);
 
     const handleSave = () => {
-        console.log('Salvar formulário');
+        console.log(`[Aba ${tab.id}] Salvando:`, values);
     };
 
     const handleCancel = () => {
-        console.log('Cancelar formulário');
+        resetForm();
     };
 
     const handleOpenSettings = () => {
@@ -39,7 +44,6 @@ export function ModeloFormPage() {
 
     return (
         <PageWrapper>
-            {/* Header */}
             <PageHeader
                 title="Modelo: Formulário"
                 description="Template de página com formulário completo e validação"
@@ -53,82 +57,86 @@ export function ModeloFormPage() {
                         className="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg font-medium transition-colors"
                     >
                         <Settings className="h-4 w-4" />
-                        <span>Configurações</span>
+                        Configurações
                     </button>
                 }
             />
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Content - SEM overflow aqui! */}
+            <div className="p-6">
                 <div className="max-w-2xl mx-auto">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-6">
                         <form className="space-y-6">
-                            {/* Nome */}
                             <div className="space-y-2">
                                 <Label htmlFor="nome">Nome Completo *</Label>
                                 <Input
                                     id="nome"
                                     type="text"
                                     placeholder="Digite o nome completo"
-                                    className="w-full"
+                                    value={values.nome}
+                                    onChange={(e) => setValue('nome', e.target.value)}
                                 />
                             </div>
 
-                            {/* Email */}
                             <div className="space-y-2">
                                 <Label htmlFor="email">E-mail *</Label>
                                 <Input
                                     id="email"
                                     type="email"
                                     placeholder="exemplo@email.com"
-                                    className="w-full"
+                                    value={values.email}
+                                    onChange={(e) => setValue('email', e.target.value)}
                                 />
                             </div>
 
-                            {/* Telefone e Documento */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="telefone">Telefone</Label>
                                     <Input
                                         id="telefone"
-                                        type="tel"
+                                        type="text"
                                         placeholder="(00) 00000-0000"
-                                        className="w-full"
+                                        value={values.telefone}
+                                        onChange={(e) => setValue('telefone', e.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="documento">CPF/CNPJ</Label>
+                                    <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
                                     <Input
-                                        id="documento"
+                                        id="cpfCnpj"
                                         type="text"
                                         placeholder="000.000.000-00"
-                                        className="w-full"
+                                        value={values.cpfCnpj}
+                                        onChange={(e) => setValue('cpfCnpj', e.target.value)}
                                     />
                                 </div>
                             </div>
 
-                            {/* Categoria */}
                             <div className="space-y-2">
                                 <Label htmlFor="categoria">Categoria *</Label>
-                                <Select>
-                                    <SelectTrigger className="w-full">
+                                <Select 
+                                    value={values.categoria} 
+                                    onValueChange={(val) => setValue('categoria', val)}
+                                >
+                                    <SelectTrigger>
                                         <SelectValue placeholder="Selecione uma categoria" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="cliente">Cliente</SelectItem>
-                                        <SelectItem value="fornecedor">Fornecedor</SelectItem>
-                                        <SelectItem value="parceiro">Parceiro</SelectItem>
-                                        <SelectItem value="outros">Outros</SelectItem>
+                                        <SelectItem value="categoria-a">Categoria A</SelectItem>
+                                        <SelectItem value="categoria-b">Categoria B</SelectItem>
+                                        <SelectItem value="categoria-c">Categoria C</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
-                            {/* Status */}
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status *</Label>
-                                <Select defaultValue="ativo">
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue />
+                                <Select 
+                                    value={values.status} 
+                                    onValueChange={(val) => setValue('status', val)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Ativo" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="ativo">Ativo</SelectItem>
@@ -138,18 +146,17 @@ export function ModeloFormPage() {
                                 </Select>
                             </div>
 
-                            {/* Observações */}
                             <div className="space-y-2">
                                 <Label htmlFor="observacoes">Observações</Label>
                                 <Textarea
                                     id="observacoes"
                                     placeholder="Digite observações adicionais..."
-                                    rows={4}
-                                    className="w-full resize-none"
+                                    className="min-h-25"
+                                    value={values.observacoes}
+                                    onChange={(e) => setValue('observacoes', e.target.value)}
                                 />
                             </div>
 
-                            {/* Botões */}
                             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                                 <button
                                     type="button"
@@ -157,7 +164,7 @@ export function ModeloFormPage() {
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg font-medium transition-colors"
                                 >
                                     <X className="h-4 w-4" />
-                                    <span>Cancelar</span>
+                                    Cancelar
                                 </button>
                                 <button
                                     type="button"
@@ -165,7 +172,7 @@ export function ModeloFormPage() {
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                                 >
                                     <Save className="h-4 w-4" />
-                                    <span>Salvar</span>
+                                    Salvar
                                 </button>
                             </div>
                         </form>
