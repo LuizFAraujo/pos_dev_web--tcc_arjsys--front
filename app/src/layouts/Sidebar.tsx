@@ -10,6 +10,8 @@
  * - Click abre aba no workspace
  * - Busca items automaticamente do registry
  * - Campo de busca em tempo real
+ * - Sistema de favoritos com accordion
+ * - Tooltips em itens truncados
  * - Contador de abas abertas por tipo
  * - 3 modos: normal (240px), compact (64px), closed (0px)
  * - Pin: fixar sidebar sempre visível
@@ -20,12 +22,13 @@
  * - Transições suaves (300ms)
  * 
  * TODO:
+ * - Implementar seção RECENTES (Fase 5.7.6)
  * - Implementar botões expand/collapse all accordions
  */
 
 import { useMemo, useState } from 'react';
-import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X } from 'lucide-react';
-import { useTabsStore, useSidebarStore } from '@stores';
+import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X, Star } from 'lucide-react';
+import { useTabsStore, useSidebarStore, useFavoritesStore } from '@stores';
 import { getTabsByCategory } from '@/registries';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/tooltip';
@@ -48,6 +51,12 @@ export function Sidebar() {
     const mode = useSidebarStore((state) => state.mode);
     const isPinned = useSidebarStore((state) => state.isPinned);
     const togglePin = useSidebarStore((state) => state.togglePin);
+
+    // Favoritos
+    const favorites = useFavoritesStore((state) => state.favorites);
+    const addFavorite = useFavoritesStore((state) => state.addFavorite);
+    const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
+    const isFavorite = useFavoritesStore((state) => state.isFavorite);
 
     // Estado de busca
     const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +86,7 @@ export function Sidebar() {
         const term = searchTerm.toLowerCase();
         return CATEGORIES.map(cat => {
             const allItems = getTabsByCategory(cat.id);
-            const items = Object.entries(allItems).filter(([type, config]) =>
+            const items = Object.entries(allItems).filter(([_type, config]) =>
                 config.defaultTitle.toLowerCase().includes(term)
             );
             return { ...cat, items: Object.fromEntries(items) };
@@ -213,80 +222,164 @@ export function Sidebar() {
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
-                <Accordion type="multiple" className="w-full">
-                    {filteredCategories.map((category) => {
-                        const Icon = category.icon;
-                        const tabEntries = Object.entries(category.items);
-
-                        // Se não tem items, mostra desabilitado
-                        if (tabEntries.length === 0) {
-                            return (
-                                <div key={category.id} className="mb-2">
-                                    <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors opacity-50 cursor-not-allowed">
-                                        <Icon className="h-4 w-4 text-slate-400" />
-                                        <span className="flex-1 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                                            {category.label}
-                                        </span>
-                                        <span className="text-xs text-slate-400">(0)</span>
-                                    </button>
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <AccordionItem key={category.id} value={category.id} className="border-none">
-                                <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&>div>svg:last-child]:data-[state=open]:rotate-90">
+                <TooltipProvider delayDuration={300}>
+                    <Accordion type="multiple" className="w-full">
+                        {/* Seção FAVORITOS */}
+                        {favorites.length > 0 && (
+                            <AccordionItem value="favorites" className="border-none">
+                                <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&[data-state]>svg]:hidden [&>div>svg]:data-[state=open]:rotate-90">
                                     <div className="flex items-center gap-2 w-full">
-                                        <Icon className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
                                         <span className="flex-1 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 text-left">
-                                            {category.label}
+                                            Favoritos
                                         </span>
-                                        <span className="text-xs text-slate-400 mr-1">({tabEntries.length})</span>
+                                        <span className="text-xs text-slate-400 mr-1">({favorites.length})</span>
                                         <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" />
                                     </div>
                                 </AccordionTrigger>
 
                                 <AccordionContent className="pb-0 pt-1">
-                                    <div className="ml-6 space-y-1">
-                                        {tabEntries.map(([type, config]) => {
+                                    <div className="ml-4 space-y-1">
+                                        {favorites.map((favType) => {
+                                            const config = CATEGORIES.flatMap(cat => Object.entries(getTabsByCategory(cat.id)))
+                                                .find(([type]) => type === favType)?.[1];
+
                                             if (!config) return null;
 
                                             const ItemIcon = config.icon;
-                                            const isActive = type === activeTabType;
-                                            const openCount = tabCountByType[type] || 0;
+                                            const isActive = favType === activeTabType;
+                                            const openCount = tabCountByType[favType] || 0;
 
                                             return (
-                                                <button
-                                                    key={type}
-                                                    onClick={() => handleOpenTab(type, config.defaultTitle)}
-                                                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors ${isActive
-                                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
-                                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                                        }`}
-                                                >
-                                                    {ItemIcon && <ItemIcon className="h-3.5 w-3.5 shrink-0" />}
-                                                    <span className="flex-1 truncate">{config.defaultTitle}</span>
-                                                    {openCount > 0 && (
-                                                        <span className="text-xs text-slate-400">({openCount})</span>
-                                                    )}
-                                                </button>
+                                                <div key={favType} className="group flex items-center gap-1">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handleOpenTab(favType, config.defaultTitle)}
+                                                                className={`flex flex-1 min-w-0 items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors ${isActive
+                                                                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                                                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                    }`}
+                                                            >
+                                                                {ItemIcon && <ItemIcon className="h-3.5 w-3.5 shrink-0" />}
+                                                                <span className="flex-1 truncate">{config.defaultTitle}</span>
+                                                                {openCount > 0 && (
+                                                                    <span className="text-xs text-slate-400">({openCount})</span>
+                                                                )}
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">
+                                                            <p className="text-sm">{config.defaultTitle}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <button
+                                                        onClick={() => removeFavorite(favType)}
+                                                        className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                        title="Remover dos favoritos"
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
                                             );
                                         })}
                                     </div>
                                 </AccordionContent>
                             </AccordionItem>
-                        );
-                    })}
-                </Accordion>
+                        )}
 
-                {/* Mensagem quando não há resultados */}
-                {searchTerm && filteredCategories.length === 0 && (
-                    <div className="px-4 py-8 text-center">
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Nenhum resultado encontrado para "{searchTerm}"
-                        </p>
-                    </div>
-                )}
+                        {/* Categorias normais */}
+                        {filteredCategories.map((category) => {
+                            const Icon = category.icon;
+                            const tabEntries = Object.entries(category.items);
+
+                            // Se não tem items, mostra desabilitado
+                            if (tabEntries.length === 0) {
+                                return (
+                                    <div key={category.id} className="mb-2">
+                                        <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors opacity-50 cursor-not-allowed">
+                                            <Icon className="h-4 w-4 text-slate-400" />
+                                            <span className="flex-1 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                                                {category.label}
+                                            </span>
+                                            <span className="text-xs text-slate-400">(0)</span>
+                                        </button>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <AccordionItem key={category.id} value={category.id} className="border-none">
+                                    <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&[data-state]>svg]:hidden [&>div>svg]:data-[state=open]:rotate-90">
+                                        <div className="flex items-center gap-2 w-full">
+                                            <Icon className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" />
+                                            <span className="flex-1 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 text-left">
+                                                {category.label}
+                                            </span>
+                                            <span className="text-xs text-slate-400 mr-1">({tabEntries.length})</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" />
+                                        </div>
+                                    </AccordionTrigger>
+
+                                    <AccordionContent className="pb-0 pt-1">
+                                        <div className="ml-4 space-y-1">
+                                            {tabEntries.map(([type, config]) => {
+                                                if (!config) return null;
+
+                                                const ItemIcon = config.icon;
+                                                const isActive = type === activeTabType;
+                                                const openCount = tabCountByType[type] || 0;
+
+                                                return (
+                                                    <div key={type} className="group flex items-center gap-1">
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    onClick={() => handleOpenTab(type, config.defaultTitle)}
+                                                                    className={`flex flex-1 min-w-0 items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors ${isActive
+                                                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                                                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                        }`}
+                                                                >
+                                                                    {ItemIcon && <ItemIcon className="h-3.5 w-3.5 shrink-0" />}
+                                                                    <span className="flex-1 truncate">{config.defaultTitle}</span>
+                                                                    {openCount > 0 && (
+                                                                        <span className="text-xs text-slate-400">({openCount})</span>
+                                                                    )}
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">
+                                                                <p className="text-sm">{config.defaultTitle}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        <button
+                                                            onClick={() => isFavorite(type) ? removeFavorite(type) : addFavorite(type)}
+                                                            className={`p-1 rounded transition-colors ${isFavorite(type)
+                                                                ? 'text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
+                                                                : 'text-slate-400 hover:text-yellow-500 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100'
+                                                                }`}
+                                                            title={isFavorite(type) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                                                        >
+                                                            <Star className={`h-3.5 w-3.5 ${isFavorite(type) ? 'fill-yellow-500' : ''}`} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            );
+                        })}
+                    </Accordion>
+
+                    {/* Mensagem quando não há resultados */}
+                    {searchTerm && filteredCategories.length === 0 && (
+                        <div className="px-4 py-8 text-center">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Nenhum resultado encontrado para "{searchTerm}"
+                            </p>
+                        </div>
+                    )}
+                </TooltipProvider>
             </div>
         </aside>
     );

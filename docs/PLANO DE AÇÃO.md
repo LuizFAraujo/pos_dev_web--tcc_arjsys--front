@@ -402,22 +402,35 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] Contador de itens por categoria atualizado
 
 #### 5.7.5 - Sidebar Avançada: Favoritos
-- [ ] Criar favoritesStore
-  - [ ] Arquivo: `src/stores/favoritesStore.ts`
-  - [ ] Estado: array de tipos favoritos
-  - [ ] Funções: addFavorite, removeFavorite, isFavorite
-  - [ ] Persistência em localStorage
+- [x] Criar favoritesStore
+  - [x] Arquivo: `src/stores/favoritesStore.ts`
+  - [x] Estado: array de tipos favoritos
+  - [x] Funções: addFavorite, removeFavorite, isFavorite, clearFavorites
+  - [x] Persistência em localStorage com zustand/persist
+  - [x] Export no `src/stores/index.ts`
 
-- [ ] Seção FAVORITOS
-  - [ ] Exibir no topo da sidebar
-  - [ ] Contador de favoritos
-  - [ ] Ícone estrela amarela
-  - [ ] Botão X vermelho para remover
+- [x] Seção FAVORITOS
+  - [x] Exibir no topo da sidebar como accordion
+  - [x] Contador de favoritos
+  - [x] Ícone estrela amarela preenchida
+  - [x] Botão X vermelho para remover (só no hover)
+  - [x] Só aparece se favorites.length > 0
+  - [x] Seta ChevronRight que rota ao expandir
 
-- [ ] Botão favoritar
-  - [ ] Adicionar estrela em cada item da sidebar
-  - [ ] Toggle ao clicar
-  - [ ] Feedback visual (amarelo quando favoritado)
+- [x] Botão favoritar nos itens
+  - [x] Adicionar estrela em cada item da sidebar
+  - [x] Toggle ao clicar
+  - [x] Estrela cheia (favoritado): sempre visível, amarela
+  - [x] Estrela vazia (não favoritado): só no hover, cinza
+  - [x] Transições suaves
+
+- [x] Ajustes visuais e UX
+  - [x] Espaçamento ml-6 → ml-4 (menos espaço esquerda)
+  - [x] Botão principal com min-w-0 (nomes compridos não escondem estrela)
+  - [x] Tooltip nos itens (side="top" para não cobrir estrela)
+  - [x] Remover seta duplicada accordion ([&[data-state]>svg]:hidden)
+  - [x] Estrela vazia: opacity-0 group-hover:opacity-100
+  - [x] X vermelho favoritos: opacity-0 group-hover:opacity-100
 
 #### 5.7.6 - Sidebar Avançada: Recentes
 - [ ] Criar recentsStore
@@ -568,13 +581,14 @@ Sistema de login e proteção de rotas.
 - [x] Alturas ajustadas (PageHeader py-3 + TabsBar py-2)
 - [x] PageRightSidebar funcional (overlay com altura limitada)
 - [x] Busca na sidebar operacional (filtro em tempo real)
-- [ ] PageRightSidebar variantes (overlay + push)
-- [ ] Sistema de favoritos implementado
+- [x] Sistema de favoritos implementado (accordion + persistência)
 - [ ] Sistema de recentes implementado
+- [ ] PageRightSidebar variantes (overlay + push)
 - [x] Correções críticas testadas e validadas (5.7.1 completa)
 - [x] Ajustes visuais testados e validados (5.7.2 completa)
 - [x] PageRightSidebar overlay testado e validado (5.7.3 completa)
 - [x] Busca na sidebar testada e validada (5.7.4 completa)
+- [x] Favoritos testados e validados (5.7.5 completa)
 
 ### Fase 6 Concluída:
 - [ ] Login/logout funciona
