@@ -9,6 +9,7 @@
  * - Categorias expansíveis (Accordion)
  * - Click abre aba no workspace
  * - Busca items automaticamente do registry
+ * - Campo de busca em tempo real
  * - Contador de abas abertas por tipo
  * - 3 modos: normal (240px), compact (64px), closed (0px)
  * - Pin: fixar sidebar sempre visível
@@ -22,8 +23,8 @@
  * - Implementar botões expand/collapse all accordions
  */
 
-import { useMemo } from 'react';
-import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X } from 'lucide-react';
 import { useTabsStore, useSidebarStore } from '@stores';
 import { getTabsByCategory } from '@/registries';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion';
@@ -48,6 +49,9 @@ export function Sidebar() {
     const isPinned = useSidebarStore((state) => state.isPinned);
     const togglePin = useSidebarStore((state) => state.togglePin);
 
+    // Estado de busca
+    const [searchTerm, setSearchTerm] = useState('');
+
     // Conta quantas abas de cada tipo estão abertas
     const tabCountByType = useMemo(() => {
         const counts: Record<string, number> = {};
@@ -60,6 +64,25 @@ export function Sidebar() {
     // Pega aba ativa para highlight
     const activeTab = tabs.find((t) => t.id === activeTabId);
     const activeTabType = activeTab?.type;
+
+    // Filtra categorias e itens baseado no termo de busca
+    const filteredCategories = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return CATEGORIES.map(cat => ({
+                ...cat,
+                items: getTabsByCategory(cat.id)
+            }));
+        }
+
+        const term = searchTerm.toLowerCase();
+        return CATEGORIES.map(cat => {
+            const allItems = getTabsByCategory(cat.id);
+            const items = Object.entries(allItems).filter(([type, config]) =>
+                config.defaultTitle.toLowerCase().includes(term)
+            );
+            return { ...cat, items: Object.fromEntries(items) };
+        }).filter(cat => Object.keys(cat.items).length > 0);
+    }, [searchTerm]);
 
     /**
      * Handler para abrir aba
@@ -166,13 +189,34 @@ export function Sidebar() {
                 </div>
             </div>
 
-            {/* Scrollable Content - CORRIGIDO: Adicionado scrollbar-thin */}
+            {/* Campo de Busca */}
+            <div className="px-2 py-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
                 <Accordion type="multiple" className="w-full">
-                    {CATEGORIES.map((category) => {
+                    {filteredCategories.map((category) => {
                         const Icon = category.icon;
-                        const categoryTabs = getTabsByCategory(category.id);
-                        const tabEntries = Object.entries(categoryTabs);
+                        const tabEntries = Object.entries(category.items);
 
                         // Se não tem items, mostra desabilitado
                         if (tabEntries.length === 0) {
@@ -234,6 +278,15 @@ export function Sidebar() {
                         );
                     })}
                 </Accordion>
+
+                {/* Mensagem quando não há resultados */}
+                {searchTerm && filteredCategories.length === 0 && (
+                    <div className="px-4 py-8 text-center">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Nenhum resultado encontrado para "{searchTerm}"
+                        </p>
+                    </div>
+                )}
             </div>
         </aside>
     );

@@ -383,20 +383,23 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] WorkspaceContent: p-3 → p-2 (otimizar espaço)
 
 #### 5.7.4 - Sidebar Avançada: Busca
-- [ ] Campo de busca no topo
-  - [ ] Input com ícone de busca
-  - [ ] Botão X para limpar
-  - [ ] Placeholder "Buscar..."
+- [x] Campo de busca no topo
+  - [x] Input com ícone de busca (Search do lucide-react)
+  - [x] Botão X para limpar (aparece apenas quando tem texto)
+  - [x] Placeholder "Buscar..."
+  - [x] Estilizado com focus ring azul
 
-- [ ] Filtragem em tempo real
-  - [ ] Filtrar por nome de página
-  - [ ] Manter agrupamento por categoria
-  - [ ] Exibir "Nenhum resultado" quando vazio
+- [x] Filtragem em tempo real
+  - [x] Filtrar por nome de página (case-insensitive)
+  - [x] Manter agrupamento por categoria
+  - [x] Categorias vazias são removidas dos resultados
+  - [x] Exibir "Nenhum resultado encontrado para '{termo}'" quando vazio
 
-- [ ] Resultados da busca
-  - [ ] Mostrar categoria de cada item
-  - [ ] Manter ícones
-  - [ ] Click abre página
+- [x] Resultados da busca
+  - [x] Mostrar categoria de cada item (accordion mantido)
+  - [x] Manter ícones de categoria e item
+  - [x] Click abre página normalmente
+  - [x] Contador de itens por categoria atualizado
 
 #### 5.7.5 - Sidebar Avançada: Favoritos
 - [ ] Criar favoritesStore
@@ -564,13 +567,14 @@ Sistema de login e proteção de rotas.
 - [x] Accordion sem seta duplicada (ChevronRight com rotate-90)
 - [x] Alturas ajustadas (PageHeader py-3 + TabsBar py-2)
 - [x] PageRightSidebar funcional (overlay com altura limitada)
+- [x] Busca na sidebar operacional (filtro em tempo real)
 - [ ] PageRightSidebar variantes (overlay + push)
-- [ ] Busca na sidebar operacional
 - [ ] Sistema de favoritos implementado
 - [ ] Sistema de recentes implementado
 - [x] Correções críticas testadas e validadas (5.7.1 completa)
 - [x] Ajustes visuais testados e validados (5.7.2 completa)
 - [x] PageRightSidebar overlay testado e validado (5.7.3 completa)
+- [x] Busca na sidebar testada e validada (5.7.4 completa)
 
 ### Fase 6 Concluída:
 - [ ] Login/logout funciona
