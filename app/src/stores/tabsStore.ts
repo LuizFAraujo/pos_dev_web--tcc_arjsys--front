@@ -1,147 +1,160 @@
 /**
- * tabsStore.ts - Store de gerenciamento de abas
+ * tabsStore.ts - Store para gerenciar abas abertas no workspace
  * 
- * Gerencia o estado das abas abertas no workspace:
- * - Lista de abas abertas
- * - Aba ativa
- * - Histórico de abas fechadas (para reabrir com Ctrl+Shift+T)
- * - Funções de manipulação (abrir, fechar, ativar)
+ * Gerencia múltiplas abas abertas, aba ativa, histórico de fechamento.
+ * Integrado com Registry Pattern para buscar configurações.
+ * Integrado com recentsStore para adicionar aos recentes automaticamente.
  */
 
 import { create } from 'zustand';
-// import type { Tab, TabType, TabMetadata } from '@types/tab.types';
-import type { Tab, TabType, TabMetadata } from '@/types/tab.types';
+import { nanoid } from 'nanoid';
+import { getTabConfig } from '@/registries';
+import { useRecentsStore } from './recentsStore';
+import type { Tab, TabType } from '@/types/tab.types';
 
 interface TabsState {
     /** Lista de abas abertas */
     tabs: Tab[];
 
-    /** ID da aba ativa */
+    /** ID da aba atualmente ativa */
     activeTabId: string | null;
 
-    /** Histórico de abas fechadas (últimas 10) */
-    closedHistory: Tab[];
+    /** Histórico de abas fechadas (para Ctrl+Shift+T) */
+    closedHistory: Array<{ type: TabType; title: string }>;
 
-    /** Aba pendente de confirmação para fechar */
-    tabPendingClose: string | null;
+    /** Abre uma nova aba ou foca se já existe */
+    openTab: (type: TabType, customTitle?: string) => void;
 
-    /** Abrir nova aba */
-    openTab: (type: TabType, title: string, metadata?: TabMetadata) => void;
+    /** Fecha uma aba pelo ID */
+    closeTab: (id: string, force?: boolean) => void;
 
-    /** Fechar aba por ID */
-    closeTab: (tabId: string, force?: boolean) => void;
+    /** Define qual aba está ativa */
+    setActiveTab: (id: string) => void;
 
-    /** Ativar aba por ID */
-    setActiveTab: (tabId: string) => void;
-
-    /** Reabrir última aba fechada */
+    /** Reabre a última aba fechada */
     reopenLastTab: () => void;
 
-    /** Definir aba pendente de confirmação */
-    setTabPendingClose: (tabId: string | null) => void;
+    /** Atualiza o título de uma aba */
+    updateTabTitle: (id: string, title: string) => void;
 
-    /** Marcar aba como dirty */
-    setTabDirty: (tabId: string, isDirty: boolean) => void;
+    /** Marca/desmarca aba como "dirty" (com alterações não salvas) */
+    setTabDirty: (id: string, isDirty: boolean) => void;
 }
 
 export const useTabsStore = create<TabsState>((set, get) => ({
     tabs: [],
     activeTabId: null,
     closedHistory: [],
-    tabPendingClose: null,
 
-    openTab: (type, title, metadata) => {
+    openTab: (type: TabType, customTitle?) => {
+        // Busca configuração no Registry
+        const config = getTabConfig(type);
+        if (!config) {
+            console.error(`Tab type "${type}" not found in registry`);
+            return;
+        }
+
+        // Cria nova aba
         const newTab: Tab = {
-            id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: nanoid(),
             type,
-            title,
+            title: customTitle || config.defaultTitle,
+            icon: config.icon,
             isDirty: false,
             createdAt: Date.now(),
             lastAccessedAt: Date.now(),
         };
 
+        // Adiciona aos recentes
+        useRecentsStore.getState().addRecent(type);
+
+        // Adiciona aba e torna ativa
         set((state) => ({
             tabs: [...state.tabs, newTab],
             activeTabId: newTab.id,
         }));
     },
 
-    closeTab: (tabId, force = false) => {
-        const { tabs } = get();
-        const tabToClose = tabs.find((t) => t.id === tabId);
+    closeTab: (id, force = false) => {
+        const tab = get().tabs.find((t) => t.id === id);
+        if (!tab) return;
 
-        if (!tabToClose) return;
-
-        // Se tem alterações não salvas e não é force, marca como pendente
-        if (tabToClose.isDirty && !force) {
-            set({ tabPendingClose: tabId });
-            return;
+        // Se aba tem alterações não salvas e não é force, poderia mostrar confirmação
+        // (implementação de modal seria aqui, mas por enquanto fecha direto)
+        if (tab.isDirty && !force) {
+            // TODO: Mostrar modal de confirmação
+            console.warn('Tab has unsaved changes');
         }
 
-        const { activeTabId } = get();
-        const newTabs = tabs.filter((t) => t.id !== tabId);
-        let newActiveTabId = activeTabId;
-
-        // Se fechou a aba ativa, ativar a próxima
-        if (activeTabId === tabId) {
-            const closedIndex = tabs.findIndex((t) => t.id === tabId);
-            if (newTabs.length > 0) {
-                const newIndex = closedIndex >= newTabs.length ? newTabs.length - 1 : closedIndex;
-                newActiveTabId = newTabs[newIndex]?.id || null;
-            } else {
-                newActiveTabId = null;
-            }
-        }
-
+        // Adiciona ao histórico de fechamento
         set((state) => ({
-            tabs: newTabs,
-            activeTabId: newActiveTabId,
-            closedHistory: [tabToClose, ...state.closedHistory].slice(0, 10),
-            tabPendingClose: null,
+            closedHistory: [
+                ...state.closedHistory,
+                { type: tab.type, title: tab.title },
+            ].slice(-10), // Mantém apenas os últimos 10
         }));
+
+        // Remove aba
+        set((state) => {
+            const newTabs = state.tabs.filter((t) => t.id !== id);
+            let newActiveId = state.activeTabId;
+
+            // Se fechou a aba ativa, ativa a próxima
+            if (state.activeTabId === id) {
+                const closedIndex = state.tabs.findIndex((t) => t.id === id);
+                if (newTabs.length > 0) {
+                    // Tenta ativar a aba seguinte, ou a anterior se for a última
+                    const nextIndex = Math.min(closedIndex, newTabs.length - 1);
+                    newActiveId = newTabs[nextIndex].id;
+                } else {
+                    newActiveId = null;
+                }
+            }
+
+            return {
+                tabs: newTabs,
+                activeTabId: newActiveId,
+            };
+        });
     },
 
-    setActiveTab: (tabId) => {
-        const { tabs } = get();
-        const tab = tabs.find((t) => t.id === tabId);
-
+    setActiveTab: (id) => {
+        const tab = get().tabs.find((t) => t.id === id);
         if (tab) {
             set((state) => ({
-                activeTabId: tabId,
+                activeTabId: id,
                 tabs: state.tabs.map((t) =>
-                    t.id === tabId ? { ...t, lastAccessedAt: Date.now() } : t
+                    t.id === id
+                        ? { ...t, lastAccessedAt: Date.now() }
+                        : t
                 ),
             }));
         }
     },
 
     reopenLastTab: () => {
-        const { closedHistory } = get();
-        if (closedHistory.length === 0) return;
+        const lastClosed = get().closedHistory[get().closedHistory.length - 1];
+        if (lastClosed) {
+            get().openTab(lastClosed.type, lastClosed.title);
+            // Remove do histórico
+            set((state) => ({
+                closedHistory: state.closedHistory.slice(0, -1),
+            }));
+        }
+    },
 
-        const [lastClosed, ...restHistory] = closedHistory;
-        const reopenedTab: Tab = {
-            ...lastClosed,
-            id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            createdAt: Date.now(),
-            lastAccessedAt: Date.now(),
-        };
-
+    updateTabTitle: (id, title) => {
         set((state) => ({
-            tabs: [...state.tabs, reopenedTab],
-            activeTabId: reopenedTab.id,
-            closedHistory: restHistory,
+            tabs: state.tabs.map((tab) =>
+                tab.id === id ? { ...tab, title } : tab
+            ),
         }));
     },
 
-    setTabPendingClose: (tabId) => {
-        set({ tabPendingClose: tabId });
-    },
-
-    setTabDirty: (tabId, isDirty) => {
+    setTabDirty: (id, isDirty) => {
         set((state) => ({
-            tabs: state.tabs.map((t) =>
-                t.id === tabId ? { ...t, isDirty } : t
+            tabs: state.tabs.map((tab) =>
+                tab.id === id ? { ...tab, isDirty } : tab
             ),
         }));
     },

@@ -11,6 +11,7 @@
  * - Busca items automaticamente do registry
  * - Campo de busca em tempo real
  * - Sistema de favoritos com accordion
+ * - Sistema de recentes com histórico (limite 10)
  * - Tooltips em itens truncados
  * - Contador de abas abertas por tipo
  * - 3 modos: normal (240px), compact (64px), closed (0px)
@@ -22,13 +23,12 @@
  * - Transições suaves (300ms)
  * 
  * TODO:
- * - Implementar seção RECENTES (Fase 5.7.6)
  * - Implementar botões expand/collapse all accordions
  */
 
 import { useMemo, useState } from 'react';
-import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X, Star } from 'lucide-react';
-import { useTabsStore, useSidebarStore, useFavoritesStore } from '@stores';
+import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X, Star, Clock, Trash2 } from 'lucide-react';
+import { useTabsStore, useSidebarStore, useFavoritesStore, useRecentsStore } from '@stores';
 import { getTabsByCategory } from '@/registries';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/tooltip';
@@ -57,6 +57,10 @@ export function Sidebar() {
     const addFavorite = useFavoritesStore((state) => state.addFavorite);
     const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
     const isFavorite = useFavoritesStore((state) => state.isFavorite);
+
+    // Recentes
+    const recents = useRecentsStore((state) => state.recents);
+    const clearRecents = useRecentsStore((state) => state.clearRecents);
 
     // Estado de busca
     const [searchTerm, setSearchTerm] = useState('');
@@ -278,6 +282,83 @@ export function Sidebar() {
                                                         title="Remover dos favoritos"
                                                     >
                                                         <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )}
+
+                        {/* Seção RECENTES */}
+                        {recents.length > 0 && (
+                            <AccordionItem value="recents" className="border-none">
+                                <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&[data-state]>svg]:hidden [&>div>svg]:data-[state=open]:rotate-90 group">
+                                    <div className="flex items-center gap-2 w-full">
+                                        <Clock className="h-4 w-4 text-blue-500 shrink-0" />
+                                        <span className="flex-1 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 text-left">
+                                            Recentes
+                                        </span>
+                                        <span className="text-xs text-slate-400 mr-1">({recents.length})</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                clearRecents();
+                                            }}
+                                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Limpar histórico de recentes"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                        <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" />
+                                    </div>
+                                </AccordionTrigger>
+
+                                <AccordionContent className="pb-0 pt-1">
+                                    <div className="ml-4 space-y-1">
+                                        {recents.map((recentType) => {
+                                            const config = CATEGORIES.flatMap(cat => Object.entries(getTabsByCategory(cat.id)))
+                                                .find(([type]) => type === recentType)?.[1];
+
+                                            if (!config) return null;
+
+                                            const ItemIcon = config.icon;
+                                            const isActive = recentType === activeTabType;
+                                            const openCount = tabCountByType[recentType] || 0;
+                                            const isFav = isFavorite(recentType);
+
+                                            return (
+                                                <div key={recentType} className="group flex items-center gap-1">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handleOpenTab(recentType, config.defaultTitle)}
+                                                                className={`flex flex-1 min-w-0 items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors ${isActive
+                                                                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                                                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                    }`}
+                                                            >
+                                                                {ItemIcon && <ItemIcon className="h-3.5 w-3.5 shrink-0" />}
+                                                                <span className="flex-1 truncate">{config.defaultTitle}</span>
+                                                                {openCount > 0 && (
+                                                                    <span className="text-xs text-slate-400">({openCount})</span>
+                                                                )}
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">
+                                                            <p className="text-sm">{config.defaultTitle}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <button
+                                                        onClick={() => isFav ? removeFavorite(recentType) : addFavorite(recentType)}
+                                                        className={`p-1 rounded transition-colors ${isFav
+                                                            ? 'text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
+                                                            : 'text-slate-400 hover:text-yellow-500 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100'
+                                                            }`}
+                                                        title={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                                                    >
+                                                        <Star className={`h-3.5 w-3.5 ${isFav ? 'fill-yellow-500' : ''}`} />
                                                     </button>
                                                 </div>
                                             );

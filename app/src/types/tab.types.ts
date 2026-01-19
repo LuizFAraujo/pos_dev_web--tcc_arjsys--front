@@ -36,6 +36,7 @@ export interface Tab {
 
     /** Timestamp da última vez que a aba foi acessada */
     lastAccessedAt: number;
+    
 }
 
 /**

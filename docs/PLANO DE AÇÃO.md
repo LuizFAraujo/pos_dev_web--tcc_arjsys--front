@@ -433,22 +433,32 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] X vermelho favoritos: opacity-0 group-hover:opacity-100
 
 #### 5.7.6 - Sidebar Avançada: Recentes
-- [ ] Criar recentsStore
-  - [ ] Arquivo: `src/stores/recentsStore.ts`
-  - [ ] Estado: array de acessos recentes (limite 10)
-  - [ ] Funções: addRecent, clearRecents
-  - [ ] Persistência em localStorage
+- [x] Criar recentsStore
+  - [x] Arquivo: `src/stores/recentsStore.ts`
+  - [x] Estado: array de acessos recentes (limite 10)
+  - [x] Funções: addRecent, clearRecents
+  - [x] Persistência em localStorage
 
-- [ ] Seção RECENTES
-  - [ ] Exibir após FAVORITOS
-  - [ ] Contador de recentes
-  - [ ] Ícone relógio
-  - [ ] Botão lixeira para limpar histórico
+- [x] Seção RECENTES
+  - [x] Exibir após FAVORITOS
+  - [x] Contador de recentes
+  - [x] Ícone relógio (Clock)
+  - [x] Botão lixeira para limpar histórico (aparece no hover)
+  - [x] Accordion expansível com ChevronRight
 
-- [ ] Integração com abas
-  - [ ] Adicionar a recentes ao abrir aba
-  - [ ] Manter ordem cronológica (mais recente primeiro)
-  - [ ] Remover duplicatas
+- [x] Integração com abas
+  - [x] Adicionar a recentes ao abrir aba (tabsStore.openTab)
+  - [x] Manter ordem cronológica (mais recente primeiro)
+  - [x] Remover duplicatas automaticamente
+  - [x] Inicializar timestamps (createdAt, lastAccessedAt)
+  - [x] Atualizar lastAccessedAt ao trocar aba ativa
+
+- [x] Funcionalidades adicionais
+  - [x] Botão favoritar em cada item de recentes
+  - [x] Contador de abas abertas por tipo
+  - [x] Highlight da aba ativa
+  - [x] Tooltip nos itens
+  - [x] Integração com busca da sidebar
 
 #### 5.7.7 - PageRightSidebar: Variantes (Overlay vs Push)
 - [ ] Adicionar prop `variant` ao PageRightSidebar

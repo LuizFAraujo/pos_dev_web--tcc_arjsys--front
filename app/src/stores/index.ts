@@ -11,3 +11,4 @@ export { useRightSidebarStore } from './rightSidebarStore';
 export { useThemeStore } from './themeStore';
 export { usePageRightSidebarStore } from './pageRightSidebarStore';
 export { useFavoritesStore } from './favoritesStore';
+export { useRecentsStore } from './recentsStore';
