@@ -4,11 +4,12 @@
  * Exporta todos os stores para facilitar imports.
  */
 
-export * from './useAppStore';
-export { useTabsStore } from './tabsStore';
-export { useSidebarStore } from './sidebarStore';
-export { useRightSidebarStore } from './rightSidebarStore';
-export { useThemeStore } from './themeStore';
-export { usePageRightSidebarStore } from './pageRightSidebarStore';
+export { useAuthStore } from './authStore';
 export { useFavoritesStore } from './favoritesStore';
+export { usePageRightSidebarStore } from './pageRightSidebarStore';
 export { useRecentsStore } from './recentsStore';
+export { useRightSidebarStore } from './rightSidebarStore';
+export { useSidebarStore } from './sidebarStore';
+export { useTabsStore } from './tabsStore';
+export { useThemeStore } from './themeStore';
+export * from './useAppStore';

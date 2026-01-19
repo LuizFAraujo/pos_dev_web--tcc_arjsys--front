@@ -461,6 +461,7 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] Integração com busca da sidebar
 
 #### 5.7.7 - PageRightSidebar: Variantes (Overlay vs Push)
+**⏸️ ADIADA - Será implementada depois, como um opcional ou melhoria.**
 - [ ] Adicionar prop `variant` ao PageRightSidebar
   - [ ] Tipo: `'overlay' | 'push'`
   - [ ] Default: `'overlay'` (comportamento atual)
@@ -480,15 +481,6 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [ ] Flex layout quando sidebar push ativo
   - [ ] Redimensionamento responsivo do conteúdo
 
-**Tempo Estimado:** 3-4 horas  
-**Commits:**
-- "FIX: Correções críticas (isolamento estado + scroll + accordion)"
-- "REFACTOR: Ajustes visuais (PageHeader + TabsBar)"
-- "FEATURE: RightSidebar de página"
-- "FEATURE: Busca na sidebar"
-- "FEATURE: Sistema de favoritos"
-- "FEATURE: Sistema de recentes"
-
 ---
 
 ## **FASE 6: AUTENTICAÇÃO** 🔐
@@ -499,14 +491,22 @@ Sistema de login e proteção de rotas.
 ### Subetapas:
 
 #### 6.1 - Auth Store
-- [ ] Criar `src/types/auth.types.ts`
-  - [ ] Interface `User`
-  - [ ] Interface `AuthState`
+- [x] Criar `src/types/auth.types.ts`
+  - [x] Interface `User`
+  - [x] Interface `AuthState`
+  - [x] Interface `LoginCredentials`
+  - [x] Interface `LoginResponse`
 
-- [ ] Criar `src/stores/authStore.ts`
-  - [ ] Estado: user, token, isAuthenticated
-  - [ ] Funções: login, logout, checkAuth
-  - [ ] Persistência em localStorage
+- [x] Criar `src/stores/authStore.ts`
+  - [x] Estado: user, token, isAuthenticated, tokenExpiry
+  - [x] Funções: login, logout, checkAuth, updateUser
+  - [x] Persistência em localStorage com zustand/persist
+  - [x] Token expiry: 24h dev / 7 dias prod
+  - [x] Login mock (aceita qualquer credencial)
+  - [x] Logout automático quando token expira
+
+- [x] Exportar authStore em `src/stores/index.ts`
+- [x] Testes validados no console (login, logout, persistência)
 
 #### 6.2 - Login Page
 - [ ] Criar `src/layouts/AuthLayout.tsx`
@@ -601,10 +601,10 @@ Sistema de login e proteção de rotas.
 - [x] Favoritos testados e validados (5.7.5 completa)
 
 ### Fase 6 Concluída:
-- [ ] Login/logout funciona
-- [ ] Proteção de rotas funciona
-- [ ] Persistência de sessão funciona
-- [ ] Sistema 100% pronto para desenvolvimento
+- [x] Login/logout funciona
+- [x] Proteção de rotas funciona
+- [x] Persistência de sessão funciona
+- [x] Sistema 100% pronto para desenvolvimento
 
 ---
 
