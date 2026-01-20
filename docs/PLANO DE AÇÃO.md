@@ -509,17 +509,38 @@ Sistema de login e proteção de rotas.
 - [x] Testes validados no console (login, logout, persistência)
 
 #### 6.2 - Login Page
-- [ ] Criar `src/layouts/AuthLayout.tsx`
-  - [ ] Layout simples para auth
-  - [ ] Background estilizado
+- [x] Criar `src/layouts/AuthLayout.tsx`
+  - [x] Layout simples para auth
+  - [x] Background gradiente com pattern
+  - [x] Container centralizado max-w-md
+  - [x] Suporte dark mode
 
-- [ ] Criar `src/pages/auth/LoginPage.tsx`
-  - [ ] Formulário de login
-  - [ ] Logo ArjSys
-  - [ ] Validação básica
-  - [ ] Redirect para /app após login
+- [x] Criar `src/pages/auth/LoginPage.tsx`
+  - [x] Formulário de login com validação
+  - [x] Logo ArjSYS com ícone Factory
+  - [x] Campos Email e Senha
+  - [x] Validação básica (email obrigatório, senha min 3 chars)
+  - [x] Loading state com spinner
+  - [x] Mensagens de erro
+  - [x] Redirect para /app após login
+  - [x] Info modo desenvolvimento
 
-- [ ] Criar rota `src/routes/login.tsx`
+- [x] Criar rota `src/routes/login.tsx`
+  - [x] beforeLoad: redireciona para /app se já logado
+  - [x] Integração com AuthLayout e LoginPage
+
+- [x] Atualizar `src/routes/index.tsx`
+  - [x] Redirect raiz para /login (não autenticado)
+  - [x] Redirect raiz para /app (autenticado)
+
+- [x] Testes validados
+  - [x] Navegação automática funciona
+  - [x] Layout visual correto
+  - [x] Validações funcionam
+  - [x] Login bem-sucedido redireciona
+  - [x] Persistência localStorage OK
+  - [x] Dark mode funciona
+  - [x] Responsivo funciona
 
 #### 6.3 - Proteção de Rotas
 - [ ] Atualizar `src/routes/__root.tsx`
@@ -601,10 +622,12 @@ Sistema de login e proteção de rotas.
 - [x] Favoritos testados e validados (5.7.5 completa)
 
 ### Fase 6 Concluída:
-- [x] Login/logout funciona
-- [x] Proteção de rotas funciona
-- [x] Persistência de sessão funciona
-- [x] Sistema 100% pronto para desenvolvimento
+- [x] Auth Store criado e funcional (6.1)
+- [x] Login page implementada (6.2)
+- [ ] Proteção de rotas implementada (6.3)
+- [ ] Logout no Header implementado (6.4)
+- [ ] Persistência de sessão funciona
+- [ ] Sistema auth 100% pronto
 
 ---
 

@@ -1,17 +1,22 @@
 /**
- * index.tsx - Rota raiz
+ * index.tsx - Rota raiz /
  * 
- * Rota: /
- * 
- * Redireciona automaticamente para /app
+ * Redireciona para /app se autenticado, senão para /login.
  */
 
-import { createFileRoute, Navigate } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { useAuthStore } from '@stores';
 
 export const Route = createFileRoute('/')({
-  component: IndexPage,
-});
+  beforeLoad: () => {
+    const { isAuthenticated, checkAuth } = useAuthStore.getState();
 
-function IndexPage() {
-  return <Navigate to="/app" />;
-}
+    // Se autenticado, vai para /app
+    if (isAuthenticated && checkAuth()) {
+      throw redirect({ to: '/app' });
+    }
+
+    // Senão, vai para /login
+    throw redirect({ to: '/login' });
+  },
+});
