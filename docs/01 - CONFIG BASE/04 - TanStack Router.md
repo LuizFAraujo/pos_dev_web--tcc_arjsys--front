@@ -35,12 +35,12 @@ pnpm add @tanstack/react-router
 ### Instalar dependências de desenvolvimento
 
 ```bash
-pnpm add -D @tanstack/router-devtools @tanstack/router-plugin
+pnpm add -D @tanstack/react-router-devtools @tanstack/router-plugin
 ```
 
 **O que cada uma faz:**
 
-* `@tanstack/router-devtools` - Ferramenta de debug para o TanStack Router
+* `@tanstack/react-router-devtools` - Ferramenta de debug para o TanStack Router
 * `@tanstack/router-plugin` - Plugin que gera automaticamente o tree de rotas
 
 -----
@@ -128,7 +128,7 @@ type nul > src\routes\__root.tsx
 
 ```tsx
 import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 export const Route = createRootRoute({
   component: () => (
