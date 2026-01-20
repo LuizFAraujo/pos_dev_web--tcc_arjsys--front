@@ -556,10 +556,28 @@ Sistema de login e proteção de rotas.
   - [x] Fluxo completo funciona (/ → /login → /app)
   - [x] Persistência após reload mantém sessão
 
-#### 6.4 - Logout
-- [ ] Integrar logout no Header (user menu)
-- [ ] Limpar stores ao fazer logout
-- [ ] Redirect para /login
+#### 6.4 - Logout no Header
+- [x] Atualizar `src/layouts/Header.tsx`
+  - [x] Adicionar imports: useAuthStore, useNavigate
+  - [x] Adicionar state hooks: user, logout, navigate
+  - [x] Implementar handleLogout (logout + navigate /login)
+  - [x] Atualizar DropdownMenuLabel com dados dinâmicos
+  - [x] Nome do usuário: {user?.name}
+  - [x] Email do usuário: {user?.email}
+  - [x] Avatar com iniciais dinâmicas: {user?.name.substring(0,2)}
+  - [x] Botão "Sair" com ação real de logout
+  - [x] Hover "Sair" mantém texto vermelho (light + dark)
+  - [x] Adicionar aria-describedby para acessibilidade
+
+- [x] Testes validados
+  - [x] Dados do usuário aparecem no dropdown
+  - [x] Avatar com iniciais dinâmicas funciona
+  - [x] Botão "Sair" faz logout e redireciona
+  - [x] Fluxo completo funciona (login → logout → bloqueio)
+  - [x] Persistência após reload mantém dados
+  - [x] Visual dropdown correto (itens + ordem)
+  - [x] Dark mode funciona
+  - [x] Console limpo (zero warnings)
 
 ---
 
@@ -630,9 +648,9 @@ Sistema de login e proteção de rotas.
 - [x] Auth Store criado e funcional (6.1)
 - [x] Login page implementada (6.2)
 - [x] Proteção de rotas implementada (6.3)
-- [ ] Logout no Header implementado (6.4)
-- [ ] Persistência de sessão funciona
-- [ ] Sistema auth 100% pronto
+- [x] Logout no Header implementado (6.4)
+- [x] Persistência de sessão funciona
+- [x] Sistema auth 100% pronto
 
 ---
 
@@ -652,7 +670,3 @@ Sistema de login e proteção de rotas.
 - Integração com backend .NET
 
 ---
-
-**Data Início:** [preencher]  
-**Data Conclusão Prevista:** [preencher]  
-**Status Atual:** Setup base concluído (6 commits)

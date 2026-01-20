@@ -25,6 +25,8 @@
  * - Placeholder para Logout (Fase 6)
  */
 
+import { useAuthStore } from '@stores';
+import { useNavigate } from '@tanstack/react-router';
 import { Sparkles, Search, Settings, Bell, Clock, BarChart3, User, LogOut, Moon, Sun, Menu } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useRightSidebarStore, useThemeStore, useSidebarStore } from '@stores';
@@ -38,6 +40,9 @@ interface HeaderProps {
 }
 
 export function Header({ onOpenCommandPalette }: HeaderProps = {}) {
+    const navigate = useNavigate();
+    const user = useAuthStore((state) => state.user);
+    const logout = useAuthStore((state) => state.logout);
     const openRightSidebar = useRightSidebarStore((state) => state.open);
     const darkMode = useThemeStore((state) => state.darkMode);
     const toggleDarkMode = useThemeStore((state) => state.toggleDarkMode);
@@ -51,10 +56,11 @@ export function Header({ onOpenCommandPalette }: HeaderProps = {}) {
     };
 
     /**
-     * Simula logout (será implementado na Fase 6)
+     * Faz logout e redireciona para login
      */
     const handleLogout = () => {
-        console.log('Logout - Será implementado na Fase 6');
+        logout();
+        navigate({ to: '/login' });
     };
 
     return (
@@ -163,31 +169,40 @@ export function Header({ onOpenCommandPalette }: HeaderProps = {}) {
                             <button className="h-9 w-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
                                 <Avatar className="h-7 w-7">
                                     <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                                        US
+                                        {user?.name.substring(0, 2).toUpperCase() || 'US'}
                                     </AvatarFallback>
                                 </Avatar>
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuContent align="end" className="w-56" aria-describedby="user-menu-description">
+
                             <DropdownMenuLabel>
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-semibold">Usuário Sistema</span>
+                                    <span className="text-sm font-semibold">{user?.name || 'Usuário'}</span>
                                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                                        usuario@arjsys.com
+                                        {user?.email || 'usuario@arjsys.com'}
                                     </span>
                                 </div>
                             </DropdownMenuLabel>
+
+                            <span id="user-menu-description" className="sr-only">
+                                Menu de opções do usuário. Acesse seu perfil, configurações ou saia do sistema.
+                            </span>
+
                             <DropdownMenuSeparator />
+                            <DropdownMenuSeparator />
+
                             <DropdownMenuItem>
                                 <User className="mr-2 h-4 w-4" />
                                 <span>Perfil</span>
                             </DropdownMenuItem>
+                            
                             <DropdownMenuItem onClick={() => openRightSidebar('settings')}>
                                 <Settings className="mr-2 h-4 w-4" />
                                 <span>Configurações</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
+                            <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"                            >
                                 <LogOut className="mr-2 h-4 w-4" />
                                 <span>Sair</span>
                             </DropdownMenuItem>
