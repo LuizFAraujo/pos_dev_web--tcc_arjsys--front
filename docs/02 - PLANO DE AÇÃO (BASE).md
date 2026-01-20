@@ -461,25 +461,25 @@ Corrigir problemas identificados e implementar features avançadas da sidebar.
   - [x] Integração com busca da sidebar
 
 #### 5.7.7 - PageRightSidebar: Variantes (Overlay vs Push)
-**⏸️ ADIADA - Será implementada depois, como um opcional ou melhoria.**
-- [ ] Adicionar prop `variant` ao PageRightSidebar
-  - [ ] Tipo: `'overlay' | 'push'`
-  - [ ] Default: `'overlay'` (comportamento atual)
+**Sidebar: Botões Expand/Collapse All Accordions**
 
-- [ ] Implementar variante Push
-  - [ ] Layout flex row na página
-  - [ ] Sidebar empurra conteúdo responsivamente
-  - [ ] Sem backdrop (sidebar faz parte do layout)
-  - [ ] Transição suave de largura
+- [x] Botão "Expandir Tudo" (ChevronsDown)
+  - [x] Expande todos os accordions com conteúdo
+  - [x] Inclui favoritos, recentes e todas as categorias
+  - [x] Lógica dinâmica e escalável
 
-- [ ] Atualizar ModeloFormPage com 2 botões
-  - [ ] Botão 1: "Config Overlay" (passa por cima)
-  - [ ] Botão 2: "Config Push" (empurra conteúdo)
-  - [ ] Demonstrar ambos comportamentos
+- [x] Botão "Colapsar Tudo" (ChevronsRight)
+  - [x] Fecha todos os accordions
+  - [x] Define `setOpenAccordions([])`
 
-- [ ] Ajustar PageWrapper para suportar Push
-  - [ ] Flex layout quando sidebar push ativo
-  - [ ] Redimensionamento responsivo do conteúdo
+- [x] Posicionamento
+  - [x] Header da sidebar junto com botão de pin
+  - [x] Ícones consistentes com o padrão do sistema
+
+- [x] Comportamento inteligente
+  - [x] Só expande accordions que têm items
+  - [x] Ignora categorias vazias
+  - [x] Funciona para qualquer número de categorias
 
 ---
 
@@ -636,13 +636,15 @@ Sistema de login e proteção de rotas.
 - [x] PageRightSidebar funcional (overlay com altura limitada)
 - [x] Busca na sidebar operacional (filtro em tempo real)
 - [x] Sistema de favoritos implementado (accordion + persistência)
-- [ ] Sistema de recentes implementado
-- [ ] PageRightSidebar variantes (overlay + push)
+- [x] Sistema de recentes implementado (accordion + histórico limitado)
+- [x] Botões expand/collapse all accordions (sidebar dinâmica)
 - [x] Correções críticas testadas e validadas (5.7.1 completa)
 - [x] Ajustes visuais testados e validados (5.7.2 completa)
 - [x] PageRightSidebar overlay testado e validado (5.7.3 completa)
 - [x] Busca na sidebar testada e validada (5.7.4 completa)
 - [x] Favoritos testados e validados (5.7.5 completa)
+- [x] Recentes testados e validados (5.7.6 completa)
+- [x] Expand/Collapse all testado e validado (5.7.7 completa)
 
 ### Fase 6 Concluída:
 - [x] Auth Store criado e funcional (6.1)

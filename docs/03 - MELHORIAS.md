@@ -5,29 +5,9 @@ Este documento registra melhorias, refatorações e funcionalidades opcionais qu
 
 ---
 
-## 🔝 Prioridade Alta
-
-### 1. Sidebar: Botões Expand/Collapse All Accordions
-**Localização:** `src/layouts/Sidebar.tsx`
-
-**Descrição:**
-Adicionar botões para expandir/colapsar todos os accordions de categorias de uma vez.
-
-**Motivo:**
-Com muitas páginas cadastradas, facilita navegação rápida.
-
-**Implementação sugerida:**
-- Botão "Expandir Tudo" (ChevronDown)
-- Botão "Colapsar Tudo" (ChevronUp)
-- Posicionar próximo ao campo de busca ou no header da sidebar
-
-**Status:** 📌 TODO
-
----
-
 ## 🔧 Refatorações Técnicas
 
-### 2. TypeScript: Extrair CategoryId como Type Separado
+### 1. TypeScript: Extrair CategoryId como Type Separado
 **Localização:** `src/types/registry.types.ts`
 
 **Situação atual:**
@@ -64,7 +44,7 @@ export interface TabConfig {
 
 ## 🎨 Funcionalidades Opcionais
 
-### 3. PageRightSidebar: Variantes (Overlay vs Push)
+### 2. PageRightSidebar: Variantes (Overlay vs Push)
 **Localização:** `src/components/shared/PageRightSidebar.tsx`
 
 **Descrição:**
@@ -72,22 +52,22 @@ Adicionar suporte para sidebar que empurra conteúdo ao invés de sobrepor.
 
 **Implementação:**
 
-#### 3.1 - Adicionar prop variant
+#### 2.1 - Adicionar prop variant
 - [ ] Tipo: `'overlay' | 'push'`
 - [ ] Default: `'overlay'` (comportamento atual)
 
-#### 3.2 - Implementar variante Push
+#### 2.2 - Implementar variante Push
 - [ ] Layout flex row na página
 - [ ] Sidebar empurra conteúdo responsivamente
 - [ ] Sem backdrop (sidebar faz parte do layout)
 - [ ] Transição suave de largura
 
-#### 3.3 - Atualizar ModeloFormPage (demonstração)
+#### 2.3 - Atualizar ModeloFormPage (demonstração)
 - [ ] Botão 1: "Config Overlay" (passa por cima)
 - [ ] Botão 2: "Config Push" (empurra conteúdo)
 - [ ] Demonstrar ambos comportamentos
 
-#### 3.4 - Ajustar PageWrapper
+#### 2.4 - Ajustar PageWrapper
 - [ ] Flex layout quando sidebar push ativo
 - [ ] Redimensionamento responsivo do conteúdo
 
@@ -97,7 +77,7 @@ Adicionar suporte para sidebar que empurra conteúdo ao invés de sobrepor.
 
 ## 📱 PWA (Progressive Web App)
 
-### 4. Configurar PWA Completo
+### 3. Configurar PWA Completo
 **Status:** ⏸️ Deixado como melhoria futura
 
 **Pacotes necessários:**
@@ -119,7 +99,7 @@ Adicionar suporte para sidebar que empurra conteúdo ao invés de sobrepor.
 
 ## 🎯 Outras Melhorias
 
-### 5. Sistema de Temas: Mais Variantes
+### 4. Sistema de Temas: Mais Variantes
 **Descrição:**
 Adicionar mais opções de tema além de light/dark.
 
@@ -132,7 +112,7 @@ Adicionar mais opções de tema além de light/dark.
 
 ---
 
-### 6. Command Palette: Expansão
+### 5. Command Palette: Expansão
 **Descrição:**
 Expandir funcionalidades do Command Palette (Ctrl+K).
 
@@ -146,7 +126,7 @@ Expandir funcionalidades do Command Palette (Ctrl+K).
 
 ---
 
-### 7. Atalhos de Teclado: Documentação
+### 6. Atalhos de Teclado: Documentação
 **Descrição:**
 Criar página ou modal mostrando todos os atalhos disponíveis.
 
@@ -159,7 +139,7 @@ Criar página ou modal mostrando todos os atalhos disponíveis.
 
 ---
 
-### 8. Tabs: Funcionalidades Extras
+### 7. Tabs: Funcionalidades Extras
 **Descrição:**
 Melhorias no sistema de abas.
 
@@ -174,7 +154,7 @@ Melhorias no sistema de abas.
 
 ---
 
-### 9. Responsividade Mobile Completa
+### 8. Responsividade Mobile Completa
 **Descrição:**
 Otimizar totalmente para dispositivos móveis.
 

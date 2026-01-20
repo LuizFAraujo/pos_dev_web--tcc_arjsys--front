@@ -116,17 +116,36 @@ export function Sidebar() {
     };
 
     /**
-     * Placeholder para collapse all accordions (TODO: Fase 5.x)
+     * Colapsa todos os accordions
      */
     const handleCollapseAll = () => {
-        console.log('Collapse all accordions - Será implementado na Fase 5.x');
+        setOpenAccordions([]);
     };
 
     /**
-     * Placeholder para expand all accordions (TODO: Fase 5.x)
+     * Expande todos os accordions que têm conteúdo
      */
     const handleExpandAll = () => {
-        console.log('Expand all accordions - Será implementado na Fase 5.x');
+        const allIds: string[] = [];
+
+        // Adiciona favoritos se tiver
+        if (favorites.length > 0) {
+            allIds.push('favorites');
+        }
+
+        // Adiciona recentes se tiver
+        if (recents.length > 0) {
+            allIds.push('recents');
+        }
+
+        // Adiciona todas as categorias que têm items
+        filteredCategories.forEach(cat => {
+            if (Object.keys(cat.items).length > 0) {
+                allIds.push(cat.id);
+            }
+        });
+
+        setOpenAccordions(allIds);
     };
 
     // Modo closed (oculto)
