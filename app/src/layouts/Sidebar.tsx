@@ -64,6 +64,7 @@ export function Sidebar() {
 
     // Estado de busca
     const [searchTerm, setSearchTerm] = useState('');
+    const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
     // Conta quantas abas de cada tipo estão abertas
     const tabCountByType = useMemo(() => {
@@ -96,6 +97,16 @@ export function Sidebar() {
             return { ...cat, items: Object.fromEntries(items) };
         }).filter(cat => Object.keys(cat.items).length > 0);
     }, [searchTerm]);
+
+    // Controlar quais accordions estão abertos
+    const accordionValue = useMemo(() => {
+        if (searchTerm.trim()) {
+            // Se tem busca, abre categorias com resultados
+            return filteredCategories.map(cat => cat.id);
+        }
+        // Se não tem busca, mantém os que estão abertos manualmente
+        return openAccordions;
+    }, [searchTerm, filteredCategories, openAccordions]);
 
     /**
      * Handler para abrir aba
@@ -229,7 +240,12 @@ export function Sidebar() {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
                 <TooltipProvider delayDuration={300}>
-                    <Accordion type="multiple" className="w-full">
+                    <Accordion
+                        type="multiple"
+                        className="w-full"
+                        value={accordionValue}
+                        onValueChange={setOpenAccordions}
+                    >
                         {/* Seção FAVORITOS */}
                         {favorites.length > 0 && (
                             <AccordionItem value="favorites" className="border-none">
