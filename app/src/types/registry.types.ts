@@ -25,7 +25,7 @@ export interface TabConfig {
     component: ComponentType<any>;
 
     /** Categoria/módulo a que pertence */
-    category: 'cadastros' | 'vendas' | 'producao' | 'compras' | 'engenharia' | 'models';
+    category: 'cadastros' | 'vendas' | 'producao' | 'compras' | 'engenharia' | 'modelos';
 
     /** Descrição da página (opcional) */
     description?: string;

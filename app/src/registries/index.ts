@@ -12,7 +12,7 @@ import { vendasRegistry } from './vendasRegistry';
 import { producaoRegistry } from './producaoRegistry';
 import { comprasRegistry } from './comprasRegistry';
 import { engenhariaRegistry } from './engenhariaRegistry';
-import { modelsRegistry } from './modelsRegistry';
+import { modelosRegistry } from './modelosRegistry';
 
 /**
  * Busca configuração de uma aba pelo seu tipo
@@ -24,7 +24,7 @@ export function getTabConfig(type: TabType): TabConfig | undefined {
         producaoRegistry[type] ||
         comprasRegistry[type] ||
         engenhariaRegistry[type] ||
-        modelsRegistry[type]
+        modelosRegistry[type]
     );
 }
 
@@ -43,8 +43,8 @@ export function getTabsByCategory(category: string): Record<string, TabConfig> {
             return comprasRegistry;
         case 'engenharia':
             return engenhariaRegistry;
-        case 'models':
-            return modelsRegistry;
+        case 'modelos':
+            return modelosRegistry;
         default:
             return {};
     }
@@ -60,6 +60,6 @@ export function getAllCategories() {
         producao: producaoRegistry,
         compras: comprasRegistry,
         engenharia: engenhariaRegistry,
-        models: modelsRegistry,
+        modelos: modelosRegistry,
     };
 }

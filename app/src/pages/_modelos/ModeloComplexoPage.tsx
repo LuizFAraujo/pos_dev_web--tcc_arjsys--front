@@ -57,10 +57,10 @@ export function ModeloComplexoPage() {
         <PageWrapper>
             {/* Header */}
             <PageHeader
-                title="Modelo: Página Complexa"
+                title="Página Complexa"
                 description="Template com múltiplas seções, tabs, tabelas e estatísticas"
                 breadcrumbs={[
-                    { label: 'Modelos', href: '/app' },
+                    { label: 'Páginas Modelo', href: '/app' },
                     { label: 'Página Complexa' },
                 ]}
                 actions={

@@ -40,7 +40,7 @@ const CATEGORIES = [
     { id: 'producao', label: 'PRODUÇÃO', icon: Package },
     { id: 'compras', label: 'COMPRAS', icon: Truck },
     { id: 'engenharia', label: 'ENGENHARIA', icon: Wrench },
-    { id: 'models', label: 'MODELOS', icon: FileCode2 },
+    { id: 'modelos', label: 'PÁGINAS MODELO', icon: FileCode2 },
 ] as const;
 
 export function Sidebar() {

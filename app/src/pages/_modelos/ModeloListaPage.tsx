@@ -42,10 +42,10 @@ export function ModeloListaPage() {
         <PageWrapper>
             {/* Header */}
             <PageHeader
-                title="Modelo: Lista Simples"
+                title="Lista Simples"
                 description="Template de página com lista de items e ações básicas"
                 breadcrumbs={[
-                    { label: 'Modelos', href: '/app' },
+                    { label: 'Páginas Modelo', href: '/app' },
                     { label: 'Lista Simples' },
                 ]}
                 actions={

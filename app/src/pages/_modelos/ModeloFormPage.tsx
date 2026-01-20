@@ -48,10 +48,10 @@ export function ModeloFormPage({ tab }: ModeloFormPageProps) {
     return (
         <PageWrapper>
             <PageHeader
-                title="Modelo: Formulário"
+                title="Formulário"
                 description="Template de página com formulário completo e validação"
                 breadcrumbs={[
-                    { label: 'Modelos', href: '/app' },
+                    { label: 'Páginas Modelo', href: '/app' },
                     { label: 'Formulário' },
                 ]}
                 actions={
