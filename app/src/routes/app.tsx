@@ -1,20 +1,28 @@
 /**
- * app.tsx - Rota principal do sistema
+ * app.tsx - Rota protegida do workspace
  * 
- * Rota: /app
- * 
- * Esta é a rota principal do sistema após o login.
- * Renderiza o WorkspaceLayout que contém toda a estrutura
- * do sistema (Header, Sidebar, Tabs, Content).
+ * Rota principal do sistema que exige autenticação.
+ * Redireciona para /login se não autenticado ou token expirado.
  */
 
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
+import { useAuthStore } from '@stores';
 
 export const Route = createFileRoute('/app')({
-    component: AppPage,
+    // Protege a rota - só autenticados podem acessar
+    beforeLoad: () => {
+        const { isAuthenticated, checkAuth } = useAuthStore.getState();
+
+        // Se não autenticado ou token expirado, redireciona para login
+        if (!isAuthenticated || !checkAuth()) {
+            throw redirect({ to: '/login' });
+        }
+    },
+
+    component: AppLayout,
 });
 
-function AppPage() {
+function AppLayout() {
     return <WorkspaceLayout />;
 }

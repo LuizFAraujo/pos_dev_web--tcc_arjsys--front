@@ -543,13 +543,18 @@ Sistema de login e proteção de rotas.
   - [x] Responsivo funciona
 
 #### 6.3 - Proteção de Rotas
-- [ ] Atualizar `src/routes/__root.tsx`
-  - [ ] Verificar autenticação
-  - [ ] Redirect para /login se não autenticado
+- [x] Atualizar `src/routes/app.tsx`
+  - [x] Adicionar beforeLoad com verificação de autenticação
+  - [x] Redirecionar para /login se não autenticado
+  - [x] Verificar token expirado via checkAuth()
+  - [x] Import useAuthStore e redirect
 
-- [ ] Atualizar `src/routes/app.tsx`
-  - [ ] Proteger com authStore
-  - [ ] Redirect para /login se necessário
+- [x] Testes validados
+  - [x] Acesso /app sem login redireciona para /login
+  - [x] Login bem-sucedido acessa /app normalmente
+  - [x] Token expirado redireciona para /login
+  - [x] Fluxo completo funciona (/ → /login → /app)
+  - [x] Persistência após reload mantém sessão
 
 #### 6.4 - Logout
 - [ ] Integrar logout no Header (user menu)
@@ -624,7 +629,7 @@ Sistema de login e proteção de rotas.
 ### Fase 6 Concluída:
 - [x] Auth Store criado e funcional (6.1)
 - [x] Login page implementada (6.2)
-- [ ] Proteção de rotas implementada (6.3)
+- [x] Proteção de rotas implementada (6.3)
 - [ ] Logout no Header implementado (6.4)
 - [ ] Persistência de sessão funciona
 - [ ] Sistema auth 100% pronto
