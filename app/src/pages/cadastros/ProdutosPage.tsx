@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Pencil, Trash2, FileText } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText, LayoutGrid, Table } from 'lucide-react';
 import { useProdutosStore } from '@/stores/cadastros/produtosStore';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { ProdutoFormModal } from '@/components/cadastros/ProdutoFormModal';
 import type { TipoProduto, Produto } from '@/types/cadastros/produto.types';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DeleteProdutoDialog } from '@/components/cadastros/DeleteProdutoDialog';
+import { ProdutoCard } from '@/components/cadastros/ProdutoCard';
 
 export function ProdutosPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +18,7 @@ export function ProdutosPage() {
     const [desenhoFilter, setDesenhoFilter] = useState<string>('all');
     const [modalOpen, setModalOpen] = useState(false);
     const [produtoEdit, setProdutoEdit] = useState<Produto | null>(null);
+    const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [produtoDelete, setProdutoDelete] = useState<Produto | null>(null);
@@ -93,10 +95,30 @@ export function ProdutosPage() {
                 title="Produtos"
                 description="Gerencie o cadastro de produtos do sistema"
                 actions={
-                    <Button onClick={handleNovoProduto}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Novo Produto
-                    </Button>
+                    <div className="flex gap-2">
+                        <div className="flex rounded-md border">
+                            <Button
+                                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setViewMode('table')}
+                                className="rounded-r-none"
+                            >
+                                <Table className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+                                size="sm"
+                                onClick={() => setViewMode('card')}
+                                className="rounded-l-none"
+                            >
+                                <LayoutGrid className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Button onClick={handleNovoProduto}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Novo Produto
+                        </Button>
+                    </div>
                 }
             />
 
@@ -157,103 +179,131 @@ export function ProdutosPage() {
                 </div>
             )}
 
-            {!isLoading && produtosFiltrados.length > 0 && (
-                <div className="rounded-lg border">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-muted/50">
-                                <tr>
-                                    <th className="p-3 text-left text-sm font-medium">Código</th>
-                                    <th className="p-3 text-left text-sm font-medium">Descrição</th>
-                                    <th className="p-3 text-left text-sm font-medium">Tipo</th>
-                                    <th className="p-3 text-left text-sm font-medium">UN</th>
-                                    <th className="p-3 text-left text-sm font-medium">Peso (kg)</th>
-                                    <th className="p-3 text-left text-sm font-medium">Tempo (h)</th>
-                                    <th className="p-3 text-left text-sm font-medium">Desenho</th>
-                                    <th className="p-3 text-left text-sm font-medium">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {produtosFiltrados.map((produto) => (
-                                    <tr
-                                        key={produto.id}
-                                        className="border-t transition-colors hover:bg-muted/30"
-                                    >
-                                        <td className="p-3 text-sm font-mono font-medium">
-                                            {produto.codigo}
-                                        </td>
-                                        <td className="p-3 text-sm">
-                                            <div>
-                                                <p className="font-medium">{produto.descricaoCurta}</p>
-                                                {produto.descricaoCompleta && (
-                                                    <p className="line-clamp-1 text-xs text-muted-foreground">
-                                                        {produto.descricaoCompleta}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="p-3">
-                                            <Badge className={getTipoBadgeClass(produto.tipo)}>
-                                                {formatTipo(produto.tipo)}
-                                            </Badge>
-                                        </td>
-                                        <td className="p-3 text-sm">{produto.unidade}</td>
-                                        <td className="p-3 text-sm">
-                                            {produto.pesoEstimado ? produto.pesoEstimado.toFixed(2) : '-'}
-                                        </td>
-                                        <td className="p-3 text-sm">{produto.tempoFabricacao || '-'}</td>
-                                        <td className="p-3 text-sm">
-                                            {produto.possuiDesenho ? (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
-                                                    onClick={() => handleAbrirDesenho(produto)}
-                                                    title="Ver desenho técnico"
-                                                >
-                                                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                                </Button>
-                                            ) : (
-                                                <span className="text-muted-foreground">-</span>
-                                            )}
-                                        </td>
-                                        <td className="p-3">
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400"
-                                                    onClick={() => handleEditarProduto(produto)}
-                                                    title="Editar produto"
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400"
-                                                    onClick={() => {
-                                                        setProdutoDelete(produto);
-                                                        setDeleteDialogOpen(true);
-                                                    }}
-                                                    title="Excluir produto"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
 
-                    <div className="border-t bg-muted/30 p-3">
-                        <p className="text-sm text-muted-foreground">
-                            Mostrando {produtosFiltrados.length} de {produtos.length} produtos
-                        </p>
-                    </div>
-                </div>
+            {!isLoading && produtosFiltrados.length > 0 && (
+                <>
+                    {viewMode === 'table' ? (
+                        <div className="rounded-lg border">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-muted/50">
+                                        <tr>
+                                            <th className="p-3 text-left text-sm font-medium">Código</th>
+                                            <th className="p-3 text-left text-sm font-medium">Descrição</th>
+                                            <th className="p-3 text-left text-sm font-medium">Tipo</th>
+                                            <th className="p-3 text-left text-sm font-medium">UN</th>
+                                            <th className="p-3 text-left text-sm font-medium">Peso (kg)</th>
+                                            <th className="p-3 text-left text-sm font-medium">Tempo (h)</th>
+                                            <th className="p-3 text-left text-sm font-medium">Desenho</th>
+                                            <th className="p-3 text-left text-sm font-medium">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {produtosFiltrados.map((produto) => (
+                                            <tr
+                                                key={produto.id}
+                                                className="border-t transition-colors hover:bg-muted/30"
+                                            >
+                                                <td className="p-3 text-sm font-mono font-medium">
+                                                    {produto.codigo}
+                                                </td>
+                                                <td className="p-3 text-sm">
+                                                    <div>
+                                                        <p className="font-medium">{produto.descricaoCurta}</p>
+                                                        {produto.descricaoCompleta && (
+                                                            <p className="line-clamp-1 text-xs text-muted-foreground">
+                                                                {produto.descricaoCompleta}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-3">
+                                                    <Badge className={getTipoBadgeClass(produto.tipo)}>
+                                                        {formatTipo(produto.tipo)}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-3 text-sm">{produto.unidade}</td>
+                                                <td className="p-3 text-sm">
+                                                    {produto.pesoEstimado ? produto.pesoEstimado.toFixed(2) : '-'}
+                                                </td>
+                                                <td className="p-3 text-sm">{produto.tempoFabricacao || '-'}</td>
+                                                <td className="p-3 text-sm">
+                                                    {produto.possuiDesenho ? (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
+                                                            onClick={() => handleAbrirDesenho(produto)}
+                                                            title="Ver desenho técnico"
+                                                        >
+                                                            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                        </Button>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3">
+                                                    <div className="flex gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400"
+                                                            onClick={() => handleEditarProduto(produto)}
+                                                            title="Editar produto"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400"
+                                                            onClick={() => {
+                                                                setProdutoDelete(produto);
+                                                                setDeleteDialogOpen(true);
+                                                            }}
+                                                            title="Excluir produto"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="border-t bg-muted/30 p-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Mostrando {produtosFiltrados.length} de {produtos.length} produtos
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {produtosFiltrados.map((produto) => (
+                                    <ProdutoCard
+                                        key={produto.id}
+                                        produto={produto}
+                                        onEdit={handleEditarProduto}
+                                        onDelete={(p) => {
+                                            setProdutoDelete(p);
+                                            setDeleteDialogOpen(true);
+                                        }}
+                                        onViewDrawing={handleAbrirDesenho}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Mostrando {produtosFiltrados.length} de {produtos.length} produtos
+                                </p>
+                            </div>
+                        </>
+                    )}
+                </>
             )}
 
             {!isLoading && produtosFiltrados.length === 0 && (
