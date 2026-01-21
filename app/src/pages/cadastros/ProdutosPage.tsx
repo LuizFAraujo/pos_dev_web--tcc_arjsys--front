@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProdutoFormModal } from '@/components/cadastros/ProdutoFormModal';
 import type { TipoProduto, Produto } from '@/types/cadastros/produto.types';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { DeleteProdutoDialog } from '@/components/cadastros/DeleteProdutoDialog';
 
 export function ProdutosPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,10 +18,14 @@ export function ProdutosPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [produtoEdit, setProdutoEdit] = useState<Produto | null>(null);
 
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [produtoDelete, setProdutoDelete] = useState<Produto | null>(null);
+
     const produtos = useProdutosStore((state) => state.produtos);
     const isLoading = useProdutosStore((state) => state.isLoading);
     const loadProdutos = useProdutosStore((state) => state.loadProdutos);
     const deleteProduto = useProdutosStore((state) => state.deleteProduto);
+
 
     useEffect(() => {
         if (produtos.length === 0) {
@@ -228,13 +233,8 @@ export function ProdutosPage() {
                                                     size="sm"
                                                     className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400"
                                                     onClick={() => {
-                                                        if (
-                                                            confirm(
-                                                                `Deseja excluir o produto ${produto.codigo}?`
-                                                            )
-                                                        ) {
-                                                            deleteProduto(produto.id);
-                                                        }
+                                                        setProdutoDelete(produto);
+                                                        setDeleteDialogOpen(true);
                                                     }}
                                                     title="Excluir produto"
                                                 >
@@ -277,6 +277,18 @@ export function ProdutosPage() {
                 open={modalOpen}
                 onOpenChange={setModalOpen}
                 produto={produtoEdit}
+            />
+            <DeleteProdutoDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                produto={produtoDelete}
+                onConfirm={() => {
+                    if (produtoDelete) {
+                        deleteProduto(produtoDelete.id);
+                        setDeleteDialogOpen(false);
+                        setProdutoDelete(null);
+                    }
+                }}
             />
         </PageWrapper>
     );
