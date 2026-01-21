@@ -1,0 +1,298 @@
+<!-- markdownlint-disable-file -->
+# 🌳 ESTRUTURA DO PROJETO - ARJSYS ERP INDUSTRIAL
+
+**Versão:** Estrutura Completa  
+**Base:** React 19 + TypeScript + Vite + TanStack Router + Zustand + shadcn/ui
+
+---
+
+## 📦 ESTRUTURA COMPLETA
+```
+pos_dev_web--tcc_front--arjsys/
+├── .gitignore
+├── package.json                    # Workspace root
+├── pnpm-workspace.yaml
+├── README.md
+│
+├── docs/                           # Documentação
+│   ├── ESTRUTURA_PROJETO.md
+│   └── PLANO_DE_ACAO.md
+│
+└── app/                            # Aplicação principal
+    ├── components.json             # Configuração shadcn/ui
+    ├── index.html
+    ├── package.json
+    ├── pnpm-lock.yaml
+    ├── tsconfig.app.json
+    ├── tsconfig.json
+    ├── tsconfig.node.json
+    ├── tsconfig.paths.json
+    ├── vite.config.ts
+    │
+    ├── public/                     # Assets estáticos
+    │
+    └── src/
+        │
+        ├── components/
+        │   ├── cadastros/          # Componentes Cadastros
+        │   │   ├── ClienteFormModal.tsx           📍 FASE 4
+        │   │   ├── DeleteClienteDialog.tsx        📍 FASE 4
+        │   │   ├── DeleteProdutoDialog.tsx        📍 FASE 1
+        │   │   ├── ProdutoCard.tsx                📍 FASE 1
+        │   │   └── ProdutoFormModal.tsx           📍 FASE 1
+        │   │
+        │   ├── engenharia/         # Componentes Engenharia
+        │   │   ├── AddComponenteModal.tsx         📍 FASE 2
+        │   │   ├── DesenhoThumbnail.tsx           📍 FASE 3
+        │   │   ├── EditComponenteModal.tsx        📍 FASE 2
+        │   │   ├── EstruturaListView.tsx          📍 FASE 2
+        │   │   ├── EstruturaTreeView.tsx          📍 FASE 2
+        │   │   ├── RemoveComponenteDialog.tsx     📍 FASE 2
+        │   │   ├── UploadDesenhoModal.tsx         📍 FASE 3
+        │   │   └── VisualizadorDesenhoModal.tsx   📍 FASE 3
+        │   │
+        │   ├── projetos/           # Componentes Projetos
+        │   │   ├── AlterarStatusDialog.tsx        📍 FASE 4
+        │   │   ├── DeletePedidoDialog.tsx         📍 FASE 4
+        │   │   ├── PedidoCard.tsx                 📍 FASE 4
+        │   │   ├── PedidoFormModal.tsx            📍 FASE 4
+        │   │   └── PedidoKanbanCard.tsx           📍 FASE 8
+        │   │
+        │   ├── relatorios/         # Componentes Relatórios
+        │   │   └── TabelaMateriaisExplosao.tsx    📍 FASE 5
+        │   │
+        │   ├── shared/             # Componentes reutilizáveis
+        │   │   ├── EmptyState.tsx                 📍 FASE 6
+        │   │   ├── ErrorState.tsx                 📍 FASE 6
+        │   │   ├── LoadingState.tsx               📍 FASE 6
+        │   │   ├── PageHeader.tsx                 ✅
+        │   │   ├── PageRightSidebar.tsx           ✅
+        │   │   └── PageWrapper.tsx                ✅
+        │   │
+        │   ├── sidebars/           # Conteúdos RightSidebar
+        │   │   ├── NotificationsContent.tsx       ✅
+        │   │   ├── SessionsContent.tsx            ✅
+        │   │   ├── SettingsContent.tsx            ✅
+        │   │   └── StatsContent.tsx               ✅
+        │   │
+        │   ├── ui/                 # shadcn/ui components
+        │   │   ├── accordion.tsx                  ✅
+        │   │   ├── alert-dialog.tsx               ✅
+        │   │   ├── avatar.tsx                     ✅
+        │   │   ├── badge.tsx                      ✅
+        │   │   ├── breadcrumb.tsx                 ✅
+        │   │   ├── button.tsx                     ✅
+        │   │   ├── calendar.tsx                   📍 FASE 4
+        │   │   ├── card.tsx                       ✅
+        │   │   ├── checkbox.tsx                   📍 FASE 1
+        │   │   ├── command.tsx                    ✅
+        │   │   ├── date-picker.tsx                📍 FASE 4
+        │   │   ├── dialog.tsx                     ✅
+        │   │   ├── dropdown-menu.tsx              ✅
+        │   │   ├── form.tsx                       ✅
+        │   │   ├── input.tsx                      ✅
+        │   │   ├── label.tsx                      ✅
+        │   │   ├── popover.tsx                    ✅
+        │   │   ├── radio-group.tsx                📍 FASE 4
+        │   │   ├── select.tsx                     ✅
+        │   │   ├── sheet.tsx                      ✅
+        │   │   ├── table.tsx                      ✅
+        │   │   ├── tabs.tsx                       ✅
+        │   │   ├── textarea.tsx                   ✅
+        │   │   └── tooltip.tsx                    ✅
+        │   │
+        │   └── workspace/          # Componentes Workspace
+        │       ├── CommandPalette.tsx             ✅
+        │       ├── ConfirmCloseDialog.tsx         ✅
+        │       ├── EmptyWorkspace.tsx             ✅
+        │       ├── TabContainer.tsx               ✅
+        │       ├── TabsBar.tsx                    ✅
+        │       ├── TabUnderConstruction.tsx       ✅
+        │       └── WorkspaceContent.tsx           ✅
+        │
+        ├── data/                   # Mock data
+        │   ├── cadastros/
+        │   │   ├── mockClientes.ts                📍 FASE 4
+        │   │   ├── mockFuncionarios.ts            📍 FASE 8
+        │   │   └── mockProdutos.ts                📍 FASE 1
+        │   │
+        │   ├── engenharia/
+        │   │   ├── mockDesenhos.ts                📍 FASE 3
+        │   │   └── mockEstruturas.ts              📍 FASE 2
+        │   │
+        │   └── projetos/
+        │       └── mockPedidos.ts                 📍 FASE 4
+        │
+        ├── hooks/                  # Custom hooks
+        │   ├── useKeyboardShortcuts.ts            ✅
+        │   ├── useTabForm.ts                      ✅
+        │   └── useTabState.ts                     ✅
+        │
+        ├── layouts/                # Layouts principais
+        │   ├── AuthLayout.tsx                     ✅
+        │   ├── Header.tsx                         ✅
+        │   ├── MainContent.tsx                    ✅
+        │   ├── RightSidebar.tsx                   ✅
+        │   ├── Sidebar.tsx                        ✅
+        │   └── WorkspaceLayout.tsx                ✅
+        │
+        ├── lib/                    # Utilitários
+        │   └── utils.ts                           ✅
+        │
+        ├── pages/                  # Páginas do sistema
+        │   ├── _modelos/           # Templates
+        │   │   ├── ModeloComplexoPage.tsx         ✅
+        │   │   ├── ModeloFormPage.tsx             ✅
+        │   │   └── ModeloListaPage.tsx            ✅
+        │   │
+        │   ├── admin/              # Administração
+        │   │   ├── LogsSistemaPage.tsx            📍 FASE 11
+        │   │   ├── PerfisAcessoPage.tsx           📍 FASE 11
+        │   │   └── UsuariosPage.tsx               📍 FASE 11
+        │   │
+        │   ├── almoxarifado/       # Almoxarifado
+        │   │   ├── EntradaMaterialPage.tsx        📍 FASE 10
+        │   │   ├── ReservaProjetoPage.tsx         📍 FASE 10
+        │   │   ├── SaidaMaterialPage.tsx          📍 FASE 10
+        │   │   └── SaldoEstoquePage.tsx           📍 FASE 10
+        │   │
+        │   ├── auth/               # Autenticação
+        │   │   ├── LoginPage.tsx                  ✅
+        │   │   └── NotFoundPage.tsx               ✅
+        │   │
+        │   ├── cadastros/          # Cadastros
+        │   │   ├── ClientesPage.tsx               📍 FASE 4
+        │   │   ├── FuncionariosPage.tsx           📍 FASE 8
+        │   │   └── ProdutosPage.tsx               📍 FASE 1
+        │   │
+        │   ├── compras/            # Compras
+        │   │   ├── NecessidadesComprasPage.tsx    📍 FASE 9
+        │   │   ├── SolicitacoesCompraPage.tsx     📍 FASE 10
+        │   │   └── StatusComprasPage.tsx          📍 FASE 10
+        │   │
+        │   ├── engenharia/         # Engenharia
+        │   │   ├── BibliotecaDesenhosPage.tsx     📍 FASE 3
+        │   │   ├── EstruturaDetalhePage.tsx       📍 FASE 2
+        │   │   ├── EstruturasPage.tsx             📍 FASE 2
+        │   │   ├── RevisaoDesenhoPage.tsx         📍 FASE 11
+        │   │   └── WhereUsedPage.tsx              📍 FASE 11
+        │   │
+        │   ├── producao/           # Produção
+        │   │   ├── ApontamentoPage.tsx            📍 FASE 10
+        │   │   ├── FilaProducaoPage.tsx           📍 FASE 10
+        │   │   └── KanbanProducaoPage.tsx         📍 FASE 10
+        │   │
+        │   ├── projetos/           # Projetos
+        │   │   ├── CronogramaPage.tsx             📍 FASE 11
+        │   │   ├── KanbanPage.tsx                 📍 FASE 8
+        │   │   ├── PedidoDetalhePage.tsx          📍 FASE 4
+        │   │   └── PedidosPage.tsx                📍 FASE 4
+        │   │
+        │   ├── qualidade/          # Qualidade
+        │   │   ├── AprovacaoPage.tsx              📍 FASE 11
+        │   │   ├── InspecaoPage.tsx               📍 FASE 11
+        │   │   └── NaoConformidadePage.tsx        📍 FASE 11
+        │   │
+        │   ├── relatorios/         # Relatórios
+        │   │   ├── ExplosaoMateriaisPage.tsx      📍 FASE 5
+        │   │   └── RelatorioConsolidadoPage.tsx   📍 FASE 9
+        │   │
+        │   └── DashboardPage.tsx                  📍 FASE 8
+        │
+        ├── registries/             # Registry Pattern
+        │   ├── adminRegistry.ts                   📍 FASE 11
+        │   ├── almoxarifadoRegistry.ts            📍 FASE 10
+        │   ├── cadastrosRegistry.ts               ✅ (atualizar nas fases)
+        │   ├── comprasRegistry.ts                 ✅ (atualizar nas fases)
+        │   ├── engenhariaRegistry.ts              ✅ (atualizar nas fases)
+        │   ├── modelsRegistry.ts                  ✅
+        │   ├── producaoRegistry.ts                ✅ (atualizar nas fases)
+        │   ├── projetosRegistry.ts                ✅ (atualizar nas fases)
+        │   ├── qualidadeRegistry.ts               📍 FASE 11
+        │   ├── relatoriosRegistry.ts              📍 FASE 5
+        │   └── index.ts                           ✅
+        │
+        ├── routes/                 # TanStack Router
+        │   ├── __root.tsx                         ✅
+        │   ├── app.tsx                            ✅
+        │   ├── index.tsx                          ✅
+        │   └── login.tsx                          ✅
+        │
+        ├── services/               # Serviços
+        │   ├── api/                # Integração Backend
+        │   │   ├── apiClient.ts                   📍 FASE 7
+        │   │   ├── clientesService.ts             📍 FASE 7
+        │   │   ├── desenhosService.ts             📍 FASE 7
+        │   │   ├── estruturasService.ts           📍 FASE 7
+        │   │   ├── pedidosService.ts              📍 FASE 7
+        │   │   └── produtosService.ts             📍 FASE 7
+        │   │
+        │   └── utils/              # Utilitários
+        │       ├── explosaoMateriaisService.ts    📍 FASE 5
+        │       └── uploadService.ts               📍 FASE 3
+        │
+        ├── stores/                 # Zustand stores
+        │   ├── cadastros/          # Stores Cadastros
+        │   │   ├── clientesStore.ts               📍 FASE 4
+        │   │   ├── funcionariosStore.ts           📍 FASE 8
+        │   │   └── produtosStore.ts               📍 FASE 1
+        │   │
+        │   ├── engenharia/         # Stores Engenharia
+        │   │   ├── desenhosStore.ts               📍 FASE 3
+        │   │   └── estruturasStore.ts             📍 FASE 2
+        │   │
+        │   ├── projetos/           # Stores Projetos
+        │   │   ├── kanbanStore.ts                 📍 FASE 8
+        │   │   └── pedidosStore.ts                📍 FASE 4
+        │   │
+        │   ├── authStore.ts                       ✅
+        │   ├── favoritesStore.ts                  ✅
+        │   ├── pageRightSidebarStore.ts           ✅
+        │   ├── recentsStore.ts                    ✅
+        │   ├── rightSidebarStore.ts               ✅
+        │   ├── sidebarStore.ts                    ✅
+        │   ├── tabsStore.ts                       ✅
+        │   ├── themeStore.ts                      ✅
+        │   ├── useAppStore.ts                     ✅
+        │   └── index.ts                           ✅
+        │
+        ├── styles/                 # Estilos
+        │   └── tailwind.css                       ✅
+        │
+        ├── types/                  # TypeScript types
+        │   ├── cadastros/          # Types Cadastros
+        │   │   ├── cliente.types.ts               📍 FASE 4
+        │   │   ├── funcionario.types.ts           📍 FASE 8
+        │   │   └── produto.types.ts               📍 FASE 1
+        │   │
+        │   ├── engenharia/         # Types Engenharia
+        │   │   ├── componente.types.ts            📍 FASE 2
+        │   │   ├── desenho.types.ts               📍 FASE 3
+        │   │   └── estrutura.types.ts             📍 FASE 2
+        │   │
+        │   ├── projetos/           # Types Projetos
+        │   │   ├── kanban.types.ts                📍 FASE 8
+        │   │   └── pedido.types.ts                📍 FASE 4
+        │   │
+        │   ├── shared/             # Types compartilhados
+        │   │   ├── api.types.ts                   📍 FASE 7
+        │   │   └── common.types.ts                📍 FASE 1
+        │   │
+        │   ├── auth.types.ts                      ✅
+        │   ├── registry.types.ts                  ✅
+        │   └── tab.types.ts                       ✅
+        │
+        ├── App.tsx                                ✅
+        ├── main.tsx                               ✅
+        ├── routeTree.gen.ts                       ✅ (gerado)
+        └── vite-env.d.ts                          ✅
+```
+
+---
+
+## 📊 RESUMO POR FASE
+
+**MVP (FASES 1-7):** 9 páginas funcionais com mock + integração backend  
+**PÓS-MVP (FASES 8-11):** Expansão funcionalidades + módulos avançados
+
+---
