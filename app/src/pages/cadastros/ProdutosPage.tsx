@@ -1,36 +1,33 @@
-// ========================================
-// PÁGINA - PRODUTOS (LISTAGEM)
-// ========================================
-
 import { useEffect, useState } from 'react';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, FileText } from 'lucide-react';
 import { useProdutosStore } from '@/stores/cadastros/produtosStore';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { TipoProduto } from '@/types/cadastros/produto.types';
+import { ProdutoFormModal } from '@/components/cadastros/ProdutoFormModal';
+import type { TipoProduto, Produto } from '@/types/cadastros/produto.types';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export function ProdutosPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [tipoFilter, setTipoFilter] = useState<string>('all');
     const [desenhoFilter, setDesenhoFilter] = useState<string>('all');
+    const [modalOpen, setModalOpen] = useState(false);
+    const [produtoEdit, setProdutoEdit] = useState<Produto | null>(null);
 
-    // Zustand - seletores separados
     const produtos = useProdutosStore((state) => state.produtos);
     const isLoading = useProdutosStore((state) => state.isLoading);
     const loadProdutos = useProdutosStore((state) => state.loadProdutos);
     const deleteProduto = useProdutosStore((state) => state.deleteProduto);
 
-    // Carregar produtos ao montar
     useEffect(() => {
         if (produtos.length === 0) {
             loadProdutos();
         }
     }, [loadProdutos, produtos.length]);
 
-    // Aplicar filtros
     const produtosFiltrados = produtos.filter((produto) => {
         const matchSearch =
             produto.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -46,7 +43,6 @@ export function ProdutosPage() {
         return matchSearch && matchTipo && matchDesenho;
     });
 
-    // Badge de tipo com cores
     const getTipoBadgeClass = (tipo: TipoProduto) => {
         switch (tipo) {
             case 'FABRICADO':
@@ -60,30 +56,46 @@ export function ProdutosPage() {
         }
     };
 
-    // Formatar tipo para exibição
     const formatTipo = (tipo: TipoProduto) => {
         return tipo.replace('_', ' ');
     };
 
+    const handleNovoProduto = () => {
+        setProdutoEdit(null);
+        setModalOpen(true);
+    };
+
+    const handleEditarProduto = (produto: Produto) => {
+        setProdutoEdit(produto);
+        setModalOpen(true);
+    };
+
+    const handleAbrirDesenho = (produto: Produto) => {
+        if (produto.caminhoDesenho) {
+            // TODO: Implementar abertura do arquivo
+            console.log('Abrir desenho:', produto.caminhoDesenho);
+            alert(`Futuro: Abrir ${produto.caminhoDesenho}`);
+        }
+    };
+
     return (
         <PageWrapper>
-            {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Produtos</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Gerencie o cadastro de produtos do sistema
-                    </p>
-                </div>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Novo Produto
-                </Button>
-            </div>
+            <PageHeader
+                breadcrumbs={[
+                    { label: 'Cadastros', href: '#' },
+                    { label: 'Produtos' }
+                ]}
+                title="Produtos"
+                description="Gerencie o cadastro de produtos do sistema"
+                actions={
+                    <Button onClick={handleNovoProduto}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Novo Produto
+                    </Button>
+                }
+            />
 
-            {/* Filtros */}
-            <div className="mb-4 flex flex-wrap gap-2">
-                {/* Busca */}
+            <div className="mt-4 mb-4 flex flex-wrap gap-2">
                 <div className="relative flex-1 min-w-xs">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -94,7 +106,6 @@ export function ProdutosPage() {
                     />
                 </div>
 
-                {/* Filtro Tipo */}
                 <Select value={tipoFilter} onValueChange={setTipoFilter}>
                     <SelectTrigger className="w-48">
                         <SelectValue placeholder="Tipo" />
@@ -107,7 +118,6 @@ export function ProdutosPage() {
                     </SelectContent>
                 </Select>
 
-                {/* Filtro Desenho */}
                 <Select value={desenhoFilter} onValueChange={setDesenhoFilter}>
                     <SelectTrigger className="w-48">
                         <SelectValue placeholder="Desenho" />
@@ -119,7 +129,6 @@ export function ProdutosPage() {
                     </SelectContent>
                 </Select>
 
-                {/* Limpar filtros */}
                 {(searchTerm || tipoFilter !== 'all' || desenhoFilter !== 'all') && (
                     <Button
                         variant="outline"
@@ -134,7 +143,6 @@ export function ProdutosPage() {
                 )}
             </div>
 
-            {/* Loading */}
             {isLoading && (
                 <div className="flex h-64 items-center justify-center">
                     <div className="text-center">
@@ -144,7 +152,6 @@ export function ProdutosPage() {
                 </div>
             )}
 
-            {/* Tabela */}
             {!isLoading && produtosFiltrados.length > 0 && (
                 <div className="rounded-lg border">
                     <div className="overflow-x-auto">
@@ -192,19 +199,34 @@ export function ProdutosPage() {
                                         <td className="p-3 text-sm">{produto.tempoFabricacao || '-'}</td>
                                         <td className="p-3 text-sm">
                                             {produto.possuiDesenho ? (
-                                                <span className="text-green-600 dark:text-green-400">✓</span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
+                                                    onClick={() => handleAbrirDesenho(produto)}
+                                                    title="Ver desenho técnico"
+                                                >
+                                                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                </Button>
                                             ) : (
                                                 <span className="text-muted-foreground">-</span>
                                             )}
                                         </td>
                                         <td className="p-3">
                                             <div className="flex gap-1">
-                                                <Button variant="ghost" size="sm">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400"
+                                                    onClick={() => handleEditarProduto(produto)}
+                                                    title="Editar produto"
+                                                >
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
+                                                    className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400"
                                                     onClick={() => {
                                                         if (
                                                             confirm(
@@ -214,8 +236,9 @@ export function ProdutosPage() {
                                                             deleteProduto(produto.id);
                                                         }
                                                     }}
+                                                    title="Excluir produto"
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         </td>
@@ -225,7 +248,6 @@ export function ProdutosPage() {
                         </table>
                     </div>
 
-                    {/* Footer com total */}
                     <div className="border-t bg-muted/30 p-3">
                         <p className="text-sm text-muted-foreground">
                             Mostrando {produtosFiltrados.length} de {produtos.length} produtos
@@ -234,7 +256,6 @@ export function ProdutosPage() {
                 </div>
             )}
 
-            {/* Empty State */}
             {!isLoading && produtosFiltrados.length === 0 && (
                 <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed">
                     <p className="mb-2 text-lg font-medium">Nenhum produto encontrado</p>
@@ -244,13 +265,19 @@ export function ProdutosPage() {
                             : 'Tente ajustar os filtros de busca'}
                     </p>
                     {produtos.length === 0 && (
-                        <Button>
+                        <Button onClick={handleNovoProduto}>
                             <Plus className="mr-2 h-4 w-4" />
                             Adicionar Primeiro Produto
                         </Button>
                     )}
                 </div>
             )}
+
+            <ProdutoFormModal
+                open={modalOpen}
+                onOpenChange={setModalOpen}
+                produto={produtoEdit}
+            />
         </PageWrapper>
     );
 }

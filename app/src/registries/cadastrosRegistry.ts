@@ -8,7 +8,14 @@
  */
 
 import type { TabRegistry } from '@/types/registry.types';
+import { Package } from 'lucide-react';
+import { ProdutosPage } from '@/pages/cadastros/ProdutosPage';
 
 export const cadastrosRegistry: TabRegistry = {
-    // Será preenchido posteriormente
+  'produtos-lista': {
+    defaultTitle: 'Produtos',
+    icon: Package,
+    component: ProdutosPage,
+    category: 'cadastros',
+  },
 };
