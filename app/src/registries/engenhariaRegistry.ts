@@ -7,7 +7,14 @@
  */
 
 import type { TabRegistry } from '@/types/registry.types';
+import { Network } from 'lucide-react';
+import { BOMPage } from '@/pages/engenharia/BOMPage';
 
 export const engenhariaRegistry: TabRegistry = {
-    // Será preenchido posteriormente
+    'estrutura-produto': {
+        defaultTitle: 'Estrutura de Produtos',
+        icon: Network,
+        component: BOMPage,
+        category: 'engenharia',
+    },
 };
