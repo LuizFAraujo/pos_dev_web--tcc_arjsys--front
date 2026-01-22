@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Search, Pencil, Trash2, FileText, LayoutGrid, Table } from 'lucide-react';
 import { useProdutosStore } from '@/stores/cadastros/produtosStore';
+import { useTabState } from '@/hooks/useTabState';
 import { PageWrapper } from '@/components/shared/PageWrapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,22 +13,31 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { DeleteProdutoDialog } from '@/components/cadastros/DeleteProdutoDialog';
 import { ProdutoCard } from '@/components/cadastros/ProdutoCard';
 
-export function ProdutosPage() {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [tipoFilter, setTipoFilter] = useState<string>('all');
-    const [desenhoFilter, setDesenhoFilter] = useState<string>('all');
+interface ProdutosPageProps {
+    tab: {
+        id: string;
+        type: string;
+        title: string;
+    };
+}
+
+export function ProdutosPage({ tab }: ProdutosPageProps) {
+
+    const [searchTerm, setSearchTerm] = useTabState(tab.id, '');
+    const [tipoFilter, setTipoFilter] = useTabState(tab.id + '-tipo', 'all');
+    const [desenhoFilter, setDesenhoFilter] = useTabState(tab.id + '-desenho', 'all');
+    const [viewMode, setViewMode] = useTabState<'table' | 'card'>(tab.id + '-view', 'table');
+
     const [modalOpen, setModalOpen] = useState(false);
     const [produtoEdit, setProdutoEdit] = useState<Produto | null>(null);
-    const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [produtoDelete, setProdutoDelete] = useState<Produto | null>(null);
 
     const produtos = useProdutosStore((state) => state.produtos);
     const isLoading = useProdutosStore((state) => state.isLoading);
+
     const loadProdutos = useProdutosStore((state) => state.loadProdutos);
     const deleteProduto = useProdutosStore((state) => state.deleteProduto);
-
 
     useEffect(() => {
         if (produtos.length === 0) {
