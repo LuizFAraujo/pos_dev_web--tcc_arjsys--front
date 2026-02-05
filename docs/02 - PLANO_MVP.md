@@ -1,4 +1,6 @@
 <!-- markdownlint-disable-file -->
+<!-- 02 - PLANO DE AÇÃO MVP EM DIANTE -->
+
 # 📋 PLANO DE AÇÃO - ARJSYS ERP INDUSTRIAL
 
 **Objetivo:** Sistema ERP completo para indústria de máquinas agrícolas  
@@ -13,7 +15,7 @@
 **FASES 8-11:** Expansão e módulos avançados
 
 ---
-
+npm add -g pnpm
 ## 📅 FASE 1 - PRODUTOS
 
 ### 1.1 - Setup e Types
@@ -160,14 +162,25 @@ pnpm dlx shadcn@latest add checkbox
   - [x] Estado UI isolado por aba (useTabState)
 
 
-### 2.4 - Página Detalhe
-- [ ] Criar `pages/engenharia/EstruturaDetalhePage.tsx`
-  - [ ] PageHeader com produto pai
-  - [ ] Seção info produto pai
-  - [ ] Cards resumo (componentes, peso, tempo, níveis)
-  - [ ] Toggle visualização (Árvore | Lista)
+### 2.4 - Página Detalhe BOM
+- [x] Criar estrutura relacional mock (mockBOMRelacional.ts)
+- [x] Criar `pages/engenharia/BOMPage.tsx`
+  - [x] PageHeader com produto pai
+  - [x] Seção info produto pai  
+  - [x] Cards resumo (componentes, níveis)
+  - [x] **Toggle Tree BOM / Flat BOM** (Árvore hierárquica / Lista relacional)
+  - [ ] Busca inteligente (Tree: Código+Desc / Flat: Pai/Comp+Desc)
   - [ ] Botão "Adicionar Componente"
-  - [ ] Salvar preferência visualização (localStorage)
+  - [x] Expand/Collapse (só Tree)
+  - [x] Salvar preferência visualização (localStorage)
+  - [x] Componente BOMTreeView (linhas tree, ícones, indentação)
+  - [x] Componente BOMFlatView (grid com filtros avançados)
+    - [x] Filtros por texto (5 campos)
+    - [x] Filtros por checkbox (níveis, unidades)
+    - [x] Filtros por range (quantidade)
+    - [x] Redimensionamento de colunas
+    - [x] Hook useBOMFlatState
+
 
 ### 2.5 - Visualização Árvore
 - [ ] Criar `components/engenharia/EstruturaTreeView.tsx`

@@ -1,236 +1,71 @@
-// ========================================
-// STORE - BOM (Zustand)
-// ========================================
-
 import { create } from 'zustand';
-import type { BOMItem, BOMStructure } from '@/types/engenharia/bom.types';
-import { mockBOMStructureTrator } from '@/data/engenharia/mockBOM';
+import { mockBOMRelacional, type BOMRelacao } from '@/data/engenharia/mockBOMRelacional';
 
-interface BOMState {
-    // Estado
-    selectedProdutoId: string | null;
-    bomStructure: BOMStructure | null;
-    expandedNodes: Set<string>;
-    isLoading: boolean;
-    error: string | null;
+// ============================================
+// TIPOS
+// ============================================
 
-    // Actions
-    loadBOM: (produtoId: string) => void;
-    clearBOM: () => void;
-    toggleNode: (nodeId: string) => void;
-    expandAll: () => void;
-    collapseAll: () => void;
-    addItem: (parentId: string | null, item: Omit<BOMItem, 'id' | 'nivel' | 'parentId'>) => void;
-    updateItem: (itemId: string, data: Partial<BOMItem>) => void;
-    deleteItem: (itemId: string) => void;
-    getAllNodeIds: (items: BOMItem[]) => string[];
+/** Item na visualização Tree */
+export interface BOMTreeItem {
+    codigo: string;
+    quantidade: number;
+    ordem: string;
+    nivel: number;
+    hasChildren: boolean;
+    children: BOMTreeItem[];
 }
 
-export const useBOMStore = create<BOMState>((set, get) => ({
-    // Estado inicial
-    selectedProdutoId: null,
-    bomStructure: null,
-    expandedNodes: new Set<string>(),
-    isLoading: false,
-    error: null,
+// ============================================
+// FUNÇÕES DE TRANSFORMAÇÃO
+// ============================================
 
-    // Carregar BOM de um produto
-    loadBOM: (produtoId) => {
-        set({ isLoading: true, error: null });
-
-        // Simular delay de API
-        setTimeout(() => {
-            // Mock: só temos estrutura do trator
-            if (produtoId === '1') {
-                set({
-                    selectedProdutoId: produtoId,
-                    bomStructure: mockBOMStructureTrator,
-                    isLoading: false,
-                    expandedNodes: new Set<string>(), // Inicia colapsado
-                });
-            } else {
-                set({
-                    selectedProdutoId: produtoId,
-                    bomStructure: null,
-                    isLoading: false,
-                    error: 'Estrutura não encontrada para este produto',
-                });
-            }
-        }, 300);
-    },
-
-    // Limpar BOM
-    clearBOM: () => {
-        set({
-            selectedProdutoId: null,
-            bomStructure: null,
-            expandedNodes: new Set<string>(),
-            error: null,
-        });
-    },
-
-    // Toggle expandir/colapsar nó
-    toggleNode: (nodeId) => {
-        const { expandedNodes } = get();
-        const newExpanded = new Set(expandedNodes);
-
-        if (newExpanded.has(nodeId)) {
-            newExpanded.delete(nodeId);
-        } else {
-            newExpanded.add(nodeId);
-        }
-
-        set({ expandedNodes: newExpanded });
-    },
-
-    // Expandir todos os nós
-    expandAll: () => {
-        const { bomStructure } = get();
-        if (!bomStructure) return;
-
-        const allIds = get().getAllNodeIds(bomStructure.items);
-        set({ expandedNodes: new Set(allIds) });
-    },
-
-    // Colapsar todos os nós
-    collapseAll: () => {
-        set({ expandedNodes: new Set<string>() });
-    },
-
-    // Pegar todos os IDs de nós (recursivo)
-    getAllNodeIds: (items) => {
-        const ids: string[] = [];
-
-        const traverse = (items: BOMItem[]) => {
-            items.forEach((item) => {
-                ids.push(item.id);
-                if (item.children && item.children.length > 0) {
-                    traverse(item.children);
-                }
-            });
-        };
-
-        traverse(items);
-        return ids;
-    },
-
-    // Adicionar item na estrutura
-    addItem: (parentId, itemData) => {
-        const { bomStructure } = get();
-        if (!bomStructure) return;
-
-        const newItem: BOMItem = {
-            id: `bom-${Date.now()}`,
-            ...itemData,
-            nivel: parentId ? findItemLevel(bomStructure.items, parentId) + 1 : 2,
-            parentId,
-            children: [],
-        };
-
-        const updatedItems = parentId
-            ? addItemToParent(bomStructure.items, parentId, newItem)
-            : [...bomStructure.items, newItem];
-
-        set({
-            bomStructure: {
-                ...bomStructure,
-                items: updatedItems,
-                updatedAt: new Date(),
-            },
-        });
-    },
-
-    // Atualizar item
-    updateItem: (itemId, data) => {
-        const { bomStructure } = get();
-        if (!bomStructure) return;
-
-        const updatedItems = updateItemRecursive(bomStructure.items, itemId, data);
-
-        set({
-            bomStructure: {
-                ...bomStructure,
-                items: updatedItems,
-                updatedAt: new Date(),
-            },
-        });
-    },
-
-    // Deletar item
-    deleteItem: (itemId) => {
-        const { bomStructure } = get();
-        if (!bomStructure) return;
-
-        const updatedItems = deleteItemRecursive(bomStructure.items, itemId);
-
-        set({
-            bomStructure: {
-                ...bomStructure,
-                items: updatedItems,
-                updatedAt: new Date(),
-            },
-        });
-    },
-}));
-
-// ========================================
-// FUNÇÕES AUXILIARES
-// ========================================
-
-function findItemLevel(items: BOMItem[], itemId: string): number {
-    for (const item of items) {
-        if (item.id === itemId) return item.nivel;
-        if (item.children) {
-            const level = findItemLevel(item.children, itemId);
-            if (level > 0) return level;
-        }
+/** Transforma dados relacionais em árvore hierárquica */
+export function buildTreeBOM(relacoes: BOMRelacao[], codigoPai: string): BOMTreeItem[] {
+    const codigosPai = new Set(relacoes.map(r => r.codigo_pai));
+    
+    function getFilhos(codigo: string, nivelAtual: number): BOMTreeItem[] {
+        return relacoes
+            .filter(r => r.codigo_pai === codigo)
+            .map(r => ({
+                codigo: r.codigo_filho,
+                quantidade: r.quantidade,
+                ordem: r.ordem,
+                nivel: nivelAtual,
+                hasChildren: codigosPai.has(r.codigo_filho),
+                children: codigosPai.has(r.codigo_filho) ? getFilhos(r.codigo_filho, nivelAtual + 1) : []
+            }));
     }
-    return 0;
+    
+    return getFilhos(codigoPai, 2);
 }
 
-function addItemToParent(items: BOMItem[], parentId: string, newItem: BOMItem): BOMItem[] {
-    return items.map((item) => {
-        if (item.id === parentId) {
-            return {
-                ...item,
-                children: [...(item.children || []), newItem],
-            };
-        }
-        if (item.children) {
-            return {
-                ...item,
-                children: addItemToParent(item.children, parentId, newItem),
-            };
-        }
-        return item;
-    });
+/** Retorna lista de todos os códigos que são produtos pais (nível 1) */
+export function getProdutosPai(relacoes: BOMRelacao[]): string[] {
+    const todosFilhos = new Set(relacoes.map(r => r.codigo_filho));
+    const todosPais = new Set(relacoes.map(r => r.codigo_pai));
+    
+    // Produtos que são pais mas nunca são filhos = nível 1
+    return Array.from(todosPais).filter(pai => !todosFilhos.has(pai));
 }
 
-function updateItemRecursive(items: BOMItem[], itemId: string, data: Partial<BOMItem>): BOMItem[] {
-    return items.map((item) => {
-        if (item.id === itemId) {
-            return { ...item, ...data };
-        }
-        if (item.children) {
-            return {
-                ...item,
-                children: updateItemRecursive(item.children, itemId, data),
-            };
-        }
-        return item;
-    });
+/** Retorna todos os códigos que TÊM estrutura (aparecem como pai) */
+export function getProdutosComEstrutura(relacoes: BOMRelacao[]): string[] {
+    const codigosPai = new Set(relacoes.map(r => r.codigo_pai));
+    return Array.from(codigosPai);
 }
 
-function deleteItemRecursive(items: BOMItem[], itemId: string): BOMItem[] {
-    return items
-        .filter((item) => item.id !== itemId)
-        .map((item) => {
-            if (item.children) {
-                return {
-                    ...item,
-                    children: deleteItemRecursive(item.children, itemId),
-                };
-            }
-            return item;
-        });
+// ============================================
+// STORE GLOBAL (apenas dados, sem estado UI)
+// ============================================
+
+interface BOMStore {
+    relacoes: BOMRelacao[];
+    produtosPai: string[];
+    produtosComEstrutura: string[];
 }
+
+export const useBOMStore = create<BOMStore>(() => ({
+    relacoes: mockBOMRelacional,
+    produtosPai: getProdutosPai(mockBOMRelacional),
+    produtosComEstrutura: getProdutosComEstrutura(mockBOMRelacional)
+}));

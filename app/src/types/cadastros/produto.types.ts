@@ -10,7 +10,7 @@ export type TipoProduto = 'FABRICADO' | 'COMPRADO' | 'MATERIA_PRIMA';
 /**
  * Unidades de medida disponíveis
  */
-export type UnidadeMedida = 'UN' | 'KG' | 'M' | 'M2' | 'M3' | 'L';
+export type UnidadeMedida = 'KT' |'CJ' |'UN' |'PC' | 'KG' | 'M' | 'M2' | 'M3' | 'L';
 
 /**
  * Interface completa do Produto
