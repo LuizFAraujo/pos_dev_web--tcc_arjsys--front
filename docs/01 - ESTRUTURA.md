@@ -52,6 +52,8 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── EditComponenteModal.tsx        📍 FASE 2
         │   │   ├── EstruturaListView.tsx          📍 FASE 2
         │   │   ├── EstruturaTreeView.tsx          📍 FASE 2
+        │   │   ├── NovaEstruturaDialog.tsx        ✅
+        │   │   ├── ProdutoSelect.tsx              ✅
         │   │   ├── RemoveComponenteDialog.tsx     📍 FASE 2
         │   │   ├── UploadDesenhoModal.tsx         📍 FASE 3
         │   │   └── VisualizadorDesenhoModal.tsx   📍 FASE 3

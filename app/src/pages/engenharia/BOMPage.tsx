@@ -7,6 +7,7 @@ import { useTabState } from '@/hooks/useTabState';
 import { useBOMStore } from '@/stores/engenharia/bomStore';
 import { BOMTreeView } from '@/components/engenharia/BOMTreeView';
 import { BOMFlatView } from '@/components/engenharia/BOMFlatView';
+import { NovaEstruturaDialog } from '@/components/engenharia/NovaEstruturaDialog';
 
 interface BOMPageProps {
   tab: { id: string; type: string; title: string };
@@ -68,6 +69,15 @@ export function BOMPage({ tab }: BOMPageProps) {
     lastEscTimeRef.current = 0;
   };
 
+  const handleEstruturaCreated = (codigoProduto: string) => {
+    // Quando uma nova estrutura é criada, abre a visualização tree
+    // com o produto selecionado em modo edição
+    openTreeForPai(codigoProduto);
+    
+    // TODO: Atualizar o bomStore com a nova estrutura vazia
+    // Por enquanto, apenas navega para a visualização
+  };
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (mode !== 'tree') return;
@@ -106,6 +116,10 @@ export function BOMPage({ tab }: BOMPageProps) {
         title="Estrutura de Produtos (BOM)"
         actions={
           <div className="flex items-center gap-2">
+            {mode === 'flat' && (
+              <NovaEstruturaDialog onEstruturaCreated={handleEstruturaCreated} />
+            )}
+            
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -116,6 +130,7 @@ export function BOMPage({ tab }: BOMPageProps) {
                 <TooltipContent>Limpar todos os filtros</TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            
             {mode === 'tree' && <Button onClick={requestCloseTree}>Fechar / Sair</Button>}
           </div>
         }

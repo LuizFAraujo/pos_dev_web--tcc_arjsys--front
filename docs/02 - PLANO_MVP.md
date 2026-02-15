@@ -169,8 +169,6 @@ pnpm dlx shadcn@latest add checkbox
   - [x] Seção info produto pai  
   - [x] Cards resumo (componentes, níveis)
   - [x] **Toggle Tree BOM / Flat BOM** (Árvore hierárquica / Lista relacional)
-  - [ ] Busca inteligente (Tree: Código+Desc / Flat: Pai/Comp+Desc)
-  - [ ] Botão "Adicionar Componente"
   - [x] Expand/Collapse (só Tree)
   - [x] Salvar preferência visualização (localStorage)
   - [x] Componente BOMTreeView (linhas tree, ícones, indentação)
@@ -182,72 +180,76 @@ pnpm dlx shadcn@latest add checkbox
     - [x] Hook useBOMFlatState
 
 
-### 2.5 - Visualização Árvore
-- [ ] Criar `components/engenharia/EstruturaTreeView.tsx`
-  - [ ] Componente recursivo
-  - [ ] Indentação por nível (visual hierárquico)
-  - [ ] Linhas de conexão (CSS)
-  - [ ] Ícones por tipo de produto
-  - [ ] Expandir/colapsar níveis
-  - [ ] Hover: botões ação (Editar | Remover)
-  - [ ] Colunas: Ord | Código | Descrição | Qtde | UN | Peso Unit | Peso Total
-  - [ ] Totalização no final
+### 2.5 - Criar Nova Estrutura
 
-### 2.6 - Visualização Lista
-- [ ] Criar `components/engenharia/EstruturaListView.tsx`
-  - [ ] Tabela plana
-  - [ ] Coluna Nível explícita (0, 1, 2, 3...)
-  - [ ] Ordenação por: nível ASC, ordem ASC
-  - [ ] Indicação visual de profundidade (cor/padding)
-  - [ ] Colunas: Nível | Ord | Código | Descrição | Qtde | UN | Peso Unit | Peso Total | Ações
-  - [ ] Hover: botões ação
+**Funcionalidades:**
+- [x] Botão "Nova Estrutura" no header da BOMPage (modo flat)
+- [x] Dialog com select de produtos FABRICADOS
+- [x] Filtro automático: apenas produtos SEM estrutura
+- [x] Auto-carregamento de produtos do store
+- [x] Layout otimizado: código (negrito) + descrição (truncada)
+- [x] Contador de produtos disponíveis
+- [x] Validação: desabilita botão se nenhum produto selecionado
+- [x] Ao confirmar → navega para tree view com produto pré-selecionado
+- [ ] Criar estrutura vazia no bomStore (aguardando backend)
+- [ ] Salvar estrutura via API (aguardando backend)
 
-### 2.7 - Modal Adicionar Componente
-- [ ] Criar `components/engenharia/AddComponenteModal.tsx`
-  - [ ] Dialog shadcn/ui
-  - [ ] Select Produto (autocomplete com busca)
-  - [ ] Input Quantidade (obrigatório, > 0)
-  - [ ] Input Ordenação (sugerida: último + 10)
-  - [ ] Select Pai (se estrutura tem componentes)
-  - [ ] Preview cálculos (peso total, tempo)
-  - [ ] Validação: não permitir produto pai como filho
-  - [ ] Validação: não permitir circularidade
-  - [ ] Botões: Cancelar | Adicionar
+**Componente ProdutoSelect:**
+- [x] Reutilizável para futuros dialogs
+- [x] Busca integrada (código + descrição)
+- [x] Popover 600px responsivo
+- [x] Truncate de textos longos (60/80 chars)
+- [x] Layout em 2 linhas (código/descrição)
 
-### 2.8 - Modal Editar Componente
-- [ ] Criar `components/engenharia/EditComponenteModal.tsx`
+
+### 2.6 - Modo Edição na BOMPage
+- [ ] Adicionar toggle "Modo Visualização" / "Modo Edição"
+- [ ] Botão "Editar Estrutura" (entra em modo edição)
+- [ ] Botão "Salvar" (salva mudanças)
+- [ ] Botão "Cancelar" (descarta mudanças)
+- [ ] Confirmação ao sair sem salvar
+- [ ] Estado temporário (mudanças pendentes)
+- [ ] Flat view sempre readonly (sem botão editar)
+
+### 2.7 - Adicionar Componente (em modo edição)
+- [ ] Botão "Adicionar Componente" (só aparece em modo edição)
+- [ ] Dialog:
+  - [ ] Select produto (qualquer tipo, exceto o próprio pai)
+  - [ ] Input Quantidade
+  - [ ] Input Sequência (auto sugerida)
+  - [ ] Select Pai (onde adicionar - em qual nível)
+- [ ] Validações:
+  - [ ] Não permitir adicionar pai como filho
+  - [ ] Não permitir circularidade
+- [ ] Adiciona no estado temporário (não salvo ainda)
+
+### 2.8 - Editar Componente (em modo edição)
+- [ ] Botão "Editar" em cada linha (só em modo edição)
+- [ ] Dialog:
   - [ ] Produto readonly (não pode trocar)
-  - [ ] Editar: Quantidade, Ordenação, Pai
-  - [ ] Preview cálculos atualizados
-  - [ ] Validações
-  - [ ] Botões: Cancelar | Salvar
+  - [ ] Editar Quantidade
+  - [ ] Editar Sequência
+  - [ ] Editar Pai (mover de nível)
+- [ ] Validações (circularidade ao mover)
+- [ ] Atualiza estado temporário
 
-### 2.9 - Dialog Remover Componente
-- [ ] Criar `components/engenharia/RemoveComponenteDialog.tsx`
-  - [ ] AlertDialog shadcn/ui
+### 2.9 - Remover Componente (em modo edição)
+- [ ] Botão "Remover" em cada linha (só em modo edição)
+- [ ] AlertDialog:
   - [ ] Mostrar código + descrição
-  - [ ] Aviso se tem filhos
-  - [ ] Opções: remover só ele | remover cascade (com filhos)
+  - [ ] Se tem filhos → opções:
+    - [ ] Remover só ele (filhos sobem 1 nível)
+    - [ ] Remover em cascade (ele + todos filhos)
   - [ ] Confirmação
-  - [ ] Botões: Cancelar | Remover
+- [ ] Remove do estado temporário
 
-### 2.10 - Registry
-- [ ] Atualizar `registries/engenhariaRegistry.ts`
-  - [ ] Entrada 'estrutura-produtos'
-  - [ ] Entrada 'estrutura-produto-detalhe'
-
-### 2.11 - Testes Manuais
-- [ ] Criar estrutura simples (1 nível)
-- [ ] Criar estrutura complexa (4 níveis)
-- [ ] Adicionar componentes
-- [ ] Editar componentes (quantidade, ordem)
-- [ ] Remover componente sem filhos
-- [ ] Remover componente com filhos (cascade)
-- [ ] Alternar visualização (árvore/lista)
-- [ ] Testar validação circular
-- [ ] Verificar cálculos (peso, tempo) recursivos
-- [ ] Salvar preferência visualização
-- [ ] Testar múltiplas abas
+### 2.10 - Controle de Mudanças Pendentes
+- [ ] Estado `hasUnsavedChanges` no bomStore
+- [ ] Detectar mudanças (add/edit/remove)
+- [ ] Ao clicar "Salvar" → persiste no store/backend
+- [ ] Ao clicar "Cancelar" → restaura estado original
+- [ ] Ao tentar sair da aba/página → confirmar se tem mudanças
+- [ ] Visual indicator (badge "Não salvo" ou similar)
 
 ---
 
