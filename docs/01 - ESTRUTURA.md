@@ -36,42 +36,38 @@ pos_dev_web--tcc_front--arjsys/
     └── src/
         │
         ├── components/
-        │   ├── cadastros/          # Componentes Cadastros
-        │   │   ├── ClienteFormModal.tsx           📍 FASE 4
-        │   │   ├── DeleteClienteDialog.tsx        📍 FASE 4
-        │   │   ├── DeleteProdutoDialog.tsx        ✅
-        │   │   ├── ProdutoCard.tsx                📍 FASE 1
-        │   │   └── ProdutoFormModal.tsx           ✅
-        │   │
         │   ├── engenharia/         # Componentes Engenharia
-        │   │   ├── AddComponenteModal.tsx         📍 FASE 2
+        │   │   ├── AddComponenteModal.tsx         📍 FALTA
         │   │   ├── BOMFlatView.tsx                ✅
         │   │   ├── BOMTreeNode.tsx                ✅
         │   │   ├── BOMTreeView.tsx                ✅
-        │   │   ├── DesenhoThumbnail.tsx           📍 FASE 3
-        │   │   ├── EditComponenteModal.tsx        📍 FASE 2
-        │   │   ├── EstruturaListView.tsx          📍 FASE 2
-        │   │   ├── EstruturaTreeView.tsx          📍 FASE 2
+        │   │   ├── DeleteProdutoDialog.tsx        ✅    
+        │   │   ├── DesenhoThumbnail.tsx           📍 FALTA
+        │   │   ├── EditComponenteModal.tsx        📍 FALTA
+        │   │   ├── EstruturaListView.tsx          📍 FALTA
+        │   │   ├── EstruturaTreeView.tsx          📍 FALTA
         │   │   ├── NovaEstruturaDialog.tsx        ✅
+        │   │   ├── ProdutoCard.tsx                ✅
+        │   │   ├── ProdutoFormModal.tsx           ✅
         │   │   ├── ProdutoSelect.tsx              ✅
-        │   │   ├── RemoveComponenteDialog.tsx     📍 FASE 2
-        │   │   ├── UploadDesenhoModal.tsx         📍 FASE 3
-        │   │   └── VisualizadorDesenhoModal.tsx   📍 FASE 3
+        │   │   ├── RemoveComponenteDialog.tsx     📍 FALTA
+        │   │   ├── UploadDesenhoModal.tsx         📍 FALTA
+        │   │   └── VisualizadorDesenhoModal.tsx   📍 FALTA
         │   │
         │   ├── projetos/           # Componentes Projetos
-        │   │   ├── AlterarStatusDialog.tsx        📍 FASE 4
-        │   │   ├── DeletePedidoDialog.tsx         📍 FASE 4
-        │   │   ├── PedidoCard.tsx                 📍 FASE 4
-        │   │   ├── PedidoFormModal.tsx            📍 FASE 4
-        │   │   └── PedidoKanbanCard.tsx           📍 FASE 8
+        │   │   ├── AlterarStatusDialog.tsx        📍 FALTA
+        │   │   ├── DeletePedidoDialog.tsx         📍 FALTA
+        │   │   ├── PedidoCard.tsx                 📍 FALTA
+        │   │   ├── PedidoFormModal.tsx            📍 FALTA
+        │   │   └── PedidoKanbanCard.tsx           📍 FALTA
         │   │
         │   ├── relatorios/         # Componentes Relatórios
-        │   │   └── TabelaMateriaisExplosao.tsx    📍 FASE 5
+        │   │   └── TabelaMateriaisExplosao.tsx    📍 FALTA
         │   │
         │   ├── shared/             # Componentes reutilizáveis
-        │   │   ├── EmptyState.tsx                 📍 FASE 6
-        │   │   ├── ErrorState.tsx                 📍 FASE 6
-        │   │   ├── LoadingState.tsx               📍 FASE 6
+        │   │   ├── EmptyState.tsx                 📍 FALTA
+        │   │   ├── ErrorState.tsx                 📍 FALTA
+        │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
         │   │   ├── PageRightSidebar.tsx           ✅
         │   │   └── PageWrapper.tsx                ✅
@@ -89,11 +85,11 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── badge.tsx                      ✅
         │   │   ├── breadcrumb.tsx                 ✅
         │   │   ├── button.tsx                     ✅
-        │   │   ├── calendar.tsx                   📍 FASE 4
+        │   │   ├── calendar.tsx                   📍 FALTA
         │   │   ├── card.tsx                       ✅
         │   │   ├── checkbox.tsx                   ✅
         │   │   ├── command.tsx                    ✅
-        │   │   ├── date-picker.tsx                📍 FASE 4
+        │   │   ├── date-picker.tsx                📍 FALTA
         │   │   ├── dialog.tsx                     ✅
         │   │   ├── dropdown-menu.tsx              ✅
         │   │   ├── form.tsx                       ✅
@@ -118,18 +114,18 @@ pos_dev_web--tcc_front--arjsys/
         │       ├── TabUnderConstruction.tsx       ✅
         │       └── WorkspaceContent.tsx           ✅
         │
-        ├── data/                   # Mock data
+        ├── data/                   # Mock data (REMOVER)
         │   ├── cadastros/
-        │   │   ├── mockClientes.ts                📍 FASE 4
-        │   │   ├── mockFuncionarios.ts            📍 FASE 8
-        │   │   └── mockProdutos.ts                ✅
+        │   │   ├── mockClientes.ts                📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
+        │   │   ├── mockFuncionarios.ts            📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
+        │   │   └── mockProdutos.ts                ✅ REMOVER
         │   │
         │   ├── engenharia/
-        │   │   ├── mockBOMRelacional.ts           ✅
-        │   │   └── mockDesenhos.ts                📍 FASE 3
+        │   │   ├── mockBOMRelacional.ts           ✅ REMOVER
+        │   │   └── mockDesenhos.ts                📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
         │   │
         │   └── projetos/
-        │       └── mockPedidos.ts                 📍 FASE 4
+        │       └── mockPedidos.ts                 📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
         │
         ├── hooks/                  # Custom hooks
         │   ├── useBOMFlatState.ts                 ✅
@@ -146,6 +142,7 @@ pos_dev_web--tcc_front--arjsys/
         │   └── WorkspaceLayout.tsx                ✅
         │
         ├── lib/                    # Utilitários
+        │   ├── api.ts                             ✅
         │   └── utils.ts                           ✅
         │
         ├── pages/                  # Páginas do sistema
@@ -155,72 +152,73 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── ModeloListaPage.tsx            ✅
         │   │
         │   ├── admin/              # Administração
-        │   │   ├── LogsSistemaPage.tsx            📍 FASE 11
-        │   │   ├── PerfisAcessoPage.tsx           📍 FASE 11
-        │   │   └── UsuariosPage.tsx               📍 FASE 11
+        │   │   ├── LogsSistemaPage.tsx            📍 FALTA
+        │   │   ├── PerfisAcessoPage.tsx           📍 FALTA
+        │   │   └── UsuariosPage.tsx               📍 FALTA
         │   │
         │   ├── almoxarifado/       # Almoxarifado
-        │   │   ├── EntradaMaterialPage.tsx        📍 FASE 10
-        │   │   ├── ReservaProjetoPage.tsx         📍 FASE 10
-        │   │   ├── SaidaMaterialPage.tsx          📍 FASE 10
-        │   │   └── SaldoEstoquePage.tsx           📍 FASE 10
+        │   │   ├── EntradaMaterialPage.tsx        📍 FALTA
+        │   │   ├── ReservaProjetoPage.tsx         📍 FALTA
+        │   │   ├── SaidaMaterialPage.tsx          📍 FALTA
+        │   │   └── SaldoEstoquePage.tsx           📍 FALTA
         │   │
         │   ├── auth/               # Autenticação
         │   │   ├── LoginPage.tsx                  ✅
         │   │   └── NotFoundPage.tsx               ✅
         │   │
-        │   ├── cadastros/          # Cadastros
-        │   │   ├── ClientesPage.tsx               📍 FASE 4
-        │   │   ├── FuncionariosPage.tsx           📍 FASE 8
-        │   │   └── ProdutosPage.tsx               ✅
+        │   ├── cadastros/          # Cadastros (verificar local correto a colocar)
+        │   │   ├── ClientesPage.tsx               📍 FALTA
+        │   │   ├── FuncionariosPage.tsx           📍 FALTA
         │   │
         │   ├── compras/            # Compras
-        │   │   ├── NecessidadesComprasPage.tsx    📍 FASE 9
-        │   │   ├── SolicitacoesCompraPage.tsx     📍 FASE 10
-        │   │   └── StatusComprasPage.tsx          📍 FASE 10
+        │   │   ├── NecessidadesComprasPage.tsx    📍 FALTA
+        │   │   ├── SolicitacoesCompraPage.tsx     📍 FALTA
+        │   │   └── StatusComprasPage.tsx          📍 FALTA
         │   │
         │   ├── engenharia/         # Engenharia
-        │   │   ├── BibliotecaDesenhosPage.tsx     📍 FASE 3
+        │   │   ├── BibliotecaDesenhosPage.tsx     📍 FALTA
         │   │   ├── BOMPage.tsx                    ✅
-        │   │   ├── EstruturaDetalhePage.tsx       📍 FASE 2
-        │   │   ├── EstruturasPage.tsx             📍 FASE 2
-        │   │   ├── RevisaoDesenhoPage.tsx         📍 FASE 11
-        │   │   └── WhereUsedPage.tsx              📍 FASE 11
+        │   │   ├── EstruturaDetalhePage.tsx       📍 FALTA
+        │   │   ├── EstruturasPage.tsx             📍 FALTA
+        │   │   ├── ProdutosPage.tsx               ✅
+        │   │   ├── RevisaoDesenhoPage.tsx         📍 FALTA
+        │   │   └── WhereUsedPage.tsx              📍 FALTA
         │   │
         │   ├── producao/           # Produção
-        │   │   ├── ApontamentoPage.tsx            📍 FASE 10
-        │   │   ├── FilaProducaoPage.tsx           📍 FASE 10
-        │   │   └── KanbanProducaoPage.tsx         📍 FASE 10
+        │   │   ├── ApontamentoPage.tsx            📍 FALTA
+        │   │   ├── FilaProducaoPage.tsx           📍 FALTA
+        │   │   └── KanbanProducaoPage.tsx         📍 FALTA
         │   │
         │   ├── projetos/           # Projetos
-        │   │   ├── CronogramaPage.tsx             📍 FASE 11
-        │   │   ├── KanbanPage.tsx                 📍 FASE 8
-        │   │   ├── PedidoDetalhePage.tsx          📍 FASE 4
-        │   │   └── PedidosPage.tsx                📍 FASE 4
+        │   │   ├── CronogramaPage.tsx             📍 FALTA
+        │   │   ├── KanbanPage.tsx                 📍 FALTA
+        │   │   ├── PedidoDetalhePage.tsx          📍 FALTA
+        │   │   └── PedidosPage.tsx                📍 FALTA
         │   │
         │   ├── qualidade/          # Qualidade
-        │   │   ├── AprovacaoPage.tsx              📍 FASE 11
-        │   │   ├── InspecaoPage.tsx               📍 FASE 11
-        │   │   └── NaoConformidadePage.tsx        📍 FASE 11
+        │   │   ├── AprovacaoPage.tsx              📍 FALTA
+        │   │   ├── InspecaoPage.tsx               📍 FALTA
+        │   │   └── NaoConformidadePage.tsx        📍 FALTA
         │   │
         │   ├── relatorios/         # Relatórios
-        │   │   ├── ExplosaoMateriaisPage.tsx      📍 FASE 5
-        │   │   └── RelatorioConsolidadoPage.tsx   📍 FASE 9
+        │   │   ├── ExplosaoMateriaisPage.tsx      📍 FALTA
+        │   │   └── RelatorioConsolidadoPage.tsx   📍 FALTA
         │   │
-        │   └── DashboardPage.tsx                  📍 FASE 8
+        │   └── DashboardPage.tsx                  📍 FALTA
         │
         ├── registries/             # Registry Pattern
-        │   ├── adminRegistry.ts                   📍 FASE 11
-        │   ├── almoxarifadoRegistry.ts            📍 FASE 10
-        │   ├── cadastrosRegistry.ts               ✅ (atualizar nas fases)
+        │   ├── index.ts                           ✅
+        │   ├── adminRegistry.ts                   ✅ (atualizar nas fases)
+        │   ├── almoxarifadoRegistry.ts            ✅ (atualizar nas fases)
+        │   ├── comercialRegistry.ts               ✅ (atualizar nas fases)
         │   ├── comprasRegistry.ts                 ✅ (atualizar nas fases)
         │   ├── engenhariaRegistry.ts              ✅
         │   ├── modelsRegistry.ts                  ✅
         │   ├── producaoRegistry.ts                ✅ (atualizar nas fases)
-        │   ├── projetosRegistry.ts                ✅ (atualizar nas fases)
-        │   ├── qualidadeRegistry.ts               📍 FASE 11
-        │   ├── relatoriosRegistry.ts              📍 FASE 5
-        │   └── index.ts                           ✅
+        │   ├── projetosRegistry.ts                📍 FALTA
+        │   ├── qualidadeRegistry.ts               📍 FALTA
+        │   ├── relatoriosRegistry.ts              📍 FALTA
+        │   └── vendasRegistry.ts                  ✅ (atualizar nas fases)
         │
         ├── routes/                 # TanStack Router
         │   ├── __root.tsx                         ✅
@@ -230,31 +228,32 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── services/               # Serviços
         │   ├── api/                # Integração Backend
-        │   │   ├── apiClient.ts                   📍 FASE 7
-        │   │   ├── clientesService.ts             📍 FASE 7
-        │   │   ├── desenhosService.ts             📍 FASE 7
-        │   │   ├── estruturasService.ts           📍 FASE 7
-        │   │   ├── pedidosService.ts              📍 FASE 7
-        │   │   └── produtosService.ts             📍 FASE 7
+        │   │   ├── apiClient.ts                   📍 FALTA
+        │   │   ├── clientesService.ts             📍 FALTA
+        │   │   ├── desenhosService.ts             📍 FALTA
+        │   │   ├── estruturasService.ts           📍 FALTA
+        │   │   ├── pedidosService.ts              📍 FALTA
+        │   │   └── produtosService.ts             📍 FALTA
         │   │
         │   └── utils/              # Utilitários
-        │       ├── explosaoMateriaisService.ts    📍 FASE 5
-        │       └── uploadService.ts               📍 FASE 3
+        │       ├── explosaoMateriaisService.ts    📍 FALTA
+        │       └── uploadService.ts               📍 FALTA
         │
         ├── stores/                 # Zustand stores
-        │   ├── cadastros/          # Stores Cadastros
-        │   │   ├── clientesStore.ts               📍 FASE 4
-        │   │   ├── funcionariosStore.ts           📍 FASE 8
-        │   │   └── produtosStore.ts               ✅
+        │   ├── cadastros/          # Stores Cadastros  (verificar local correto a colocar)
+        │   │   ├── clientesStore.ts               📍 FALTA ????
+        │   │   ├── funcionariosStore.ts           📍 FALTA ????
         │   │
         │   ├── engenharia/         # Stores Engenharia
         │   │   ├── bomStore.ts                    ✅
-        │   │   └── desenhosStore.ts               📍 FASE 3
+        │   │   ├── desenhosStore.ts               📍 FALTA
+        │   │   └── produtosStore.ts               ✅
         │   │
         │   ├── projetos/           # Stores Projetos
-        │   │   ├── kanbanStore.ts                 📍 FASE 8
-        │   │   └── pedidosStore.ts                📍 FASE 4
+        │   │   ├── kanbanStore.ts                 📍 FALTA
+        │   │   └── pedidosStore.ts                📍 FALTA
         │   │
+        │   ├── index.ts                           ✅
         │   ├── authStore.ts                       ✅
         │   ├── favoritesStore.ts                  ✅
         │   ├── pageRightSidebarStore.ts           ✅
@@ -263,29 +262,28 @@ pos_dev_web--tcc_front--arjsys/
         │   ├── sidebarStore.ts                    ✅
         │   ├── tabsStore.ts                       ✅
         │   ├── themeStore.ts                      ✅
-        │   ├── useAppStore.ts                     ✅
-        │   └── index.ts                           ✅
+        │   └── useAppStore.ts                     ✅
         │
         ├── styles/                 # Estilos
         │   └── tailwind.css                       ✅
         │
         ├── types/                  # TypeScript types
-        │   ├── cadastros/          # Types Cadastros
-        │   │   ├── cliente.types.ts               📍 FASE 4
-        │   │   ├── funcionario.types.ts           📍 FASE 8
-        │   │   └── produto.types.ts               ✅
+        │   ├── cadastros/          # Types Cadastros  (verificar local correto a colocar)
+        │   │   ├── cliente.types.ts               📍 FALTA ????
+        │   │   ├── funcionario.types.ts           📍 FALTA ????
         │   │
         │   ├── engenharia/         # Types Engenharia
         │   │   ├── bom.types.ts                   ✅
-        │   │   ├── componente.types.ts            📍 FASE 2
-        │   │   └── desenho.types.ts               📍 FASE 3
+        │   │   ├── componente.types.ts            📍 FALTA
+        │   │   ├── desenho.types.ts               📍 FALTA
+        │   │   └── produto.types.ts               ✅
         │   │
         │   ├── projetos/           # Types Projetos
-        │   │   ├── kanban.types.ts                📍 FASE 8
-        │   │   └── pedido.types.ts                📍 FASE 4
+        │   │   ├── kanban.types.ts                📍 FALTA
+        │   │   └── pedido.types.ts                📍 FALTA
         │   │
         │   ├── shared/             # Types compartilhados
-        │   │   ├── api.types.ts                   📍 FASE 7
+        │   │   ├── api.types.ts                   📍 FALTA
         │   │   └── common.types.ts                ✅
         │   │
         │   ├── auth.types.ts                      ✅

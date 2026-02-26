@@ -1,55 +1,83 @@
 // ========================================
-// TYPES - BOM (Bill of Materials)
+// TYPES — BOM / Estrutura de Produto (Engenharia)
 // ========================================
+// Alinhado com o backend ASP.NET Core 10.
+// Endpoints em /api/engenharia/Bom
 
 /**
- * Tipo de item na estrutura
+ * Item de estrutura BOM — resposta do backend
+ *
+ * GET /api/engenharia/Bom/flat retorna lista destes itens.
+ * GET /api/engenharia/Bom/produto/{produtoPaiId} retorna filhos de um produto.
  */
-export type TipoItem = 'FABRICADO' | 'COMPRADO' | 'MATERIA_PRIMA';
+export interface BomItem {
+  id: number;
+  produtoPaiId: number;
+  produtoFilhoId: number;
+  quantidade: number;
+  posicao: number;
+  observacao?: string;
 
-/**
- * Item da estrutura (nó da árvore)
- */
-export interface BOMItem {
-    id: string;
-    produtoId: string;
-    codigo: string;
-    descricao: string;
-    tipo: TipoItem;
-    quantidade: number;
-    unidade: string;
-    nivel: number;
-    sequencia: number;
-    parentId: string | null;
-    children?: BOMItem[];
+  /** Dados expandidos do produto pai (retornados pelo backend nos GETs) */
+  produtoPaiCodigo?: string;
+  produtoPaiDescricao?: string;
+
+  /** Dados expandidos do produto filho (retornados pelo backend nos GETs) */
+  produtoFilhoCodigo?: string;
+  produtoFilhoDescricao?: string;
+  produtoFilhoUnidade?: string;
+  produtoFilhoTipo?: string;
+  produtoFilhoTemDocumento?: boolean;
 }
 
 /**
- * Estrutura completa de um produto
+ * Produto que possui estrutura — resposta do GET /api/engenharia/Bom
+ * Lista paginável de produtos que são "pais" na BOM.
  */
-export interface BOMStructure {
-    produtoId: string;
-    codigoProduto: string;
-    descricaoProduto: string;
-    items: BOMItem[];
-    createdAt: Date;
-    updatedAt: Date;
+export interface BomProdutoPai {
+  produtoId: number;
+  produtoCodigo: string;
+  produtoDescricao: string;
+  quantidadeFilhos: number;
 }
 
 /**
- * Formulário para adicionar/editar item
+ * Dados para criar/editar item BOM
+ * POST /api/engenharia/Bom
+ * PUT /api/engenharia/Bom/{id}
  */
-export interface BOMItemFormData {
-    produtoId: string;
-    quantidade: number;
-    sequencia: number;
+export interface BomItemFormData {
+  produtoPaiId: number;
+  produtoFilhoId: number;
+  quantidade: number;
+  posicao?: number; // Se <= 0 ou omitido, backend gera automaticamente
+  observacao?: string;
 }
 
 /**
- * Filtros da árvore BOM
+ * Item na visualização Tree (construído no frontend)
+ *
+ * Montado a partir dos dados flat da API para exibir hierarquia.
  */
-export interface BOMFilters {
-    showOnlyFabricados?: boolean;
-    showOnlyComprados?: boolean;
-    searchTerm?: string;
+export interface BomTreeItem {
+  id: number;
+  codigo: string;
+  descricao: string;
+  unidade: string;
+  tipo: string;
+  quantidade: number;
+  posicao: number;
+  nivel: number;
+  temDocumento: boolean;
+  hasChildren: boolean;
+  children: BomTreeItem[];
+}
+
+/**
+ * Filtros da BOM (uso no frontend)
+ */
+export interface BomFilters {
+  searchTerm?: string;
+  tipo?: string;
+  temDocumento?: boolean;
 }

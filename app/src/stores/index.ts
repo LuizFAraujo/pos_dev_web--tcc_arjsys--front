@@ -1,7 +1,5 @@
 /**
  * stores/index.ts - Exports centralizados dos stores
- * 
- * Exporta todos os stores para facilitar imports.
  */
 
 export { useAuthStore } from './authStore';

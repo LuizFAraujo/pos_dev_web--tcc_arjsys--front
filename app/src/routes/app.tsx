@@ -10,19 +10,23 @@ import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
 import { useAuthStore } from '@stores';
 
 export const Route = createFileRoute('/app')({
-    // Protege a rota - só autenticados podem acessar
-    beforeLoad: () => {
-        const { isAuthenticated, checkAuth } = useAuthStore.getState();
+	// Protege a rota - só autenticados podem acessar
+	beforeLoad: () => {
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
 
-        // Se não autenticado ou token expirado, redireciona para login
-        if (!isAuthenticated || !checkAuth()) {
-            throw redirect({ to: '/login' });
-        }
-    },
-
-    component: AppLayout,
+	// Se não autenticado ou token expirado, redireciona para login
+    if (!isAuthenticated) {
+      throw redirect({ to: '/login' });
+    }
+  },
+  
+  component: AppLayout,
 });
 
 function AppLayout() {
-    return <WorkspaceLayout />;
+  return <WorkspaceLayout />;
 }
+
+
+
+

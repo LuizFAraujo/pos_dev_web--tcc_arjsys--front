@@ -1,73 +1,66 @@
-/**
- * auth.types.ts - Tipos relacionados à autenticação
- * 
- * Define as interfaces para usuário e estado de autenticação.
- */
+// ========================================
+// TYPES — AUTENTICAÇÃO
+// ========================================
+// Alinhado com o backend ASP.NET Core 10.
+// POST /api/admin/Auth/login
 
 /**
- * User - Dados do usuário autenticado
- */
-export interface User {
-    /** ID único do usuário */
-    id: string;
-
-    /** Nome completo do usuário */
-    name: string;
-
-    /** Email do usuário */
-    email: string;
-
-    /** Avatar/foto do usuário (URL ou base64) */
-    avatar?: string;
-
-    /** Cargo/função do usuário */
-    role?: string;
-
-    /** Departamento do usuário */
-    department?: string;
-
-    /** Data de criação da conta */
-    createdAt?: string;
-}
-
-/**
- * AuthState - Estado de autenticação
- */
-export interface AuthState {
-    /** Usuário atualmente autenticado (null se não autenticado) */
-    user: User | null;
-
-    /** Token JWT de autenticação */
-    token: string | null;
-
-    /** Se o usuário está autenticado */
-    isAuthenticated: boolean;
-
-    /** Timestamp de quando o token expira */
-    tokenExpiry: number | null;
-}
-
-/**
- * LoginCredentials - Credenciais para login
+ * Credenciais para login — campo é "usuario" (não email)
  */
 export interface LoginCredentials {
-    /** Email do usuário */
-    email: string;
-
-    /** Senha do usuário */
-    password: string;
+  usuario: string;
+  senha: string;
 }
 
 /**
- * LoginResponse - Resposta do servidor após login (mock)
+ * Permissão de acesso a um módulo
  */
-export interface LoginResponse {
-    /** Usuário autenticado */
-    user: User;
+export interface Permissao {
+  id: number;
+  funcionarioId: number;
+  modulo: ModuloSistema;
+  nivel: NivelPermissao;
+}
 
-    /** Token JWT */
-    token: string;
+/**
+ * Módulos disponíveis no sistema
+ */
+export type ModuloSistema =
+  | 'Engenharia'
+  | 'Comercial'
+  | 'PCP'
+  | 'Compras'
+  | 'Almoxarifado'
+  | 'Admin';
 
-    /** Tempo de expiração do token em milissegundos */
-    expiresIn: number;
+/**
+ * Níveis de acesso
+ */
+export type NivelPermissao =
+  | 'SemAcesso'
+  | 'Leitura'
+  | 'LeituraEscrita'
+  | 'Admin';
+
+/**
+ * Dados do funcionário logado — resposta do /api/admin/Auth/login
+ */
+export interface FuncionarioLogado {
+  funcionarioId: number;
+  nome: string;
+  usuario: string;
+  cargo?: string;
+  setor?: string;
+  permissoes: Permissao[];
+}
+
+/**
+ * Estado de autenticação no Zustand
+ */
+export interface AuthState {
+  /** Funcionário logado (null se não autenticado) */
+  funcionario: FuncionarioLogado | null;
+
+  /** Se está autenticado */
+  isAuthenticated: boolean;
 }

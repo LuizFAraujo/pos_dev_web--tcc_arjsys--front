@@ -1,8 +1,5 @@
 /**
- * NovaEstruturaDialog.tsx
- * 
- * Modal para criar uma nova estrutura de produto.
- * Permite selecionar um produto FABRICADO e criar uma estrutura vazia.
+ * NovaEstruturaDialog.tsx — Modal para criar nova estrutura de produto.
  */
 
 import { useState, useEffect } from 'react';
@@ -18,61 +15,54 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { useProdutosStore } from '@/stores/cadastros/produtosStore';
+import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { useBOMStore } from '@/stores/engenharia/bomStore';
 import { ProdutoSelect } from './ProdutoSelect';
 
 interface NovaEstruturaDialogProps {
-  /** Callback chamado após criar a estrutura com o código do produto */
   onEstruturaCreated: (codigoProduto: string) => void;
 }
 
 export function NovaEstruturaDialog({ onEstruturaCreated }: NovaEstruturaDialogProps) {
   const [open, setOpen] = useState(false);
-  const [selectedProdutoId, setSelectedProdutoId] = useState<string>('');
+  const [selectedProdutoId, setSelectedProdutoId] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const produtos = useProdutosStore((s) => s.produtos);
-  const loadProdutos = useProdutosStore((s) => s.loadProdutos);
+  const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
   const produtosComEstrutura = useBOMStore((s) => s.produtosComEstrutura);
 
-  // Carregar produtos se ainda não foram carregados
   useEffect(() => {
     if (produtos.length === 0) {
-      loadProdutos();
+      fetchProdutos();
     }
-  }, [produtos.length, loadProdutos]);
+  }, [produtos.length, fetchProdutos]);
 
-  // Filtrar apenas produtos FABRICADOS que ainda NÃO têm estrutura
+  // Filtrar apenas FABRICADOS que ainda NÃO têm estrutura
   const produtosDisponiveis = produtos.filter(
-    (p) => p.tipo === 'FABRICADO' && !produtosComEstrutura.includes(p.codigo)
+    (p) => p.tipo === 'Fabricado' && !produtosComEstrutura.includes(p.codigo),
   );
 
   const handleCreate = () => {
-    if (!selectedProdutoId) return;
+    if (selectedProdutoId == null) return;
 
     const produto = produtos.find((p) => p.id === selectedProdutoId);
     if (!produto) return;
 
     setIsCreating(true);
 
-    // Simular criação (em produção, faria chamada API)
+    // TODO: Implementar criação real via API
     setTimeout(() => {
-      // TODO: Implementar criação real via API
-      // Por enquanto, apenas navega para a página BOM com o produto selecionado
-      
       setIsCreating(false);
       setOpen(false);
-      setSelectedProdutoId('');
-      
-      // Notifica o componente pai para abrir a BOMPage com este produto
+      setSelectedProdutoId(null);
       onEstruturaCreated(produto.codigo);
     }, 300);
   };
 
   const handleCancel = () => {
     setOpen(false);
-    setSelectedProdutoId('');
+    setSelectedProdutoId(null);
   };
 
   return (
@@ -121,7 +111,7 @@ export function NovaEstruturaDialog({ onEstruturaCreated }: NovaEstruturaDialogP
           <Button variant="outline" onClick={handleCancel} disabled={isCreating}>
             Cancelar
           </Button>
-          <Button onClick={handleCreate} disabled={!selectedProdutoId || isCreating}>
+          <Button onClick={handleCreate} disabled={selectedProdutoId == null || isCreating}>
             {isCreating ? 'Criando...' : 'Criar e Abrir'}
           </Button>
         </DialogFooter>

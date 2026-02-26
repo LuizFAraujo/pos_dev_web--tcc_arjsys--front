@@ -1,22 +1,19 @@
 /**
  * index.tsx - Rota raiz /
- * 
+ *
  * Redireciona para /app se autenticado, senão para /login.
  */
-
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useAuthStore } from '@stores';
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
-    const { isAuthenticated, checkAuth } = useAuthStore.getState();
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
 
-    // Se autenticado, vai para /app
-    if (isAuthenticated && checkAuth()) {
+    if (isAuthenticated) {
       throw redirect({ to: '/app' });
     }
 
-    // Senão, vai para /login
     throw redirect({ to: '/login' });
   },
 });

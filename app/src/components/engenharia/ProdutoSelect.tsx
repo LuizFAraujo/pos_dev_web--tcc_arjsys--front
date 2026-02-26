@@ -1,8 +1,5 @@
 /**
- * ProdutoSelect.tsx
- * 
- * Componente select reutilizável para seleção de produtos.
- * Suporta busca e filtragem.
+ * ProdutoSelect.tsx — Componente select reutilizável para seleção de produtos.
  */
 
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -21,21 +18,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import type { Produto } from '@/types/cadastros/produto.types';
+import type { Produto } from '@/types/engenharia/produto.types';
 import { useState } from 'react';
 
 interface ProdutoSelectProps {
-  /** Lista de produtos disponíveis */
   produtos: Produto[];
-  /** ID do produto selecionado */
-  value: string;
-  /** Callback quando produto é selecionado */
-  onChange: (produtoId: string) => void;
-  /** Texto do placeholder */
+  value: number | null;
+  onChange: (produtoId: number) => void;
   placeholder?: string;
-  /** Mensagem quando não há produtos */
   emptyMessage?: string;
-  /** Desabilitar o select */
   disabled?: boolean;
 }
 
@@ -51,7 +42,6 @@ export function ProdutoSelect({
 
   const selectedProduto = produtos.find((p) => p.id === value);
 
-  // Função para truncar descrição longa
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
@@ -71,7 +61,7 @@ export function ProdutoSelect({
             <div className="flex flex-col gap-0.5 overflow-hidden">
               <span className="font-mono text-xs font-semibold">{selectedProduto.codigo}</span>
               <span className="text-xs text-muted-foreground truncate">
-                {truncateText(selectedProduto.descricaoCurta, 60)}
+                {truncateText(selectedProduto.descricao, 60)}
               </span>
             </div>
           ) : (
@@ -90,7 +80,7 @@ export function ProdutoSelect({
               {produtos.map((produto) => (
                 <CommandItem
                   key={produto.id}
-                  value={`${produto.codigo} ${produto.descricaoCurta}`}
+                  value={`${produto.codigo} ${produto.descricao}`}
                   onSelect={() => {
                     onChange(produto.id);
                     setOpen(false);
@@ -100,13 +90,13 @@ export function ProdutoSelect({
                   <Check
                     className={cn(
                       'mr-2 h-4 w-4 shrink-0',
-                      value === produto.id ? 'opacity-100' : 'opacity-0'
+                      value === produto.id ? 'opacity-100' : 'opacity-0',
                     )}
                   />
                   <div className="flex flex-col gap-0.5 overflow-hidden flex-1 min-w-0">
                     <span className="font-mono text-xs font-semibold">{produto.codigo}</span>
                     <span className="text-xs text-muted-foreground truncate">
-                      {truncateText(produto.descricaoCurta, 80)}
+                      {truncateText(produto.descricao, 80)}
                     </span>
                   </div>
                 </CommandItem>
