@@ -18,6 +18,8 @@ const ESC_INTERVAL_MS = 450;
 
 export function BOMPage({ tab }: BOMPageProps) {
   const produtosComEstrutura = useBOMStore((s) => s.produtosComEstrutura);
+  const fetchProdutosPai = useBOMStore((s) => s.fetchProdutosPai);
+  const error = useBOMStore((s) => s.error);
 
   const [mode, setMode] = useTabState<PageMode>(tab.id + '-bom-mode', 'flat');
   const [codigoPaiFocus, setCodigoPaiFocus] = useTabState<string>(tab.id + '-bom-focus', '');
@@ -27,6 +29,13 @@ export function BOMPage({ tab }: BOMPageProps) {
   const [isDirty, setIsDirty] = useTabState<boolean>(tab.id + '-dirty', false);
 
   const lastEscTimeRef = useRef<number>(0);
+
+  // Carrega lista de produtos pai ao montar
+  useEffect(() => {
+    if (produtosComEstrutura.length === 0) {
+      fetchProdutosPai();
+    }
+  }, [produtosComEstrutura.length, fetchProdutosPai]);
 
   const handleClearAllFilters = () => setClearFiltersFlag((prev) => prev + 1);
 
@@ -70,12 +79,7 @@ export function BOMPage({ tab }: BOMPageProps) {
   };
 
   const handleEstruturaCreated = (codigoProduto: string) => {
-    // Quando uma nova estrutura é criada, abre a visualização tree
-    // com o produto selecionado em modo edição
     openTreeForPai(codigoProduto);
-    
-    // TODO: Atualizar o bomStore com a nova estrutura vazia
-    // Por enquanto, apenas navega para a visualização
   };
 
   useEffect(() => {
@@ -119,7 +123,7 @@ export function BOMPage({ tab }: BOMPageProps) {
             {mode === 'flat' && (
               <NovaEstruturaDialog onEstruturaCreated={handleEstruturaCreated} />
             )}
-            
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -130,11 +134,18 @@ export function BOMPage({ tab }: BOMPageProps) {
                 <TooltipContent>Limpar todos os filtros</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
+
             {mode === 'tree' && <Button onClick={requestCloseTree}>Fechar / Sair</Button>}
           </div>
         }
       />
+
+      {/* Erro da API */}
+      {error && (
+        <div className="mx-4 mt-2 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden">
         {mode === 'flat' && (

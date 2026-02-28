@@ -1,12 +1,14 @@
 /**
- * BOMTreeView - COMPLETO COM RESIZE
- * Mostra estrutura de 1 pai com todas funcionalidades do Flat
+ * BOMTreeView — COMPLETO COM RESIZE
+ * Mostra estrutura de 1 pai com todas funcionalidades.
+ * Agora usa dados da API real (sem mockProdutos).
  */
 
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { useBOMStore, buildTreeBOM } from '@/stores/engenharia/bomStore';
-import { mockProdutos } from '@/data/cadastros/mockProdutos';
+import { useBOMStore } from '@/stores/engenharia/bomStore';
+import { useProdutosStore } from '@/stores/engenharia/produtosStore';
+import type { BomTreeItem } from '@/types/engenharia/bom.types';
 import { BOMTreeNode } from './BOMTreeNode';
 
 interface BOMTreeViewProps {
@@ -38,14 +40,6 @@ const DEFAULT_WIDTHS: ColumnWidths = {
   desenho: 60,
 };
 
-function getProdutoInfo(codigo: string) {
-  const produto = mockProdutos.find((p) => p.codigo === codigo);
-  return {
-    descricao: produto?.descricaoCurta || codigo,
-    unidade: produto?.unidade || 'UN',
-  };
-}
-
 export function BOMTreeView({
   expandedProducts,
   expandedItems,
@@ -54,7 +48,9 @@ export function BOMTreeView({
   clearFiltersFlag,
   codigoPaiFocus,
 }: BOMTreeViewProps) {
-  const relacoes = useBOMStore((s) => s.relacoes);
+  const bomFlat = useBOMStore((s) => s.bomFlat);
+  const fetchBomFlat = useBOMStore((s) => s.fetchBomFlat);
+  const produtos = useProdutosStore((s) => s.produtos);
 
   const [colWidths, setColWidths] = useState<ColumnWidths>(() => {
     const saved = localStorage.getItem('bom-tree-column-widths');
@@ -70,6 +66,12 @@ export function BOMTreeView({
   useEffect(() => {
     localStorage.setItem('bom-tree-column-widths', JSON.stringify(colWidths));
   }, [colWidths]);
+
+  useEffect(() => {
+    if (bomFlat.length === 0) {
+      fetchBomFlat();
+    }
+  }, [bomFlat.length, fetchBomFlat]);
 
   const handleMouseDown = (column: keyof ColumnWidths, e: React.MouseEvent) => {
     e.preventDefault();
@@ -99,16 +101,53 @@ export function BOMTreeView({
 
   const codigoPai = codigoPaiFocus || '';
 
-  const treeData = useMemo(() => {
+  // Buscar info do produto pai na lista de produtos
+  const produtoPaiInfo = useMemo(() => {
+    const produto = produtos.find((p) => p.codigo === codigoPai);
+    return {
+      descricao: produto?.descricao || codigoPai,
+      unidade: produto?.unidade || 'UN',
+    };
+  }, [produtos, codigoPai]);
+
+  // Construir árvore a partir dos dados flat da API
+  const treeData = useMemo((): BomTreeItem[] => {
     if (!codigoPai) return [];
-    return buildTreeBOM(relacoes, codigoPai);
-  }, [relacoes, codigoPai]);
+
+    // Encontra o produtoPaiId pelo código
+    const produtoPai = produtos.find((p) => p.codigo === codigoPai);
+    if (!produtoPai) return [];
+
+    const paiId = produtoPai.id;
+
+    // Set de todos os IDs que são pai (têm filhos)
+    const idsPai = new Set(bomFlat.map((r) => r.produtoPaiId));
+
+    function getFilhos(parentId: number, nivelAtual: number): BomTreeItem[] {
+      return bomFlat
+        .filter((r) => r.produtoPaiId === parentId)
+        .map((r) => ({
+          id: r.id,
+          codigo: r.produtoFilhoCodigo || '',
+          descricao: r.produtoFilhoDescricao || '',
+          unidade: r.produtoFilhoUnidade || 'UN',
+          tipo: r.produtoFilhoTipo || '',
+          quantidade: r.quantidade,
+          posicao: r.posicao,
+          nivel: nivelAtual,
+          temDocumento: r.produtoFilhoTemDocumento || false,
+          hasChildren: idsPai.has(r.produtoFilhoId),
+          children: idsPai.has(r.produtoFilhoId) ? getFilhos(r.produtoFilhoId, nivelAtual + 1) : [],
+        }));
+    }
+
+    return getFilhos(paiId, 2);
+  }, [bomFlat, codigoPai, produtos]);
 
   const isExpandedProduct = expandedProducts.includes(codigoPai);
   const expandedItemsArray = expandedItems[codigoPai] || [];
 
   let globalRowIndex = 0;
-  const produtoInfo = getProdutoInfo(codigoPai);
 
   if (!codigoPai) {
     return (
@@ -130,40 +169,35 @@ export function BOMTreeView({
                 <span>Nível</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('nivel', e)} />
               </th>
-
               <th style={{ width: `${colWidths.ordem}px` }} className="relative h-8.5 overflow-hidden whitespace-nowrap border-b-2 border-r border-slate-300 px-2 py-2">
-                <span>Ordem</span>
+                <span>Pos.</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('ordem', e)} />
               </th>
-
               <th style={{ width: `${colWidths.qtde}px` }} className="relative h-8.5 overflow-hidden whitespace-nowrap border-b-2 border-r border-slate-300 px-2 py-2">
                 <span>Qtde</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('qtde', e)} />
               </th>
-
               <th style={{ width: `${colWidths.codigo}px` }} className="relative h-8.5 overflow-hidden whitespace-nowrap border-b-2 border-r border-slate-300 px-2 py-2">
                 <span>Código</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('codigo', e)} />
               </th>
-
               <th style={{ width: `${colWidths.descricao}px` }} className="relative h-8.5 overflow-hidden whitespace-nowrap border-b-2 border-r border-slate-300 px-2 py-2">
                 <span>Descrição</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('descricao', e)} />
               </th>
-
               <th style={{ width: `${colWidths.unidade}px` }} className="relative h-8.5 overflow-hidden whitespace-nowrap border-b-2 border-r border-slate-300 px-2 py-2">
                 <span>Unid.</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('unidade', e)} />
               </th>
-
               <th style={{ width: `${colWidths.desenho}px` }} className="relative h-8.5 overflow-hidden whitespace-nowrap border-b-2 border-slate-300 px-2 py-2">
-                <span>Des.</span>
+                <span>Doc.</span>
                 <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => handleMouseDown('desenho', e)} />
               </th>
             </tr>
           </thead>
 
           <tbody>
+            {/* Linha do produto PAI (nível 1) */}
             <tr
               className={`cursor-pointer hover:bg-slate-300 ${globalRowIndex % 2 === 0 ? 'bg-slate-100' : 'bg-white'}`}
               onClick={() => onToggleProduct(codigoPai)}
@@ -171,7 +205,6 @@ export function BOMTreeView({
               <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center font-bold text-slate-800">1</td>
               <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">-</td>
               <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">-</td>
-
               <td className="border-b border-r border-slate-200 px-2 py-1.5">
                 <div className="flex items-center gap-1">
                   {isExpandedProduct ? (
@@ -182,12 +215,12 @@ export function BOMTreeView({
                   <span className="font-semibold text-blue-900">{codigoPai}</span>
                 </div>
               </td>
-
-              <td className="truncate border-b border-r border-slate-200 px-2 py-1.5 font-semibold uppercase text-slate-800">{produtoInfo.descricao}</td>
-              <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">{produtoInfo.unidade}</td>
+              <td className="truncate border-b border-r border-slate-200 px-2 py-1.5 font-semibold uppercase text-slate-800">{produtoPaiInfo.descricao}</td>
+              <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">{produtoPaiInfo.unidade}</td>
               <td className="border-b border-slate-200 px-2 py-1.5 text-center text-slate-400">-</td>
             </tr>
 
+            {/* Filhos recursivos */}
             {isExpandedProduct &&
               treeData.map((item) => {
                 const itemRowIndex = globalRowIndex++;

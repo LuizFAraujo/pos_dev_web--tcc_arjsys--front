@@ -340,7 +340,7 @@ Componentes, pages, stores — atualizar imports.
 - [x] `REFACTOR: reorganiza por setor + lib/api.ts + tipos alinhados com backend` (Fase 1)
 - [x] `FEATURE: autenticacao real com backend e controle de permissoes` (Fase 2)
 - [x] `FEATURE: produtos engenharia integrado com API real` (Fase 3)
-- [ ] `FEATURE: BOM engenharia integrado com API real` (Fase 4)
+- [x] `FEATURE: BOM engenharia integrado com API real` (Fase 4)
 - [ ] `FEATURE: modulo admin clientes e funcionarios` (Fase 5)
 - [ ] `FEATURE: modulo comercial pedidos e numero serie` (Fase 6)
 - [ ] `FEATURE: configuracoes engenharia` (Fase 7)

@@ -1,13 +1,13 @@
 /**
- * BOMTreeNode - recursivo
+ * BOMTreeNode — recursivo
+ * Agora usa dados da API (descrição, unidade, temDocumento vêm no BomItem).
  */
 
 import { ChevronRight, ChevronDown } from 'lucide-react';
-import type { BOMTreeItem } from '@/stores/engenharia/bomStore';
-import { mockProdutos } from '@/data/cadastros/mockProdutos';
+import type { BomTreeItem } from '@/types/engenharia/bom.types';
 
 interface Props {
-  item: BOMTreeItem;
+  item: BomTreeItem;
   depth: number;
   produtoPai: string;
   expandedItems: string[];
@@ -17,29 +17,27 @@ interface Props {
   onDoubleClick: (codigo: string) => void;
 }
 
-function getProdutoInfo(codigo: string) {
-  const produto = mockProdutos.find((p) => p.codigo === codigo);
-  return {
-    descricao: produto?.descricaoCurta || codigo,
-    unidade: produto?.unidade || 'UN',
-    possuiDesenho: produto?.possuiDesenho ? 'S' : '-',
-  };
-}
-
 function formatQtde(q: number) {
-  return q.toLocaleString('pt-BR',
-    {
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3
-    });
+  return q.toLocaleString('pt-BR', {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
 }
 
-export function BOMTreeNode({ item, depth, produtoPai, expandedItems, onToggleItem, rowIndex, getNextRowIndex, onDoubleClick, }: Props) {
-  const { codigo, nivel, ordem, quantidade, hasChildren, children } = item;
+export function BOMTreeNode({
+  item,
+  depth,
+  produtoPai,
+  expandedItems,
+  onToggleItem,
+  rowIndex,
+  getNextRowIndex,
+  onDoubleClick,
+}: Props) {
+  const { codigo, nivel, posicao, quantidade, hasChildren, children, descricao, unidade, temDocumento } = item;
   const isExpanded = expandedItems.includes(codigo);
   const indentPx = depth * 8;
   const zebra = rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50';
-  const produtoInfo = getProdutoInfo(codigo);
 
   return (
     <>
@@ -50,7 +48,7 @@ export function BOMTreeNode({ item, depth, produtoPai, expandedItems, onToggleIt
         }}
       >
         <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center font-bold text-slate-800">{nivel}</td>
-        <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">{ordem}</td>
+        <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">{posicao}</td>
         <td className="border-b border-r border-slate-200 px-2 py-1.5 text-right font-bold text-emerald-700">{formatQtde(quantidade)}</td>
 
         <td className="border-b border-r border-slate-200 px-2 py-1.5" onDoubleClick={() => onDoubleClick(codigo)}>
@@ -68,9 +66,9 @@ export function BOMTreeNode({ item, depth, produtoPai, expandedItems, onToggleIt
           </div>
         </td>
 
-        <td className="truncate border-b border-r border-slate-200 px-2 py-1.5 font-semibold uppercase text-slate-800">{produtoInfo.descricao}</td>
-        <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">{produtoInfo.unidade}</td>
-        <td className="border-b border-slate-200 px-2 py-1.5 text-center text-slate-600">{produtoInfo.possuiDesenho}</td>
+        <td className="truncate border-b border-r border-slate-200 px-2 py-1.5 font-semibold uppercase text-slate-800">{descricao}</td>
+        <td className="border-b border-r border-slate-200 px-2 py-1.5 text-center text-slate-600">{unidade}</td>
+        <td className="border-b border-slate-200 px-2 py-1.5 text-center text-slate-600">{temDocumento ? 'S' : '-'}</td>
       </tr>
 
       {hasChildren &&
@@ -79,7 +77,7 @@ export function BOMTreeNode({ item, depth, produtoPai, expandedItems, onToggleIt
           const childRowIndex = getNextRowIndex();
           return (
             <BOMTreeNode
-              key={`${produtoPai}__${codigo}__${child.ordem}__${child.codigo}__${idx}`}
+              key={`${produtoPai}__${codigo}__${child.posicao}__${child.codigo}__${idx}`}
               item={child}
               depth={depth + 1}
               produtoPai={produtoPai}
