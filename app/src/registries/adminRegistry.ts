@@ -2,12 +2,26 @@
  * adminRegistry.ts - Registry do módulo Admin
  *
  * Registra páginas do setor Admin:
- * - Clientes (Fase 5)
- * - Funcionários (Fase 5)
+ * - Clientes
+ * - Funcionários
  */
 
 import type { TabRegistry } from '@/types/registry.types';
+import { Users, UserCog } from 'lucide-react';
+import { ClientesPage } from '@/pages/admin/ClientesPage';
+import { FuncionariosPage } from '@/pages/admin/FuncionariosPage';
 
 export const adminRegistry: TabRegistry = {
-  // Será preenchido na Fase 5
+  'adm-clientes': {
+    defaultTitle: 'Clientes',
+    icon: Users,
+    component: ClientesPage,
+    category: 'admin',
+  },
+  'adm-funcionarios': {
+    defaultTitle: 'Funcionários',
+    icon: UserCog,
+    component: FuncionariosPage,
+    category: 'admin',
+  },
 };

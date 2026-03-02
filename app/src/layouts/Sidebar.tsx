@@ -27,19 +27,21 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X, Star, Clock, Trash2 } from 'lucide-react';
+import { Users, Package, Truck, ShoppingCart, Wrench, Pin, ChevronRight, ChevronsRight, ChevronsDown, FileCode2, Search, X, Star, Clock, Trash2, Warehouse } from 'lucide-react';
 import { useTabsStore, useSidebarStore, useFavoritesStore, useRecentsStore } from '@stores';
 import { getTabsByCategory } from '@/registries';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@ui/accordion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@ui/tooltip';
 
 // Categorias do sistema
+// na sequencia aqui, é mostrada na tela
 const CATEGORIES = [
-    { id: 'cadastros', label: 'CADASTROS', icon: Users },
-    { id: 'vendas', label: 'VENDAS', icon: ShoppingCart },
-    { id: 'producao', label: 'PRODUÇÃO', icon: Package },
-    { id: 'compras', label: 'COMPRAS', icon: Truck },
     { id: 'engenharia', label: 'ENGENHARIA', icon: Wrench },
+    { id: 'producao', label: 'PRODUÇÃO', icon: Package },
+    { id: 'comercial', label: 'COMERCIAL', icon: ShoppingCart },
+    { id: 'admin', label: 'ADMIN', icon: Users },
+    { id: 'compras', label: 'COMPRAS', icon: Truck },
+    { id: 'almoxarifado', label: 'ALMOXARIFADO', icon: Warehouse },
     { id: 'modelos', label: 'PÁGINAS MODELO', icon: FileCode2 },
 ] as const;
 

@@ -36,6 +36,12 @@ pos_dev_web--tcc_front--arjsys/
     └── src/
         │
         ├── components/
+        │   ├── engenharia/         # Componentes Admin
+        │   │   ├── ClienteFormModal.tsx           ✅
+        │   │   ├── DeleteClienteDialog.tsx        ✅
+        │   │   ├── DeleteFuncionarioDialog.tsx    ✅
+        │   │   └── FuncionarioFormModal.tsx       ✅
+        │   │
         │   ├── engenharia/         # Componentes Engenharia
         │   │   ├── AddComponenteModal.tsx         📍 FALTA
         │   │   ├── BOMFlatView.tsx                ✅
@@ -151,10 +157,14 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── ModeloFormPage.tsx             ✅
         │   │   └── ModeloListaPage.tsx            ✅
         │   │
-        │   ├── admin/              # Administração
+        │   ├── admin ??/           # Administração
         │   │   ├── LogsSistemaPage.tsx            📍 FALTA
         │   │   ├── PerfisAcessoPage.tsx           📍 FALTA
         │   │   └── UsuariosPage.tsx               📍 FALTA
+        │   │
+        │   ├── admin/              # Admin
+        │   │   ├── ClientesPage.tsx               ✅
+        │   │   └── FuncionariosPage.tsx           ✅
         │   │
         │   ├── almoxarifado/       # Almoxarifado
         │   │   ├── EntradaMaterialPage.tsx        📍 FALTA
@@ -244,6 +254,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── clientesStore.ts               📍 FALTA ????
         │   │   ├── funcionariosStore.ts           📍 FALTA ????
         │   │
+        │   ├── admin/             # Stores Admin
+        │   │   ├── clientesStore.ts               ✅
+        │   │   └── funcionariosStore.ts           ✅
+        │   │
         │   ├── engenharia/         # Stores Engenharia
         │   │   ├── bomStore.ts                    ✅
         │   │   ├── desenhosStore.ts               📍 FALTA
@@ -271,6 +285,10 @@ pos_dev_web--tcc_front--arjsys/
         │   ├── cadastros/          # Types Cadastros  (verificar local correto a colocar)
         │   │   ├── cliente.types.ts               📍 FALTA ????
         │   │   ├── funcionario.types.ts           📍 FALTA ????
+        │   │
+        │   ├── admin/              # Types Admin
+        │   │   ├── cliente.types.ts               ✅
+        │   │   └── funcionario.types.ts           ✅
         │   │
         │   ├── engenharia/         # Types Engenharia
         │   │   ├── bom.types.ts                   ✅
