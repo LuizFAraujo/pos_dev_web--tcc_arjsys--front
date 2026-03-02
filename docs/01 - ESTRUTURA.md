@@ -36,11 +36,17 @@ pos_dev_web--tcc_front--arjsys/
     └── src/
         │
         ├── components/
-        │   ├── engenharia/         # Componentes Admin
+        │   ├── admin/             # Componentes Admin
         │   │   ├── ClienteFormModal.tsx           ✅
         │   │   ├── DeleteClienteDialog.tsx        ✅
         │   │   ├── DeleteFuncionarioDialog.tsx    ✅
         │   │   └── FuncionarioFormModal.tsx       ✅
+        │   │
+        │   ├── comercial/         # Componentes Comercial
+        │   │   ├── DeletePedidoDialog.tsx         ✅
+        │   │   ├── PedidoDetalheModal.tsx         ✅
+        │   │   ├── PedidoFormModal.tsx            ✅
+        │   │   └── StatusPedidoActions.tsx        ✅
         │   │
         │   ├── engenharia/         # Componentes Engenharia
         │   │   ├── AddComponenteModal.tsx         📍 FALTA
@@ -176,6 +182,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── LoginPage.tsx                  ✅
         │   │   └── NotFoundPage.tsx               ✅
         │   │
+        │   ├── comercial/          # Comercial
+        │   │   ├── NumeroSeriePage.tsx            ✅
+        │   │   └── PedidosPage.tsx                ✅
+        │   │
         │   ├── cadastros/          # Cadastros (verificar local correto a colocar)
         │   │   ├── ClientesPage.tsx               📍 FALTA
         │   │   ├── FuncionariosPage.tsx           📍 FALTA
@@ -258,6 +268,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── clientesStore.ts               ✅
         │   │   └── funcionariosStore.ts           ✅
         │   │
+        │   ├── comercial/         # Stores Comercial
+        │   │   ├── numeroSerieStore.ts            ✅
+        │   │   └── pedidosStore.ts                ✅
+        │   │
         │   ├── engenharia/         # Stores Engenharia
         │   │   ├── bomStore.ts                    ✅
         │   │   ├── desenhosStore.ts               📍 FALTA
@@ -289,6 +303,10 @@ pos_dev_web--tcc_front--arjsys/
         │   ├── admin/              # Types Admin
         │   │   ├── cliente.types.ts               ✅
         │   │   └── funcionario.types.ts           ✅
+        │   │
+        │   ├── comercial/          # Types Comercial
+        │   │   ├── numeroserie.types.ts           ✅
+        │   │   └── pedido.types.ts                ✅
         │   │
         │   ├── engenharia/         # Types Engenharia
         │   │   ├── bom.types.ts                   ✅
