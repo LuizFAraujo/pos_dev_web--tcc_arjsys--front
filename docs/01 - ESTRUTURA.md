@@ -79,11 +79,13 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── TabelaMateriaisExplosao.tsx    📍 FALTA
         │   │
         │   ├── shared/             # Componentes reutilizáveis
+        │   │   ├── DataGrid.tsx                   ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA
         │   │   ├── ErrorState.tsx                 📍 FALTA
         │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
         │   │   ├── PageRightSidebar.tsx           ✅
+        │   │   ├── PageShell.tsx                  ✅
         │   │   └── PageWrapper.tsx                ✅
         │   │
         │   ├── sidebars/           # Conteúdos RightSidebar
