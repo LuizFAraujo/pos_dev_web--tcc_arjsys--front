@@ -61,7 +61,7 @@
     // Ocultar especificamente dentro de app/
     "app/api": true,
     "app/**/*config*.js*": true,
-    "app/**/*config*.ts*": true,
+    //"app/**/*config*.ts*": true,
     "app/**/*.env*": true,
     "app/**/*-env.d*": true,
 

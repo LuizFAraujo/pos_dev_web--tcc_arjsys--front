@@ -198,6 +198,7 @@ pos_dev_web--tcc_front--arjsys/
         │   ├── engenharia/         # Engenharia
         │   │   ├── BibliotecaDesenhosPage.tsx     📍 FALTA
         │   │   ├── BOMPage.tsx                    ✅
+        │   │   ├── ConfiguracoesPage.tsx          ✅
         │   │   ├── EstruturaDetalhePage.tsx       📍 FALTA
         │   │   ├── EstruturasPage.tsx             📍 FALTA
         │   │   ├── ProdutosPage.tsx               ✅
@@ -274,6 +275,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │
         │   ├── engenharia/         # Stores Engenharia
         │   │   ├── bomStore.ts                    ✅
+        │   │   ├── configuracoesStore.ts          ✅
         │   │   ├── desenhosStore.ts               📍 FALTA
         │   │   └── produtosStore.ts               ✅
         │   │
@@ -310,6 +312,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │
         │   ├── engenharia/         # Types Engenharia
         │   │   ├── bom.types.ts                   ✅
+        │   │   ├── configuracao.types.ts          ✅
         │   │   ├── componente.types.ts            📍 FALTA
         │   │   ├── desenho.types.ts               📍 FALTA
         │   │   └── produto.types.ts               ✅

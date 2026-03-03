@@ -2,16 +2,17 @@
  * engenhariaRegistry.ts - Registry do módulo Engenharia
  *
  * Registra todas as páginas do setor de Engenharia:
- * - Produtos (era cadastrosRegistry, agora pertence aqui)
+ * - Produtos
  * - Estrutura de Produto (BOM)
- * - Grupos de Produto (futuro — Fase 8)
- * - Configurações (futuro — Fase 7)
+ * - Configurações (Fase 7)
+ * - Grupos de Produto (Fase 8)
  */
 
 import type { TabRegistry } from '@/types/registry.types';
-import { Package, Network } from 'lucide-react';
+import { Package, Network, Settings } from 'lucide-react';
 import { ProdutosPage } from '@/pages/engenharia/ProdutosPage';
 import { BOMPage } from '@/pages/engenharia/BOMPage';
+import { ConfiguracoesPage } from '@/pages/engenharia/ConfiguracoesPage';
 
 export const engenhariaRegistry: TabRegistry = {
   'eng-produtos': {
@@ -24,6 +25,12 @@ export const engenhariaRegistry: TabRegistry = {
     defaultTitle: 'Estrutura de Produtos',
     icon: Network,
     component: BOMPage,
+    category: 'engenharia',
+  },
+  'eng-configuracoes': {
+    defaultTitle: 'Configurações',
+    icon: Settings,
+    component: ConfiguracoesPage,
     category: 'engenharia',
   },
 };

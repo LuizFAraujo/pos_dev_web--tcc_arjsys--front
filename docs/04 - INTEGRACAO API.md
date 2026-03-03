@@ -341,9 +341,9 @@ Componentes, pages, stores — atualizar imports.
 - [x] `FEATURE: autenticacao real com backend e controle de permissoes` (Fase 2)
 - [x] `FEATURE: produtos engenharia integrado com API real` (Fase 3)
 - [x] `FEATURE: BOM engenharia integrado com API real` (Fase 4)
-- [ ] `FEATURE: modulo admin clientes e funcionarios` (Fase 5)
-- [ ] `FEATURE: modulo comercial pedidos e numero serie` (Fase 6)
-- [ ] `FEATURE: configuracoes engenharia` (Fase 7)
+- [x] `FEATURE: modulo admin clientes e funcionarios` (Fase 5)
+- [x] `FEATURE: modulo comercial pedidos e numero serie` (Fase 6)
+- [x] `FEATURE: configuracoes engenharia` (Fase 7)
 - [ ] `FEATURE: grupos produto e vinculos` (Fase 8)
 
 ---
