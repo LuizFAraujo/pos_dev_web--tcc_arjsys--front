@@ -9,10 +9,11 @@
  */
 
 import type { TabRegistry } from '@/types/registry.types';
-import { Package, Network, Settings } from 'lucide-react';
+import { Package, Network, Settings, FolderTree } from 'lucide-react';
 import { ProdutosPage } from '@/pages/engenharia/ProdutosPage';
 import { BOMPage } from '@/pages/engenharia/BOMPage';
 import { ConfiguracoesPage } from '@/pages/engenharia/ConfiguracoesPage';
+import { GruposPage } from '@/pages/engenharia/GruposPage';
 
 export const engenhariaRegistry: TabRegistry = {
   'eng-produtos': {
@@ -31,6 +32,12 @@ export const engenhariaRegistry: TabRegistry = {
     defaultTitle: 'Configurações',
     icon: Settings,
     component: ConfiguracoesPage,
+    category: 'engenharia',
+  },
+  'eng-grupos': {
+    defaultTitle: 'Grupos de Produto',
+    icon: FolderTree,
+    component: GruposPage,
     category: 'engenharia',
   },
 };

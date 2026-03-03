@@ -344,7 +344,7 @@ Componentes, pages, stores — atualizar imports.
 - [x] `FEATURE: modulo admin clientes e funcionarios` (Fase 5)
 - [x] `FEATURE: modulo comercial pedidos e numero serie` (Fase 6)
 - [x] `FEATURE: configuracoes engenharia` (Fase 7)
-- [ ] `FEATURE: grupos produto e vinculos` (Fase 8)
+- [x] `FEATURE: grupos produto e vinculos` (Fase 8)
 
 ---
 

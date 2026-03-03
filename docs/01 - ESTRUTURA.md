@@ -53,7 +53,9 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── BOMFlatView.tsx                ✅
         │   │   ├── BOMTreeNode.tsx                ✅
         │   │   ├── BOMTreeView.tsx                ✅
-        │   │   ├── DeleteProdutoDialog.tsx        ✅    
+        │   │   ├── DeleteGrupoDialog.tsx          ✅
+        │   │   ├── DeleteProdutoDialog.tsx        ✅
+        │   │   ├── GrupoFormModal.tsx             ✅
         │   │   ├── DesenhoThumbnail.tsx           📍 FALTA
         │   │   ├── EditComponenteModal.tsx        📍 FALTA
         │   │   ├── EstruturaListView.tsx          📍 FALTA
@@ -199,6 +201,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── BibliotecaDesenhosPage.tsx     📍 FALTA
         │   │   ├── BOMPage.tsx                    ✅
         │   │   ├── ConfiguracoesPage.tsx          ✅
+        │   │   ├── GruposPage.tsx                 ✅
         │   │   ├── EstruturaDetalhePage.tsx       📍 FALTA
         │   │   ├── EstruturasPage.tsx             📍 FALTA
         │   │   ├── ProdutosPage.tsx               ✅
@@ -276,6 +279,7 @@ pos_dev_web--tcc_front--arjsys/
         │   ├── engenharia/         # Stores Engenharia
         │   │   ├── bomStore.ts                    ✅
         │   │   ├── configuracoesStore.ts          ✅
+        │   │   ├── gruposStore.ts                 ✅
         │   │   ├── desenhosStore.ts               📍 FALTA
         │   │   └── produtosStore.ts               ✅
         │   │
@@ -313,6 +317,7 @@ pos_dev_web--tcc_front--arjsys/
         │   ├── engenharia/         # Types Engenharia
         │   │   ├── bom.types.ts                   ✅
         │   │   ├── configuracao.types.ts          ✅
+        │   │   ├── grupo.types.ts                 ✅
         │   │   ├── componente.types.ts            📍 FALTA
         │   │   ├── desenho.types.ts               📍 FALTA
         │   │   └── produto.types.ts               ✅
