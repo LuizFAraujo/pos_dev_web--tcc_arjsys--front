@@ -2,8 +2,8 @@
  * DataGrid.tsx - Grid baseado em TanStack Table
  */
 
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import type { ReactNode, Ref } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -149,22 +149,39 @@ function ColFilterPopover({ type, options, value, onChange, onClear, header }: {
 }
 
 // ============================================
+// HANDLE (métodos expostos via ref)
+// ============================================
+
+export interface DataGridHandle {
+  clearFilters: () => void;   // limpa filtros de coluna
+  clearSort: () => void;      // limpa ordenação
+  clearAll: () => void;       // limpa tudo (filtros + sort + seleção)
+}
+
+// ============================================
 // DATAGRID
 // ============================================
 
-export function DataGrid<T extends Record<string, any>>({
+function DataGridInner<T extends Record<string, any>>({
   tabId, storageId, columns: gc, data,
   loading = false, loadingText = 'Carregando...',
   emptyTitle = 'Nenhum registro encontrado', emptyDescription, emptyAction,
   headerHeight = DEFAULT_HEADER_HEIGHT,
   rowHeight = DEFAULT_ROW_HEIGHT,
   className = '',
-}: DataGridProps<T>) {
+}: DataGridProps<T>, ref: Ref<DataGridHandle>) {
 
   // --- Estado persistido por aba ---
   const [sorting, setSorting] = useTabState<SortingState>(tabId + '-sort', []);
   const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tabId + '-filters', []);
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
+
+  // Métodos expostos via ref
+  useImperativeHandle(ref, () => ({
+    clearFilters: () => setColumnFilters([]),
+    clearSort: () => setSorting([]),
+    clearAll: () => { setColumnFilters([]); setSorting([]); setSelectedIdx(null); },
+  }), [setColumnFilters, setSorting, setSelectedIdx]);
 
   // Handlers que resolvem Updater do TanStack
   const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
@@ -443,3 +460,7 @@ export function DataGrid<T extends Record<string, any>>({
     </div>
   );
 }
+// forwardRef wrapper — preserva generics
+export const DataGrid = forwardRef(DataGridInner) as <T extends Record<string, any>>(
+  props: DataGridProps<T> & { ref?: Ref<DataGridHandle> }
+) => ReturnType<typeof DataGridInner>;

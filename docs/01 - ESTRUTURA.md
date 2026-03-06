@@ -79,6 +79,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── TabelaMateriaisExplosao.tsx    📍 FALTA
         │   │
         │   ├── shared/             # Componentes reutilizáveis
+        │   │   ├── AppTooltip.tsx                 ✅
         │   │   ├── DataGrid.tsx                   ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA
         │   │   ├── ErrorState.tsx                 📍 FALTA
