@@ -1,135 +1,102 @@
 /**
- * PageShell.tsx - Shell padrão para páginas do sistema
+ * PageShell.tsx - Template definitivo de página
  *
- * Unifica PageWrapper + PageHeader + bloco de erro + barra de busca.
- * Cada página passa props declarativas e o shell cuida do layout.
- *
- * Uso:
- * <PageShell
- *   breadcrumbs={[{ label: 'Engenharia' }, { label: 'Produtos' }]}
- *   title="Produtos"
- *   description="Gerencie o cadastro de produtos"
- *   error={error}
- *   actions={<Button>Novo</Button>}
- *   searchTerm={searchTerm}
- *   onSearchChange={setSearchTerm}
- *   searchPlaceholder="Buscar por código ou descrição..."
- *   extraFilters={<Select>...</Select>}
- * >
- *   <DataGrid ... />
- * </PageShell>
+ * Replica o layout da BOM:
+ * - Header compacto: breadcrumb + título (text-lg) + botões à direita
+ * - Sem search bar no header (filtros ficam no grid)
+ * - Conteúdo com scroll isolado
+ * - Footer fixo (opcional)
+ * - Sem paddings excessivos
  */
 
 import type { ReactNode } from 'react';
-import { Search } from 'lucide-react';
-import { PageWrapper } from '@/components/shared/PageWrapper';
-import { PageHeader } from '@/components/shared/PageHeader';
-import { Input } from '@/components/ui/input';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@ui/breadcrumb';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
-interface BreadcrumbItem {
+interface BreadcrumbEntry {
   label: string;
   href?: string;
 }
 
 interface PageShellProps {
-  /** Breadcrumbs */
-  breadcrumbs?: BreadcrumbItem[];
-
-  /** Título da página */
+  breadcrumbs?: BreadcrumbEntry[];
   title: string;
-
-  /** Descrição (opcional) */
-  description?: string;
-
-  /** Botões de ação no header (direita) */
-  actions?: ReactNode;
-
-  /** Mensagem de erro da API */
-  error?: string | null;
-
-  /** Mensagem de sucesso */
-  success?: string | null;
-
-  // --- Busca (opcional) ---
-
-  /** Termo de busca — se passado, renderiza o input de busca */
-  searchTerm?: string;
-
-  /** Callback de mudança de busca */
-  onSearchChange?: (value: string) => void;
-
-  /** Placeholder do campo de busca */
-  searchPlaceholder?: string;
-
-  /** Filtros extras ao lado do campo de busca */
-  extraFilters?: ReactNode;
-
-  // --- Conteúdo ---
-
-  /** Conteúdo da página (DataGrid, forms, etc) */
+  tooltip?: string;
+  /** Botões à direita do título */
+  headerRight?: ReactNode;
+  /** Extra abaixo do título (search, filtros rápidos — opcional) */
+  headerExtra?: ReactNode;
+  /** Footer fixo */
+  footer?: ReactNode;
   children: ReactNode;
-
-  /** Classe CSS extra */
-  className?: string;
 }
 
 export function PageShell({
-  breadcrumbs,
-  title,
-  description,
-  actions,
-  error,
-  success,
-  searchTerm,
-  onSearchChange,
-  searchPlaceholder = 'Buscar...',
-  extraFilters,
-  children,
-  className = '',
+  breadcrumbs, title, tooltip, headerRight, headerExtra, footer, children,
 }: PageShellProps) {
-  const hasSearch = searchTerm !== undefined && onSearchChange !== undefined;
-
   return (
-    <PageWrapper className={className}>
-      <PageHeader
-        breadcrumbs={breadcrumbs}
-        title={title}
-        description={description}
-        actions={actions}
-      />
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* HEADER */}
+      <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-1.5">
+        {breadcrumbs && breadcrumbs.length > 0 && (
+          <Breadcrumb className="mb-0.5">
+            <BreadcrumbList className="text-xs">
+              {breadcrumbs.map((item, index) => (
+                <div key={index} className="flex items-center">
+                  {index > 0 && <BreadcrumbSeparator />}
+                  <BreadcrumbItem>
+                    {item.href ? (
+                      <BreadcrumbLink href={item.href}>{item.label}</BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
+                </div>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          {tooltip ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate cursor-default">{title}</h1>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start"><p className="text-sm">{tooltip}</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{title}</h1>
+          )}
+          {headerRight && <div className="flex items-center gap-2 shrink-0">{headerRight}</div>}
+        </div>
+        {headerExtra && <div className="mt-1">{headerExtra}</div>}
+      </div>
 
-      {/* Erro */}
-      {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-          {error}
+      {/* CONTEÚDO */}
+      <div className="flex-1 overflow-hidden">
+        {children}
+      </div>
+
+      {/* FOOTER */}
+      {footer && (
+        <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5">
+          {footer}
         </div>
       )}
-
-      {/* Sucesso */}
-      {success && (
-        <div className="mt-4 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-          ✓ {success}
-        </div>
-      )}
-
-      {/* Barra de busca + filtros extras */}
-      {hasSearch && (
-        <div className="mt-4 mb-4 flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          {extraFilters}
-        </div>
-      )}
-
-      {/* Conteúdo */}
-      {children}
-    </PageWrapper>
+    </div>
   );
 }

@@ -1,279 +1,442 @@
 /**
- * DataGrid.tsx - Grid de dados reutilizável com features configuráveis
- *
- * Features (opt-in por coluna):
- * - sortable: ordenação click no header (asc → desc → off)
- * - filterable: popover com contém/começa/termina/não contém
- * - resizable: drag na borda direita do header
+ * DataGrid.tsx - Grid baseado em TanStack Table
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+  type FilterFn,
+  type Updater,
+} from '@tanstack/react-table';
+import { useTabState } from '@/hooks/useTabState';
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // ============================================
 // TIPOS
 // ============================================
 
-export interface DataGridColumn<T> {
-  key: string;
-  header: string;
-  align?: 'left' | 'center' | 'right';
-  className?: string;
-  render?: (item: T, index: number) => ReactNode;
+export type GridFilterType = 'text' | 'exact' | 'select' | 'number';
 
-  sortable?: boolean;
-  sortFn?: (a: T, b: T) => number;
-
-  filterable?: boolean;
-  filterField?: string;
-
-  resizable?: boolean;
-  initialWidth?: number;
-  minWidth?: number;
+export interface GridColumn<T> {
+  key: string;                                        // identificador da coluna, deve bater com campo do objeto T
+  header: string;                                     // texto exibido no cabeçalho
+  contentAlign?: 'left' | 'center' | 'right';         // alinhamento do conteúdo (default: 'left')
+  headerAlign?: 'left' | 'center' | 'right';          // alinhamento do cabeçalho (default: 'center')
+  className?: string;                                 // classes CSS extras nas células de conteúdo
+  render?: (item: T) => ReactNode;                    // render customizado. se não passar, exibe item[key]
+  sortable?: boolean;                                 // habilita ordenação (default: true)
+  filterType?: GridFilterType | false;                // tipo de filtro: 'text'|'exact'|'select'|'number'|false (default: 'text')
+  filterOptions?: { label: string; value: string }[]; // opções do dropdown, obrigatório se filterType 'select'
+  filterField?: string;                               // campo do objeto pra filtrar/ordenar, se diferente de key
+  resizable?: boolean;                                // habilita redimensionar arrastando borda (default: true, exceto última)
+  width?: number;                                     // largura inicial em px (default: 150). última coluna ignora
+  minWidth?: number;                                  // largura mínima em px (default: 50)
+  maxWidth?: number;                                  // largura máxima em px (default: sem limite)
 }
 
 interface DataGridProps<T> {
-  columns: DataGridColumn<T>[];
-  data: T[];
-  total?: number;
-  loading?: boolean;
-  loadingText?: string;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  emptyAction?: ReactNode;
-  keyExtractor?: (item: T, index: number) => string | number;
-  itemLabel?: string;
-  className?: string;
-}
-
-type SortOrder = 'asc' | 'desc' | null;
-
-interface ColFilter {
-  contem: string;
-  comeca: string;
-  termina: string;
-  naoContem: string;
-}
-
-const EMPTY_F: ColFilter = { contem: '', comeca: '', termina: '', naoContem: '' };
-
-// ============================================
-// HELPERS
-// ============================================
-
-const alignCls = (a?: 'left' | 'center' | 'right') =>
-  a === 'center' ? 'text-center' : a === 'right' ? 'text-right' : 'text-left';
-
-function matchF(value: string, f: ColFilter): boolean {
-  const v = (value || '').toLowerCase();
-  if (f.contem && !v.includes(f.contem.toLowerCase())) return false;
-  if (f.comeca && !v.startsWith(f.comeca.toLowerCase())) return false;
-  if (f.termina && !v.endsWith(f.termina.toLowerCase())) return false;
-  if (f.naoContem && v.includes(f.naoContem.toLowerCase())) return false;
-  return true;
-}
-
-function isActive(f: ColFilter): boolean {
-  return !!(f.contem || f.comeca || f.termina || f.naoContem);
+  tabId: string;                // ID da aba — pra persistir sort/filters entre trocas de aba
+  storageId?: string;           // ID fixo pra localStorage (ex: 'clientes'). Se não passar, usa tabId
+  columns: GridColumn<T>[];     // definição das colunas
+  data: T[];                    // dados a exibir
+  loading?: boolean;            // exibe spinner (default: false)
+  loadingText?: string;         // texto do spinner (default: 'Carregando...')
+  emptyTitle?: string;          // título quando sem dados (default: 'Nenhum registro encontrado')
+  emptyDescription?: string;    // descrição quando sem dados
+  emptyAction?: ReactNode;      // botão/ação quando sem dados
+  headerHeight?: number;        // altura do header em px (default: 32)
+  rowHeight?: number;           // altura das linhas em px (default: 28)
+  className?: string;           // classes extras no container
 }
 
 // ============================================
-// COMPONENTE
+// FILTER
+// ============================================
+
+interface CompoundFilter {
+  type: GridFilterType;
+  contem?: string; comeca?: string; termina?: string; naoContem?: string;
+  valor?: string; min?: string; max?: string;
+}
+
+const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
+  if (!fv || !fv.type) return true;
+  const cv = String(row.getValue(columnId) ?? '').toLowerCase();
+  switch (fv.type) {
+    case 'text':
+      if (fv.contem && !cv.includes(fv.contem.toLowerCase())) return false;
+      if (fv.comeca && !cv.startsWith(fv.comeca.toLowerCase())) return false;
+      if (fv.termina && !cv.endsWith(fv.termina.toLowerCase())) return false;
+      if (fv.naoContem && cv.includes(fv.naoContem.toLowerCase())) return false;
+      return true;
+    case 'exact': return !fv.valor || cv === fv.valor.toLowerCase();
+    case 'select': return !fv.valor || cv === fv.valor.toLowerCase();
+    case 'number': {
+      const n = parseFloat(String(row.getValue(columnId)));
+      if (isNaN(n)) return !fv.min && !fv.max;
+      if (fv.min && n < parseFloat(fv.min)) return false;
+      if (fv.max && n > parseFloat(fv.max)) return false;
+      return true;
+    }
+    default: return true;
+  }
+};
+
+function isActive(f?: CompoundFilter): boolean {
+  if (!f) return false;
+  return !!(f.contem || f.comeca || f.termina || f.naoContem || f.valor || f.min || f.max);
+}
+
+const DEFAULT_MIN_WIDTH = 50;
+const DEFAULT_HEADER_HEIGHT = 32;
+const DEFAULT_ROW_HEIGHT = 28;
+
+// ============================================
+// FILTER POPOVER
+// ============================================
+
+function ColFilterPopover({ type, options, value, onChange, onClear, header }: {
+  type: GridFilterType; options?: { label: string; value: string }[];
+  value: CompoundFilter; onChange: (f: CompoundFilter) => void; onClear: () => void; header: string;
+}) {
+  const on = isActive(value);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className={`p-0.5 rounded hover:bg-slate-600 ${on ? 'text-blue-300' : 'opacity-40 hover:opacity-80'}`}>
+          <Filter className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 space-y-2" align="start">
+        <p className="text-xs font-semibold text-muted-foreground">Filtrar: {header}</p>
+        {type === 'text' && (
+          <div className="space-y-1.5">
+            <div><label className="text-[10px] text-muted-foreground">Contém</label><Input className="h-7 text-xs" value={value.contem || ''} onChange={(e) => onChange({ ...value, contem: e.target.value })} /></div>
+            <div><label className="text-[10px] text-muted-foreground">Começa com</label><Input className="h-7 text-xs" value={value.comeca || ''} onChange={(e) => onChange({ ...value, comeca: e.target.value })} /></div>
+            <div><label className="text-[10px] text-muted-foreground">Termina com</label><Input className="h-7 text-xs" value={value.termina || ''} onChange={(e) => onChange({ ...value, termina: e.target.value })} /></div>
+            <div><label className="text-[10px] text-muted-foreground">Não contém</label><Input className="h-7 text-xs" value={value.naoContem || ''} onChange={(e) => onChange({ ...value, naoContem: e.target.value })} /></div>
+          </div>
+        )}
+        {type === 'exact' && (<div><label className="text-[10px] text-muted-foreground">Valor exato</label><Input className="h-7 text-xs" value={value.valor || ''} onChange={(e) => onChange({ ...value, valor: e.target.value })} /></div>)}
+        {type === 'select' && (
+          <Select value={value.valor || '__all__'} onValueChange={(v) => onChange({ ...value, valor: v === '__all__' ? '' : v })}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent><SelectItem value="__all__">Todos</SelectItem>{(options || []).map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+          </Select>
+        )}
+        {type === 'number' && (
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="text-[10px] text-muted-foreground">Mín</label><Input className="h-7 text-xs" type="number" value={value.min || ''} onChange={(e) => onChange({ ...value, min: e.target.value })} /></div>
+            <div><label className="text-[10px] text-muted-foreground">Máx</label><Input className="h-7 text-xs" type="number" value={value.max || ''} onChange={(e) => onChange({ ...value, max: e.target.value })} /></div>
+          </div>
+        )}
+        {on && (<Button variant="ghost" size="sm" className="w-full text-xs h-7" onClick={onClear}><X className="mr-1 h-3 w-3" /> Limpar</Button>)}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ============================================
+// DATAGRID
 // ============================================
 
 export function DataGrid<T extends Record<string, any>>({
-  columns, data, total, loading = false, loadingText = 'Carregando...',
+  tabId, storageId, columns: gc, data,
+  loading = false, loadingText = 'Carregando...',
   emptyTitle = 'Nenhum registro encontrado', emptyDescription, emptyAction,
-  keyExtractor, itemLabel = 'registros', className = '',
+  headerHeight = DEFAULT_HEADER_HEIGHT,
+  rowHeight = DEFAULT_ROW_HEIGHT,
+  className = '',
 }: DataGridProps<T>) {
 
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortOrd, setSortOrd] = useState<SortOrder>(null);
-  const [filters, setFilters] = useState<Record<string, ColFilter>>({});
-  const [widths, setWidths] = useState<Record<string, number>>(() => {
+  // --- Estado persistido por aba ---
+  const [sorting, setSorting] = useTabState<SortingState>(tabId + '-sort', []);
+  const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tabId + '-filters', []);
+  const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
+
+  // Handlers que resolvem Updater do TanStack
+  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
+    setSorting(typeof updater === 'function' ? updater(sorting) : updater);
+  }, [sorting, setSorting]);
+
+  const handleFiltersChange = useCallback((updater: Updater<ColumnFiltersState>) => {
+    setColumnFilters(typeof updater === 'function' ? updater(columnFilters) : updater);
+  }, [columnFilters, setColumnFilters]);
+
+  // --- Column widths: localStorage com chave fixa por tipo de página ---
+  const lsKey = `grid-widths-${storageId || tabId}`;
+
+  const defaultW = useMemo(() => {
     const w: Record<string, number> = {};
-    columns.forEach((c) => { if (c.resizable && c.initialWidth) w[c.key] = c.initialWidth; });
+    gc.forEach((c) => { if (c.width) w[c.key] = c.width; });
     return w;
+  }, [gc]);
+
+  const [colW, setColW] = useState<Record<string, number>>(() => {
+    try {
+      const s = localStorage.getItem(lsKey);
+      if (s) return { ...defaultW, ...JSON.parse(s) };
+    } catch {}
+    return { ...defaultW };
   });
 
+  useEffect(() => {
+    try { localStorage.setItem(lsKey, JSON.stringify(colW)); } catch {}
+  }, [colW, lsKey]);
+
+  // --- Resize ---
   const resRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
 
   const onResizeDown = useCallback((k: string, e: React.MouseEvent) => {
     e.preventDefault();
-    const sw = widths[k] || columns.find((c) => c.key === k)?.initialWidth || 150;
+    e.stopPropagation();
+    const col = gc.find((c) => c.key === k);
+    const sw = colW[k] || col?.width || 150;
     resRef.current = { key: k, startX: e.clientX, startW: sw };
+
     const onMove = (ev: MouseEvent) => {
-      if (!resRef.current) return;
-      const minW = columns.find((c) => c.key === resRef.current!.key)?.minWidth || 60;
-      setWidths((p) => ({ ...p, [resRef.current!.key]: Math.max(minW, resRef.current!.startW + ev.clientX - resRef.current!.startX) }));
+      const ref = resRef.current;
+      if (!ref) return;
+      const c = gc.find((x) => x.key === ref.key);
+      const min = c?.minWidth || DEFAULT_MIN_WIDTH;
+      const max = c?.maxWidth;
+      let newW = Math.max(min, ref.startW + ev.clientX - ref.startX);
+      if (max) newW = Math.min(max, newW);
+      setColW((p) => ({ ...p, [ref.key]: newW }));
     };
-    const onUp = () => { resRef.current = null; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    const onUp = () => {
+      resRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
-  }, [widths, columns]);
+  }, [colW, gc]);
 
-  const onSort = useCallback((k: string) => {
-    if (sortKey === k) { if (sortOrd === 'asc') setSortOrd('desc'); else { setSortKey(null); setSortOrd(null); } }
-    else { setSortKey(k); setSortOrd('asc'); }
-  }, [sortKey, sortOrd]);
+  // --- Navegação por teclado (setas cima/baixo) ---
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rowCountRef = useRef(0);
 
-  const setF = useCallback((k: string, field: keyof ColFilter, val: string) => {
-    setFilters((p) => ({ ...p, [k]: { ...(p[k] || EMPTY_F), [field]: val } }));
-  }, []);
-
-  const clearF = useCallback((k: string) => {
-    setFilters((p) => { const n = { ...p }; delete n[k]; return n; });
-  }, []);
-
-  const processed = useMemo(() => {
-    let res = [...data];
-    for (const col of columns) {
-      if (!col.filterable) continue;
-      const f = filters[col.key];
-      if (!f || !isActive(f)) continue;
-      const field = col.filterField || col.key;
-      res = res.filter((item) => matchF(String(item[field] ?? ''), f));
-    }
-    if (sortKey && sortOrd) {
-      const col = columns.find((c) => c.key === sortKey);
-      if (col) {
-        res.sort((a, b) => {
-          if (col.sortFn) return sortOrd === 'desc' ? -col.sortFn(a, b) : col.sortFn(a, b);
-          const field = col.filterField || col.key;
-          const va = a[field], vb = b[field];
-          if (va == null && vb == null) return 0;
-          if (va == null) return 1;
-          if (vb == null) return -1;
-          if (typeof va === 'number' && typeof vb === 'number') return sortOrd === 'asc' ? va - vb : vb - va;
-          const cmp = String(va).localeCompare(String(vb), 'pt-BR', { sensitivity: 'base' });
-          return sortOrd === 'asc' ? cmp : -cmp;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIdx((prev: number | null) => {
+          const max = rowCountRef.current - 1;
+          if (prev == null) return 0;
+          return prev < max ? prev + 1 : prev;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIdx((prev: number | null) => {
+          if (prev == null) return 0;
+          return prev > 0 ? prev - 1 : prev;
         });
       }
-    }
-    return res;
-  }, [data, columns, filters, sortKey, sortOrd]);
+    };
+    el.addEventListener('keydown', onKey);
+    return () => el.removeEventListener('keydown', onKey);
+  }, [setSelectedIdx]);
 
-  const anyFilter = Object.values(filters).some(isActive);
+  // --- TanStack columns ---
+  const tCols = useMemo<ColumnDef<T, any>[]>(() => gc.map((col) => ({
+    id: col.key,
+    accessorKey: col.filterField || col.key,
+    header: col.header,
+    enableSorting: col.sortable !== false,
+    enableColumnFilter: col.filterType !== false,
+    filterFn: col.filterType !== false ? compoundFilterFn : undefined,
+    cell: col.render ? ({ row }: any) => col.render!(row.original) : ({ getValue }: any) => getValue() ?? '-',
+    meta: {
+      contentAlign: col.contentAlign,
+      headerAlign: col.headerAlign,
+      className: col.className,
+      filterType: col.filterType !== false ? (col.filterType || 'text') : false,
+      filterOptions: col.filterOptions,
+      resizable: col.resizable !== false,
+      colKey: col.key,
+    },
+  })), [gc]);
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">{loadingText}</p>
-        </div>
+  const table = useReactTable({
+    data, columns: tCols,
+    state: { sorting, columnFilters },
+    onSortingChange: handleSortingChange,
+    onColumnFiltersChange: handleFiltersChange,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    filterFns: { compound: compoundFilterFn },
+  });
+
+  const hasFilters = columnFilters.some((f) => isActive(f.value as CompoundFilter));
+  const rows = table.getRowModel().rows;
+  const lastColKey = gc[gc.length - 1]?.key;
+
+  // Atualiza ref do count pra navegação por teclado
+  rowCountRef.current = rows.length;
+
+  // --- LOADING ---
+  if (loading) return (
+    <div className="flex h-full items-center justify-center">
+      <div className="text-center">
+        <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-sm text-muted-foreground">{loadingText}</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (data.length === 0) {
-    return (
-      <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed">
-        <p className="mb-2 text-lg font-medium">{emptyTitle}</p>
-        {emptyDescription && <p className="mb-4 text-sm text-muted-foreground">{emptyDescription}</p>}
-        {emptyAction}
-      </div>
-    );
-  }
+  // --- EMPTY ---
+  if (data.length === 0) return (
+    <div className="flex h-full flex-col items-center justify-center">
+      <p className="mb-2 text-lg font-medium">{emptyTitle}</p>
+      {emptyDescription && <p className="mb-4 text-sm text-muted-foreground">{emptyDescription}</p>}
+      {emptyAction}
+    </div>
+  );
 
-  const totalCount = total ?? data.length;
-
+  // --- RENDER ---
   return (
-    <div className={`rounded-lg border ${className}`}>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr>
-              {columns.map((col) => {
-                const w = widths[col.key];
-                const sorted = sortKey === col.key;
-                const f = filters[col.key] || EMPTY_F;
-                const fOn = isActive(f);
+    <div ref={containerRef} tabIndex={0} className={`flex flex-col h-full overflow-hidden outline-none ${className}`}>
+      <div className="flex-1 overflow-auto">
+        <table className="border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
+          <colgroup>
+            {gc.map((col, idx) => {
+              const isLast = idx === gc.length - 1;
+              // Última coluna: width ignorado, preenche espaço restante. Use minWidth.
+              if (isLast) {
+                return <col key={col.key} style={{ minWidth: col.minWidth || col.width || 80 }} />;
+              }
+              const w = colW[col.key] || col.width || 150;
+              return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH, maxWidth: col.maxWidth || undefined }} />;
+            })}
+          </colgroup>
 
-                return (
-                  <th key={col.key} className={`p-3 text-sm font-medium ${alignCls(col.align)} relative select-none`} style={w ? { width: w, minWidth: w } : undefined}>
-                    <div className="flex items-center gap-1">
-                      {col.sortable ? (
-                        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => onSort(col.key)}>
-                          {col.header}
-                          <span className="opacity-50">
+          {/* HEADER */}
+          <thead className="sticky top-0 z-10 bg-slate-700 dark:bg-slate-800 text-slate-100">
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} className="border-b-2 border-slate-300">
+                {hg.headers.map((h) => {
+                  const m = h.column.columnDef.meta as any;
+                  const ck = m?.colKey as string | undefined;
+                  const isLast = ck === lastColKey;
+                  const canSort = h.column.getCanSort();
+                  const sorted = h.column.getIsSorted();
+                  const ft: GridFilterType | false = m?.filterType ?? false;
+                  const canResize = m?.resizable !== false && !isLast;
+                  const cf = h.column.getFilterValue() as CompoundFilter | undefined;
+
+                  return (
+                    <th key={h.id}
+                      style={{ height: headerHeight }}
+                      className="px-2 py-0 text-xs font-medium relative select-none whitespace-nowrap overflow-hidden border-r border-slate-600 last:border-r-0"
+                    >
+                      {/* Layout: [sort] [título] [filtro] */}
+                      <div className="flex items-center gap-1 w-full">
+                        {/* Sort: sempre à esquerda */}
+                        {canSort ? (
+                          <button className="shrink-0 opacity-60 hover:opacity-100 hover:text-white transition-colors"
+                            onClick={h.column.getToggleSortingHandler()}>
                             {!sorted && <ArrowUpDown className="h-3 w-3" />}
-                            {sorted && sortOrd === 'asc' && <ArrowUp className="h-3 w-3 opacity-100" />}
-                            {sorted && sortOrd === 'desc' && <ArrowDown className="h-3 w-3 opacity-100" />}
-                          </span>
-                        </button>
-                      ) : <span>{col.header}</span>}
+                            {sorted === 'asc' && <ArrowUp className="h-3 w-3" />}
+                            {sorted === 'desc' && <ArrowDown className="h-3 w-3" />}
+                          </button>
+                        ) : <span className="w-3 shrink-0" />}
 
-                      {col.filterable && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className={`ml-auto p-0.5 rounded hover:bg-muted ${fOn ? 'text-primary' : 'opacity-40 hover:opacity-100'}`}>
-                              <Filter className="h-3 w-3" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 space-y-2" align="start">
-                            <p className="text-xs font-semibold text-muted-foreground">Filtrar: {col.header}</p>
-                            <div className="space-y-1.5">
-                              <div><label className="text-[10px] text-muted-foreground">Contém</label><Input className="h-7 text-xs" value={f.contem} onChange={(e) => setF(col.key, 'contem', e.target.value)} /></div>
-                              <div><label className="text-[10px] text-muted-foreground">Começa com</label><Input className="h-7 text-xs" value={f.comeca} onChange={(e) => setF(col.key, 'comeca', e.target.value)} /></div>
-                              <div><label className="text-[10px] text-muted-foreground">Termina com</label><Input className="h-7 text-xs" value={f.termina} onChange={(e) => setF(col.key, 'termina', e.target.value)} /></div>
-                              <div><label className="text-[10px] text-muted-foreground">Não contém</label><Input className="h-7 text-xs" value={f.naoContem} onChange={(e) => setF(col.key, 'naoContem', e.target.value)} /></div>
-                            </div>
-                            {fOn && (
-                              <Button variant="ghost" size="sm" className="w-full text-xs h-7" onClick={() => clearF(col.key)}>
-                                <X className="mr-1 h-3 w-3" /> Limpar
-                              </Button>
-                            )}
-                          </PopoverContent>
-                        </Popover>
+                        {/* Título: preenche o centro, alinhamento conforme headerAlign */}
+                        <span
+                          className={`flex-1 truncate ${m?.headerAlign === 'left' ? 'text-left' : m?.headerAlign === 'right' ? 'text-right' : 'text-center'}`}
+                          onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
+                          style={canSort ? { cursor: 'pointer' } : undefined}
+                        >
+                          {flexRender(h.column.columnDef.header, h.getContext())}
+                        </span>
+
+                        {/* Filtro: sempre à direita */}
+                        {ft ? (
+                          <ColFilterPopover type={ft} options={m?.filterOptions}
+                            header={String(h.column.columnDef.header)}
+                            value={cf || { type: ft }}
+                            onChange={(f) => h.column.setFilterValue({ ...f, type: ft })}
+                            onClear={() => h.column.setFilterValue(undefined)}
+                          />
+                        ) : <span className="w-3 shrink-0" />}
+                      </div>
+
+                      {/* Resize handle */}
+                      {canResize && ck && (
+                        <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400"
+                          onMouseDown={(e) => onResizeDown(ck, e)}
+                        />
                       )}
-                    </div>
-                    {col.resizable && (
-                      <div className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50" onMouseDown={(e) => onResizeDown(col.key, e)} />
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
+
+          {/* BODY */}
           <tbody>
-            {processed.map((item, index) => {
-              const key = keyExtractor ? keyExtractor(item, index) : (item.id ?? index);
+            {rows.map((row, i) => {
+              const isSelected = selectedIdx === i;
               return (
-                <tr key={key} className="border-t transition-colors hover:bg-muted/30">
-                  {columns.map((col) => {
-                    const w = widths[col.key];
+                <tr key={row.id}
+                  style={{ height: rowHeight }}
+                  onClick={() => setSelectedIdx(i)}
+                  className={`border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default
+                    ${isSelected
+                      ? 'bg-sky-200 dark:bg-sky-900'
+                      : i % 2 === 0
+                        ? 'bg-white dark:bg-slate-950'
+                        : 'bg-slate-50 dark:bg-slate-900'}
+                    ${!isSelected ? 'hover:bg-slate-200 dark:hover:bg-slate-700' : ''}`}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const m = cell.column.columnDef.meta as any;
                     return (
-                      <td key={col.key} className={`p-3 text-sm ${alignCls(col.align)} ${col.className || ''}`} style={w ? { width: w, minWidth: w } : undefined}>
-                        {col.render ? col.render(item, index) : (item[col.key] ?? '-')}
+                      <td key={cell.id} className={`px-2 py-0 text-sm truncate ${m?.className || ''}`}>
+                        <div className={`flex items-center ${m?.contentAlign === 'center' ? 'justify-center' : m?.contentAlign === 'right' ? 'justify-end' : 'justify-start'}`}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
                       </td>
                     );
                   })}
                 </tr>
               );
             })}
-            {processed.length === 0 && data.length > 0 && (
-              <tr>
-                <td colSpan={columns.length} className="p-8 text-center text-sm text-muted-foreground">
-                  Nenhum resultado com os filtros aplicados
-                  <button className="ml-2 text-primary hover:underline" onClick={() => setFilters({})}>Limpar filtros</button>
-                </td>
-              </tr>
+
+            {/* Sem resultados após filtro */}
+            {rows.length === 0 && data.length > 0 && (
+              <tr><td colSpan={gc.length} className="px-3 py-6 text-center text-muted-foreground">
+                Nenhum resultado com os filtros aplicados
+                <button className="ml-2 text-primary hover:underline" onClick={() => setColumnFilters([])}>Limpar filtros</button>
+              </td></tr>
             )}
           </tbody>
         </table>
       </div>
-      <div className="border-t bg-muted/30 p-3 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {processed.length === totalCount ? `${totalCount} ${itemLabel}` : `${processed.length} de ${totalCount} ${itemLabel}`}
-        </p>
-        {anyFilter && (
-          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setFilters({})}>
-            <X className="mr-1 h-3 w-3" /> Limpar todos os filtros
+
+      {/* FOOTER */}
+      <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground flex items-center justify-between">
+        <span>{rows.length} {rows.length === 1 ? 'registro' : 'registros'}{rows.length !== data.length ? ` de ${data.length}` : ''}</span>
+        {hasFilters && (
+          <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setColumnFilters([])}>
+            <X className="mr-1 h-3 w-3" /> Limpar filtros
           </Button>
         )}
       </div>
