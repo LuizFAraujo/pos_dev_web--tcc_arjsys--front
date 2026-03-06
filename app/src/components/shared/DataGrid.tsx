@@ -115,8 +115,8 @@ function ColFilterPopover({ type, options, value, onChange, onClear, header }: {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className={`p-0.5 rounded hover:bg-slate-600 ${on ? 'text-blue-300' : 'opacity-40 hover:opacity-80'}`}>
-          <Filter className="h-3 w-3" />
+        <button className={`p-0.5 rounded hover:bg-slate-600 ${on ? 'text-yellow-400 bg-slate-600' : 'opacity-40 hover:opacity-80'}`}>
+          <Filter className="h-3 w-3" fill={on ? 'currentColor' : 'none'} />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 space-y-2" align="start">
@@ -188,12 +188,12 @@ export function DataGrid<T extends Record<string, any>>({
     try {
       const s = localStorage.getItem(lsKey);
       if (s) return { ...defaultW, ...JSON.parse(s) };
-    } catch {}
+    } catch { }
     return { ...defaultW };
   });
 
   useEffect(() => {
-    try { localStorage.setItem(lsKey, JSON.stringify(colW)); } catch {}
+    try { localStorage.setItem(lsKey, JSON.stringify(colW)); } catch { }
   }, [colW, lsKey]);
 
   // --- Resize ---
@@ -349,11 +349,11 @@ export function DataGrid<T extends Record<string, any>>({
                       <div className="flex items-center gap-1 w-full">
                         {/* Sort: sempre à esquerda */}
                         {canSort ? (
-                          <button className="shrink-0 opacity-60 hover:opacity-100 hover:text-white transition-colors"
+                          <button className={`shrink-0 transition-colors hover:text-white ${sorted ? 'text-yellow-400 bg-slate-600 rounded p-0.5' : 'opacity-60 hover:opacity-100 p-0.5'}`}
                             onClick={h.column.getToggleSortingHandler()}>
                             {!sorted && <ArrowUpDown className="h-3 w-3" />}
-                            {sorted === 'asc' && <ArrowUp className="h-3 w-3" />}
-                            {sorted === 'desc' && <ArrowDown className="h-3 w-3" />}
+                            {sorted === 'asc' && <ArrowUp className="h-3 w-3" fill="currentColor" />}
+                            {sorted === 'desc' && <ArrowDown className="h-3 w-3" fill="currentColor" />}
                           </button>
                         ) : <span className="w-3 shrink-0" />}
 
