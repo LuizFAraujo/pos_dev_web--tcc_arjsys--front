@@ -1,9 +1,23 @@
 /**
- * DataGrid.tsx - Grid baseado em TanStack Table
+ * DataGrid/index.tsx — Componente principal do grid
+ *
+ * Grid baseado em TanStack Table com:
+ * - Sort por coluna (click no header)
+ * - Filtros por coluna (popover com multi-condição, E/OU)
+ * - Resize de colunas (drag na borda, localStorage)
+ * - Linha selecionada (clique + setas cima/baixo)
+ * - Zebra, hover, header fixo (sticky)
+ * - Última coluna preenche espaço restante
+ *
+ * Uso:
+ *   import { DataGrid } from '@/components/shared/DataGrid';
+ *   import type { GridColumn, DataGridHandle } from '@/components/shared/DataGrid';
+ *
+ *   <DataGrid ref={gridRef} tabId={tab.id} storageId="clientes" columns={columns} data={data} />
  */
 
 import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import type { ReactNode, Ref } from 'react';
+import type { Ref } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,63 +31,37 @@ import {
   type Updater,
 } from '@tanstack/react-table';
 import { useTabState } from '@/hooks/useTabState';
-import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ColFilterPopover, isFilterActive, matchSingleCondition } from './ColFilterPopover';
+import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
+import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
+
 
 // ============================================
-// TIPOS
+// FILTER ENGINE
 // ============================================
 
-export type GridFilterType = 'text' | 'exact' | 'select' | 'number';
-
-export interface GridColumn<T> {
-  key: string;                                        // identificador da coluna, deve bater com campo do objeto T
-  header: string;                                     // texto exibido no cabeçalho
-  contentAlign?: 'left' | 'center' | 'right';         // alinhamento do conteúdo (default: 'left')
-  headerAlign?: 'left' | 'center' | 'right';          // alinhamento do cabeçalho (default: 'center')
-  className?: string;                                 // classes CSS extras nas células de conteúdo
-  render?: (item: T) => ReactNode;                    // render customizado. se não passar, exibe item[key]
-  sortable?: boolean;                                 // habilita ordenação (default: true)
-  filterType?: GridFilterType | false;                // tipo de filtro: 'text'|'exact'|'select'|'number'|false (default: 'text')
-  filterOptions?: { label: string; value: string }[]; // opções do dropdown, obrigatório se filterType 'select'
-  filterField?: string;                               // campo do objeto pra filtrar/ordenar, se diferente de key
-  resizable?: boolean;                                // habilita redimensionar arrastando borda (default: true, exceto última)
-  width?: number;                                     // largura inicial em px (default: 150). última coluna ignora
-  minWidth?: number;                                  // largura mínima em px (default: 50)
-  maxWidth?: number;                                  // largura máxima em px (default: sem limite)
-}
-
-interface DataGridProps<T> {
-  tabId: string;                // ID da aba — pra persistir sort/filters entre trocas de aba
-  storageId?: string;           // ID fixo pra localStorage (ex: 'clientes'). Se não passar, usa tabId
-  columns: GridColumn<T>[];     // definição das colunas
-  data: T[];                    // dados a exibir
-  loading?: boolean;            // exibe spinner (default: false)
-  loadingText?: string;         // texto do spinner (default: 'Carregando...')
-  emptyTitle?: string;          // título quando sem dados (default: 'Nenhum registro encontrado')
-  emptyDescription?: string;    // descrição quando sem dados
-  emptyAction?: ReactNode;      // botão/ação quando sem dados
-  headerHeight?: number;        // altura do header em px (default: 32)
-  rowHeight?: number;           // altura das linhas em px (default: 28)
-  className?: string;           // classes extras no container
-}
-
-// ============================================
-// FILTER
-// ============================================
-
-interface CompoundFilter {
-  type: GridFilterType;
-  contem?: string; comeca?: string; termina?: string; naoContem?: string;
-  valor?: string; min?: string; max?: string;
-}
-
+/** Função de filtro composto — registrada no TanStack Table */
 const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
   if (!fv || !fv.type) return true;
   const cv = String(row.getValue(columnId) ?? '').toLowerCase();
+
+  // Multi-condição com E/OU (filterType 'text')
+  if (fv.type === 'text' && fv.conditions && fv.conditions.length > 0) {
+    const active = fv.conditions.filter(c => c.value.trim());
+    if (active.length === 0) return true;
+
+    let result = matchSingleCondition(cv, active[0]);
+    for (let i = 1; i < active.length; i++) {
+      const prevLogic = active[i - 1].logic;
+      const match = matchSingleCondition(cv, active[i]);
+      result = prevLogic === 'OU' ? result || match : result && match;
+    }
+    return result;
+  }
+
+  // Campos diretos (legado ou outros tipos)
   switch (fv.type) {
     case 'text':
       if (fv.contem && !cv.includes(fv.contem.toLowerCase())) return false;
@@ -94,72 +82,8 @@ const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
   }
 };
 
-function isActive(f?: CompoundFilter): boolean {
-  if (!f) return false;
-  return !!(f.contem || f.comeca || f.termina || f.naoContem || f.valor || f.min || f.max);
-}
-
-const DEFAULT_MIN_WIDTH = 50;
-const DEFAULT_HEADER_HEIGHT = 32;
-const DEFAULT_ROW_HEIGHT = 28;
-
 // ============================================
-// FILTER POPOVER
-// ============================================
-
-function ColFilterPopover({ type, options, value, onChange, onClear, header }: {
-  type: GridFilterType; options?: { label: string; value: string }[];
-  value: CompoundFilter; onChange: (f: CompoundFilter) => void; onClear: () => void; header: string;
-}) {
-  const on = isActive(value);
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button className={`p-0.5 rounded hover:bg-slate-600 ${on ? 'text-yellow-400 bg-slate-600' : 'opacity-40 hover:opacity-80'}`}>
-          <Filter className="h-3 w-3" fill={on ? 'currentColor' : 'none'} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 space-y-2" align="start">
-        <p className="text-xs font-semibold text-muted-foreground">Filtrar: {header}</p>
-        {type === 'text' && (
-          <div className="space-y-1.5">
-            <div><label className="text-[10px] text-muted-foreground">Contém</label><Input className="h-7 text-xs" value={value.contem || ''} onChange={(e) => onChange({ ...value, contem: e.target.value })} /></div>
-            <div><label className="text-[10px] text-muted-foreground">Começa com</label><Input className="h-7 text-xs" value={value.comeca || ''} onChange={(e) => onChange({ ...value, comeca: e.target.value })} /></div>
-            <div><label className="text-[10px] text-muted-foreground">Termina com</label><Input className="h-7 text-xs" value={value.termina || ''} onChange={(e) => onChange({ ...value, termina: e.target.value })} /></div>
-            <div><label className="text-[10px] text-muted-foreground">Não contém</label><Input className="h-7 text-xs" value={value.naoContem || ''} onChange={(e) => onChange({ ...value, naoContem: e.target.value })} /></div>
-          </div>
-        )}
-        {type === 'exact' && (<div><label className="text-[10px] text-muted-foreground">Valor exato</label><Input className="h-7 text-xs" value={value.valor || ''} onChange={(e) => onChange({ ...value, valor: e.target.value })} /></div>)}
-        {type === 'select' && (
-          <Select value={value.valor || '__all__'} onValueChange={(v) => onChange({ ...value, valor: v === '__all__' ? '' : v })}>
-            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent><SelectItem value="__all__">Todos</SelectItem>{(options || []).map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-          </Select>
-        )}
-        {type === 'number' && (
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className="text-[10px] text-muted-foreground">Mín</label><Input className="h-7 text-xs" type="number" value={value.min || ''} onChange={(e) => onChange({ ...value, min: e.target.value })} /></div>
-            <div><label className="text-[10px] text-muted-foreground">Máx</label><Input className="h-7 text-xs" type="number" value={value.max || ''} onChange={(e) => onChange({ ...value, max: e.target.value })} /></div>
-          </div>
-        )}
-        {on && (<Button variant="ghost" size="sm" className="w-full text-xs h-7" onClick={onClear}><X className="mr-1 h-3 w-3" /> Limpar</Button>)}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// ============================================
-// HANDLE (métodos expostos via ref)
-// ============================================
-
-export interface DataGridHandle {
-  clearFilters: () => void;   // limpa filtros de coluna
-  clearSort: () => void;      // limpa ordenação
-  clearAll: () => void;       // limpa tudo (filtros + sort + seleção)
-}
-
-// ============================================
-// DATAGRID
+// DATAGRID (componente interno)
 // ============================================
 
 function DataGridInner<T extends Record<string, any>>({
@@ -176,14 +100,14 @@ function DataGridInner<T extends Record<string, any>>({
   const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tabId + '-filters', []);
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
 
-  // Métodos expostos via ref
+  // --- Métodos expostos via ref ---
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColumnFilters([]),
     clearSort: () => setSorting([]),
     clearAll: () => { setColumnFilters([]); setSorting([]); setSelectedIdx(null); },
   }), [setColumnFilters, setSorting, setSelectedIdx]);
 
-  // Handlers que resolvem Updater do TanStack
+  // --- Handlers TanStack (resolvem Updater) ---
   const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
     setSorting(typeof updater === 'function' ? updater(sorting) : updater);
   }, [sorting, setSorting]);
@@ -224,14 +148,14 @@ function DataGridInner<T extends Record<string, any>>({
     resRef.current = { key: k, startX: e.clientX, startW: sw };
 
     const onMove = (ev: MouseEvent) => {
-      const ref = resRef.current;
-      if (!ref) return;
-      const c = gc.find((x) => x.key === ref.key);
+      const r = resRef.current;
+      if (!r) return;
+      const c = gc.find((x) => x.key === r.key);
       const min = c?.minWidth || DEFAULT_MIN_WIDTH;
       const max = c?.maxWidth;
-      let newW = Math.max(min, ref.startW + ev.clientX - ref.startX);
+      let newW = Math.max(min, r.startW + ev.clientX - r.startX);
       if (max) newW = Math.min(max, newW);
-      setColW((p) => ({ ...p, [ref.key]: newW }));
+      setColW((p) => ({ ...p, [r.key]: newW }));
     };
     const onUp = () => {
       resRef.current = null;
@@ -300,7 +224,7 @@ function DataGridInner<T extends Record<string, any>>({
     filterFns: { compound: compoundFilterFn },
   });
 
-  const hasFilters = columnFilters.some((f) => isActive(f.value as CompoundFilter));
+  const hasFilters = columnFilters.some((f) => isFilterActive(f.value as CompoundFilter));
   const rows = table.getRowModel().rows;
   const lastColKey = gc[gc.length - 1]?.key;
 
@@ -374,7 +298,7 @@ function DataGridInner<T extends Record<string, any>>({
                           </button>
                         ) : <span className="w-3 shrink-0" />}
 
-                        {/* Título: preenche o centro, alinhamento conforme headerAlign */}
+                        {/* Título: preenche o centro */}
                         <span
                           className={`flex-1 truncate ${m?.headerAlign === 'left' ? 'text-left' : m?.headerAlign === 'right' ? 'text-right' : 'text-center'}`}
                           onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
@@ -460,6 +384,7 @@ function DataGridInner<T extends Record<string, any>>({
     </div>
   );
 }
+
 // forwardRef wrapper — preserva generics
 export const DataGrid = forwardRef(DataGridInner) as <T extends Record<string, any>>(
   props: DataGridProps<T> & { ref?: Ref<DataGridHandle> }

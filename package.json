@@ -1,0 +1,11 @@
+{
+  "name": "arjsys-front",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter ./app dev",
+    "dev2": "pnpm --filter arjsys-frontend dev",
+    "build": "pnpm --filter app build",
+    "preview": "pnpm --filter app preview",
+    "lint": "pnpm --filter app lint"
+  }
+}

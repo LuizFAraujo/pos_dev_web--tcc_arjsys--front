@@ -79,6 +79,13 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── TabelaMateriaisExplosao.tsx    📍 FALTA
         │   │
         │   ├── shared/             # Componentes reutilizáveis
+        │   │   ├── index.ts                       ✅
+        │   │   ├── DataGrid/
+        │   │   │   ├── index.ts                   ✅
+        │   │   │   ├── ColFilterPopover.tsx       ✅
+        │   │   │   ├── DataGrid.tsx               ✅
+        │   │   │   ├── FilterConditionRow.tsx     ✅
+        │   │   │   └── types.ts                   ✅
         │   │   ├── AppTooltip.tsx                 ✅
         │   │   ├── DataGrid.tsx                   ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA

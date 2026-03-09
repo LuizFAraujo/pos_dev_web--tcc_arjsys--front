@@ -3,8 +3,8 @@ import { Plus, Pencil, Trash2, FileText, LayoutGrid, Table, ScanSearch, Search }
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { useTabState } from '@/hooks/useTabState';
 import { PageShell } from '@/components/shared/PageShell';
-import { DataGrid } from '@/components/shared/DataGrid';
-import type { DataGridColumn } from '@/components/shared/DataGrid';
+import { DataGrid } from '@/components/shared/DataGrid/DataGrid';
+import type { DataGridColumn } from '@/components/shared/DataGrid/DataGrid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
