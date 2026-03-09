@@ -87,14 +87,14 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   ├── FilterConditionRow.tsx     ✅
         │   │   │   └── types.ts                   ✅
         │   │   ├── AppTooltip.tsx                 ✅
-        │   │   ├── DataGrid.tsx                   ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA
         │   │   ├── ErrorState.tsx                 📍 FALTA
         │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
         │   │   ├── PageRightSidebar.tsx           ✅
         │   │   ├── PageShell.tsx                  ✅
-        │   │   └── PageWrapper.tsx                ✅
+        │   │   ├── PageWrapper.tsx                ✅
+        │   │   └── SearchBar.tsx                  ✅
         │   │
         │   ├── sidebars/           # Conteúdos RightSidebar
         │   │   ├── NotificationsContent.tsx       ✅
