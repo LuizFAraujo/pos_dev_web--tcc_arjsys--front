@@ -87,6 +87,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   ├── FilterConditionRow.tsx     ✅
         │   │   │   └── types.ts                   ✅
         │   │   ├── AppTooltip.tsx                 ✅
+        │   │   ├── CadGrid.tsx                    ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA
         │   │   ├── ErrorState.tsx                 📍 FALTA
         │   │   ├── LoadingState.tsx               📍 FALTA
