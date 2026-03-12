@@ -1,19 +1,15 @@
 /**
- * DataGrid/index.tsx — Componente principal do grid
+ * DataGrid/DataGrid.tsx — Componente principal do grid
  *
  * Grid baseado em TanStack Table com:
  * - Sort por coluna (click no header)
  * - Filtros por coluna (popover com multi-condição, E/OU)
  * - Resize de colunas (drag na borda, localStorage)
  * - Linha selecionada (clique + setas cima/baixo)
+ * - Enter com linha selecionada → onActivate (abre edição)
+ * - Duplo clique na linha → onActivate
  * - Zebra, hover, header fixo (sticky)
  * - Última coluna preenche espaço restante
- *
- * Uso:
- *   import { DataGrid } from '@/components/shared/DataGrid';
- *   import type { GridColumn, DataGridHandle } from '@/components/shared/DataGrid';
- *
- *   <DataGrid ref={gridRef} tabId={tab.id} storageId="clientes" columns={columns} data={data} />
  */
 
 import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -42,16 +38,13 @@ import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } fr
 // FILTER ENGINE
 // ============================================
 
-/** Função de filtro composto — registrada no TanStack Table */
 const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
   if (!fv || !fv.type) return true;
   const cv = String(row.getValue(columnId) ?? '').toLowerCase();
 
-  // Multi-condição com E/OU (filterType 'text')
   if (fv.type === 'text' && fv.conditions && fv.conditions.length > 0) {
     const active = fv.conditions.filter(c => c.value.trim());
     if (active.length === 0) return true;
-
     let result = matchSingleCondition(cv, active[0]);
     for (let i = 1; i < active.length; i++) {
       const prevLogic = active[i - 1].logic;
@@ -61,7 +54,6 @@ const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
     return result;
   }
 
-  // Campos diretos (legado ou outros tipos)
   switch (fv.type) {
     case 'text':
       if (fv.contem && !cv.includes(fv.contem.toLowerCase())) return false;
@@ -93,21 +85,23 @@ function DataGridInner<T extends Record<string, any>>({
   headerHeight = DEFAULT_HEADER_HEIGHT,
   rowHeight = DEFAULT_ROW_HEIGHT,
   className = '',
+  onSelect,
+  onActivate,
 }: DataGridProps<T>, ref: Ref<DataGridHandle>) {
 
-  // --- Estado persistido por aba ---
   const [sorting, setSorting] = useTabState<SortingState>(tabId + '-sort', []);
   const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tabId + '-filters', []);
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
 
-  // --- Métodos expostos via ref ---
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColumnFilters([]),
     clearSort: () => setSorting([]),
     clearAll: () => { setColumnFilters([]); setSorting([]); setSelectedIdx(null); },
+    focus: () => containerRef.current?.focus(),
   }), [setColumnFilters, setSorting, setSelectedIdx]);
 
-  // --- Handlers TanStack (resolvem Updater) ---
   const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
     setSorting(typeof updater === 'function' ? updater(sorting) : updater);
   }, [sorting, setSorting]);
@@ -116,7 +110,6 @@ function DataGridInner<T extends Record<string, any>>({
     setColumnFilters(typeof updater === 'function' ? updater(columnFilters) : updater);
   }, [columnFilters, setColumnFilters]);
 
-  // --- Column widths: localStorage com chave fixa por tipo de página ---
   const lsKey = `grid-widths-${storageId || tabId}`;
 
   const defaultW = useMemo(() => {
@@ -137,7 +130,6 @@ function DataGridInner<T extends Record<string, any>>({
     try { localStorage.setItem(lsKey, JSON.stringify(colW)); } catch { }
   }, [colW, lsKey]);
 
-  // --- Resize ---
   const resRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
 
   const onResizeDown = useCallback((k: string, e: React.MouseEvent) => {
@@ -146,7 +138,6 @@ function DataGridInner<T extends Record<string, any>>({
     const col = gc.find((c) => c.key === k);
     const sw = colW[k] || col?.width || 150;
     resRef.current = { key: k, startX: e.clientX, startW: sw };
-
     const onMove = (ev: MouseEvent) => {
       const r = resRef.current;
       if (!r) return;
@@ -166,34 +157,6 @@ function DataGridInner<T extends Record<string, any>>({
     document.addEventListener('mouseup', onUp);
   }, [colW, gc]);
 
-  // --- Navegação por teclado (setas cima/baixo) ---
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rowCountRef = useRef(0);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIdx((prev: number | null) => {
-          const max = rowCountRef.current - 1;
-          if (prev == null) return 0;
-          return prev < max ? prev + 1 : prev;
-        });
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIdx((prev: number | null) => {
-          if (prev == null) return 0;
-          return prev > 0 ? prev - 1 : prev;
-        });
-      }
-    };
-    el.addEventListener('keydown', onKey);
-    return () => el.removeEventListener('keydown', onKey);
-  }, [setSelectedIdx]);
-
-  // --- TanStack columns ---
   const tCols = useMemo<ColumnDef<T, any>[]>(() => gc.map((col) => ({
     id: col.key,
     accessorKey: col.filterField || col.key,
@@ -228,8 +191,62 @@ function DataGridInner<T extends Record<string, any>>({
   const rows = table.getRowModel().rows;
   const lastColKey = gc[gc.length - 1]?.key;
 
-  // Atualiza ref do count pra navegação por teclado
+  const rowCountRef = useRef(0);
   rowCountRef.current = rows.length;
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const onActivateRef = useRef(onActivate);
+  onActivateRef.current = onActivate;
+
+  const selectRow = useCallback((idx: number | null) => {
+    setSelectedIdx(idx);
+    const row = idx !== null ? rowsRef.current[idx] : null;
+    onSelectRef.current?.(row ? row.original : null);
+  }, [setSelectedIdx]);
+
+  useEffect(() => {
+    const row = selectedIdx !== null ? rowsRef.current[selectedIdx] : null;
+    onSelectRef.current?.(row ? row.original : null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIdx, rows.length]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIdx((prev: number | null) => {
+          const next = prev == null ? 0 : Math.min(prev + 1, rowCountRef.current - 1);
+          const row = rowsRef.current[next];
+          onSelectRef.current?.(row ? row.original : null);
+          return next;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIdx((prev: number | null) => {
+          const next = prev == null ? 0 : Math.max(prev - 1, 0);
+          const row = rowsRef.current[next];
+          onSelectRef.current?.(row ? row.original : null);
+          return next;
+        });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const idx = selectedIdx;
+        if (idx == null) return;
+        const row = rowsRef.current[idx];
+        if (!row) return;
+        const item = row.original;
+        // setTimeout 0: aguarda o evento terminar antes de abrir o modal,
+        // evitando que o Enter acione botões dentro do modal ao abrir.
+        setTimeout(() => onActivateRef.current?.(item), 0);
+      }
+    };
+    el.addEventListener('keydown', onKey);
+    return () => el.removeEventListener('keydown', onKey);
+  }, [setSelectedIdx, selectedIdx]);
 
   // --- LOADING ---
   if (loading) return (
@@ -258,7 +275,6 @@ function DataGridInner<T extends Record<string, any>>({
           <colgroup>
             {gc.map((col, idx) => {
               const isLast = idx === gc.length - 1;
-              // Última coluna: width ignorado, preenche espaço restante. Use minWidth.
               if (isLast) {
                 return <col key={col.key} style={{ minWidth: col.minWidth || col.width || 80 }} />;
               }
@@ -286,9 +302,7 @@ function DataGridInner<T extends Record<string, any>>({
                       style={{ height: headerHeight }}
                       className="px-2 py-0 text-xs font-medium relative select-none whitespace-nowrap overflow-hidden border-r border-slate-600 last:border-r-0"
                     >
-                      {/* Layout: [sort] [título] [filtro] */}
                       <div className="flex items-center gap-1 w-full">
-                        {/* Sort: sempre à esquerda */}
                         {canSort ? (
                           <button className={`shrink-0 transition-colors hover:text-white ${sorted ? 'text-yellow-400 bg-slate-600 rounded p-0.5' : 'opacity-60 hover:opacity-100 p-0.5'}`}
                             onClick={h.column.getToggleSortingHandler()}>
@@ -298,7 +312,6 @@ function DataGridInner<T extends Record<string, any>>({
                           </button>
                         ) : <span className="w-3 shrink-0" />}
 
-                        {/* Título: preenche o centro */}
                         <span
                           className={`flex-1 truncate ${m?.headerAlign === 'left' ? 'text-left' : m?.headerAlign === 'right' ? 'text-right' : 'text-center'}`}
                           onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
@@ -307,7 +320,6 @@ function DataGridInner<T extends Record<string, any>>({
                           {flexRender(h.column.columnDef.header, h.getContext())}
                         </span>
 
-                        {/* Filtro: sempre à direita */}
                         {ft ? (
                           <ColFilterPopover type={ft} options={m?.filterOptions}
                             header={String(h.column.columnDef.header)}
@@ -318,7 +330,6 @@ function DataGridInner<T extends Record<string, any>>({
                         ) : <span className="w-3 shrink-0" />}
                       </div>
 
-                      {/* Resize handle */}
                       {canResize && ck && (
                         <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400"
                           onMouseDown={(e) => onResizeDown(ck, e)}
@@ -338,7 +349,8 @@ function DataGridInner<T extends Record<string, any>>({
               return (
                 <tr key={row.id}
                   style={{ height: rowHeight }}
-                  onClick={() => setSelectedIdx(i)}
+                  onClick={() => selectRow(i)}
+                  onDoubleClick={() => onActivateRef.current?.(row.original)}
                   className={`border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default
                     ${isSelected
                       ? 'bg-sky-200 dark:bg-sky-900'
@@ -361,7 +373,6 @@ function DataGridInner<T extends Record<string, any>>({
               );
             })}
 
-            {/* Sem resultados após filtro */}
             {rows.length === 0 && data.length > 0 && (
               <tr><td colSpan={gc.length} className="px-3 py-6 text-center text-muted-foreground">
                 Nenhum resultado com os filtros aplicados
@@ -385,7 +396,6 @@ function DataGridInner<T extends Record<string, any>>({
   );
 }
 
-// forwardRef wrapper — preserva generics
 export const DataGrid = forwardRef(DataGridInner) as <T extends Record<string, any>>(
   props: DataGridProps<T> & { ref?: Ref<DataGridHandle> }
 ) => ReturnType<typeof DataGridInner>;

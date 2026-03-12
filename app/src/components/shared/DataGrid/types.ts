@@ -50,6 +50,18 @@ export interface DataGridProps<T> {
   headerHeight?: number;        // altura do header em px (default: 32)
   rowHeight?: number;           // altura das linhas em px (default: 28)
   className?: string;           // classes extras no container
+
+  /**
+   * Chamado ao selecionar/deselecionar uma linha (clique ou seta).
+   * Recebe o item selecionado, ou null se a seleção foi limpa.
+   */
+  onSelect?: (item: T | null) => void;
+
+  /**
+   * Chamado ao "ativar" uma linha: Enter com linha selecionada, ou duplo clique.
+   * Usado para abrir edição diretamente pelo grid.
+   */
+  onActivate?: (item: T) => void;
 }
 
 /** Métodos expostos pelo DataGrid via ref */
@@ -57,6 +69,7 @@ export interface DataGridHandle {
   clearFilters: () => void;   // limpa filtros de coluna
   clearSort: () => void;      // limpa ordenação
   clearAll: () => void;       // limpa tudo (filtros + sort + seleção)
+  focus: () => void;          // devolve o foco pro container do grid (usar com useRestoreFocus)
 }
 
 // ============================================

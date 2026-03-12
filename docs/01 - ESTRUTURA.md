@@ -37,6 +37,7 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── components/
         │   ├── admin/             # Componentes Admin
+        │   │   ├── ClienteForm.tsx                ✅
         │   │   ├── ClienteFormModal.tsx           ✅
         │   │   ├── DeleteClienteDialog.tsx        ✅
         │   │   ├── DeleteFuncionarioDialog.tsx    ✅
@@ -86,6 +87,11 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   ├── DataGrid.tsx               ✅
         │   │   │   ├── FilterConditionRow.tsx     ✅
         │   │   │   └── types.ts                   ✅
+        │   │   ├── PageShell/
+        │   │   │   ├── index.ts                   ✅
+        │   │   │   ├── PageShell.tsx              ✅
+        │   │   │   ├── types.ts                   ✅
+        │   │   │   └── usePageMode.tsx            ✅
         │   │   ├── AppTooltip.tsx                 ✅
         │   │   ├── CadGrid.tsx                    ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA
@@ -93,7 +99,6 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
         │   │   ├── PageRightSidebar.tsx           ✅
-        │   │   ├── PageShell.tsx                  ✅
         │   │   ├── PageWrapper.tsx                ✅
         │   │   └── SearchBar.tsx                  ✅
         │   │
@@ -156,6 +161,7 @@ pos_dev_web--tcc_front--arjsys/
         ├── hooks/                  # Custom hooks
         │   ├── useBOMFlatState.ts                 ✅
         │   ├── useKeyboardShortcuts.ts            ✅
+        │   ├── useRestoreFocus.ts                 ✅
         │   ├── useTabForm.ts                      ✅
         │   └── useTabState.ts                     ✅
         │

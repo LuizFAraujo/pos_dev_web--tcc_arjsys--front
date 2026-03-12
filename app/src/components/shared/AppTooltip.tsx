@@ -21,7 +21,7 @@
 
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
-const DEFAULT_DELAY = 1500; // ms — tempo até o tooltip aparecer
+const DEFAULT_DELAY = 1200; // ms — tempo até o tooltip aparecer
 
 function AppTooltip({ delayDuration = DEFAULT_DELAY, ...props }: React.ComponentProps<typeof Tooltip>) {
   return <Tooltip delayDuration={delayDuration} {...props} />;

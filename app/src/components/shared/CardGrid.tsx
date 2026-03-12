@@ -25,6 +25,8 @@ import {
 export interface CardGridHandle {
   /** Limpa a seleção atual */
   clearSelection: () => void;
+  /** Devolve o foco pro container (usar com useRestoreFocus) */
+  focus: () => void;
 }
 
 export interface CardGridProps<T extends { id: number | string }> {
@@ -130,6 +132,7 @@ function CardGridInner<T extends { id: number | string }>(
   // Expõe handle externo
   useImperativeHandle(ref, () => ({
     clearSelection: () => onSelect(null),
+    focus: () => containerRef.current?.focus(),
   }));
 
   /**
