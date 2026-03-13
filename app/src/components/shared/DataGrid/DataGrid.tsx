@@ -271,7 +271,7 @@ function DataGridInner<T extends Record<string, any>>({
   return (
     <div ref={containerRef} tabIndex={0} className={`flex flex-col h-full overflow-hidden outline-none ${className}`}>
       <div className="flex-1 overflow-auto">
-        <table className="border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
+        <table className="border-separate border-spacing-0" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             {gc.map((col, idx) => {
               const isLast = idx === gc.length - 1;
