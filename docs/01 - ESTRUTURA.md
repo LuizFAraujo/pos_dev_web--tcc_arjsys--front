@@ -160,6 +160,7 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── hooks/                  # Custom hooks
         │   ├── useBOMFlatState.ts                 ✅
+        │   ├── useFormTabNavigation.ts            ✅
         │   ├── useKeyboardShortcuts.ts            ✅
         │   ├── useRestoreFocus.ts                 ✅
         │   ├── useTabForm.ts                      ✅

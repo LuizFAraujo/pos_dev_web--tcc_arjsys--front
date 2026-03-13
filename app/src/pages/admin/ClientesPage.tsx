@@ -1,12 +1,16 @@
 /**
  * ClientesPage.tsx — Página de clientes com modos list/view/new/edit
+ *
+ * Botões do header são gerenciados pelo PageActions (template).
+ * Esta página cuida apenas do conteúdo específico:
+ * - Colunas do grid e SearchBar
+ * - Form inline (ClienteForm)
+ * - Callbacks de CRUD
+ * - Card customizado
  */
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import {
-  Plus, Pencil, Trash2, FilterX, List, LayoutGrid,
-  Settings, Eye, Save, ArrowLeft, X,
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -14,15 +18,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useClientesStore } from '@/stores/admin/clientesStore';
 import { useTabState } from '@/hooks/useTabState';
-import { PageShell, usePageMode } from '@/components/shared/PageShell';
+import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn, DataGridHandle } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import type { CardGridHandle } from '@/components/shared/CardGrid';
-import { SearchBar } from '@/components/shared/SearchBar';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { DeleteClienteDialog } from '@/components/admin/DeleteClienteDialog';
 import { ClienteForm } from '@/components/admin/ClienteForm';
 import type { ClienteFormHandle } from '@/components/admin/ClienteForm';
@@ -42,10 +44,6 @@ const SEARCH_COLUMNS: SearchColumn[] = [
 ];
 
 const DEFAULT_SEARCH_COLS = ['nome'];
-
-function Sep() {
-  return <div className="mx-2 h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />;
-}
 
 function ClienteCard({ cliente }: { cliente: Cliente }) {
   return (
@@ -110,7 +108,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   );
 
   const activeItem = viewMode === 'list' ? selectedItem : selectedCard;
-  const isListMode = viewMode === 'list';
   const inForm = page.mode !== 'list';
 
   // ─── Save ────────────────────────────────────────────────────────────────────
@@ -145,6 +142,21 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         if (!ok) throw new Error('VALIDATION');
       });
       toast.success('Salvo com sucesso.');
+    } catch (e: any) {
+      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [page]);
+
+  const doSaveAndNew = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      await page.saveAndNew(async () => {
+        const ok = await formRef.current?.submit();
+        if (!ok) throw new Error('VALIDATION');
+      });
+      toast.success('Salvo! Adicione outro.');
     } catch (e: any) {
       if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
     } finally {
@@ -194,178 +206,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     return undefined;
   }, [page.mode]);
 
-  // ─── Header buttons ───────────────────────────────────────────────────────────
-
-  const btnConfig = (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8">
-          <Settings className="h-4 w-4" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent><p>Configurações</p></TooltipContent>
-    </Tooltip>
-  );
-
-  const headerRight = useMemo(() => {
-
-    // ── list ──────────────────────────────────────────────────────────────────
-    if (!inForm) return (
-      <div className="flex items-center">
-        <SearchBar value={searchTerm} onChange={setSearchTerm}
-          columns={SEARCH_COLUMNS} selectedColumns={searchCols}
-          onColumnsChange={setSearchCols} placeholder="Buscar..." className="w-80" />
-        <Sep />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="icon" className="h-8 w-8" disabled={!isListMode}
-              onClick={() => { gridRef.current?.clearAll(); setSearchTerm(''); }}>
-              <FilterX className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Limpar filtros</p></TooltipContent>
-        </Tooltip>
-        <Sep />
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" className="h-8 w-8" onClick={() => page.openNew()}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Novo cliente</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!activeItem}
-                onClick={() => { if (activeItem) handleView(activeItem); }}>
-                <Eye className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>{activeItem ? 'Visualizar' : 'Selecione um cliente'}</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8" disabled={!activeItem}
-                onClick={() => { if (activeItem) handleEdit(activeItem); }}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>{activeItem ? 'Editar' : 'Selecione um cliente'}</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon"
-                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                disabled={!activeItem}
-                onClick={() => { if (activeItem) handleDelete(activeItem); }}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>{activeItem ? 'Excluir' : 'Selecione um cliente'}</p></TooltipContent>
-          </Tooltip>
-        </div>
-        <Sep />
-        <div className="flex items-center gap-0.5 rounded-md border border-slate-200 dark:border-slate-700">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant={isListMode ? 'secondary' : 'ghost'} size="icon"
-                className="h-7 w-7 rounded-r-none" onClick={() => handleViewMode('list')}>
-                <List className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Lista</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant={!isListMode ? 'secondary' : 'ghost'} size="icon"
-                className="h-7 w-7 rounded-l-none" onClick={() => handleViewMode('cards')}>
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Cards</p></TooltipContent>
-          </Tooltip>
-        </div>
-        <Sep />
-        {btnConfig}
-      </div>
-    );
-
-    // ── view ──────────────────────────────────────────────────────────────────
-    if (page.mode === 'view') return (
-      <div className="flex items-center">
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleStartEdit}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Editar</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8"
-                onClick={() => page.requestBack()}>
-                <X className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Fechar</p></TooltipContent>
-          </Tooltip>
-        </div>
-        <Sep />
-        {btnConfig}
-      </div>
-    );
-
-    // ── new / edit ────────────────────────────────────────────────────────────
-    return (
-      <div className="flex items-center">
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" className="h-8 w-8"
-                disabled={isSaving || !page.isDirty} onClick={doSaveAndBack}>
-                <Save className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar e Sair'}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8"
-                disabled={isSaving || !page.isDirty} onClick={doSaveAndStay}>
-                <Save className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar'}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8"
-                onClick={() => page.requestBack()}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{page.mode === 'edit' ? 'Voltar para Visualização' : 'Cancelar'}</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <Sep />
-        {btnConfig}
-      </div>
-    );
-  }, [
-    inForm, page, isListMode, activeItem, searchTerm, searchCols, isSaving,
-    setSearchTerm, setSearchCols, handleView, handleEdit, handleStartEdit,
-    handleDelete, handleViewMode, doSaveAndBack, doSaveAndStay,
-  ]);
-
   // ─── Colunas ─────────────────────────────────────────────────────────────────
 
   const columns: GridColumn<Cliente>[] = useMemo(() => [
@@ -395,10 +235,35 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <PageShell module="Admin" title="Clientes" tag={modeTag} headerRight={headerRight}>
+    <PageShell module="Admin" title="Clientes" tag={modeTag}
+      headerRight={
+        <PageActions
+          page={page}
+          activeItem={activeItem}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onStartEdit={handleStartEdit}
+          searchColumns={SEARCH_COLUMNS}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchSelectedColumns={searchCols}
+          onSearchColumnsChange={setSearchCols}
+          gridRef={gridRef}
+          viewMode={viewMode}
+          onViewModeChange={handleViewMode}
+          onSaveAndBack={doSaveAndBack}
+          onSaveAndStay={doSaveAndStay}
+          onSaveAndNew={doSaveAndNew}
+          isSaving={isSaving}
+          newTooltip="Novo cliente"
+          noSelectionText="Selecione um cliente"
+        />
+      }
+    >
 
       {!inForm && (
-        isListMode ? (
+        viewMode === 'list' ? (
           <DataGrid
             ref={gridRef} tabId={tab.id} storageId="clientes"
             columns={columns} data={filtrados}
@@ -430,6 +295,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
 
       {inForm && (
         <ClienteForm
+          key={page.resetKey}
           ref={formRef}
           mode={page.mode as 'view' | 'new' | 'edit'}
           cliente={page.editingItem}

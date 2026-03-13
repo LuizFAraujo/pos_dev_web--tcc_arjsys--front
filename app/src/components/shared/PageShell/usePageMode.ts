@@ -3,7 +3,7 @@
  *
  * Fluxo:
  *   list → new  → Salvar e Sair → list
- *               → Salvar → permanece
+ *               → Salvar (novo) → salva, limpa form, continua em new
  *               → Cancelar (sem dirty) → list
  *               → Cancelar (com dirty) → dialog
  *
@@ -51,6 +51,7 @@ export function usePageMode<T>(
 
   const [isDirty, setIsDirtyState] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     setIsDirtyState(false);
@@ -149,10 +150,22 @@ export function usePageMode<T>(
     setIsDirtyState(false);
   }, []);
 
+  /** Salva e reseta para novo cadastro — permanece em mode 'new' com form limpo */
+  const saveAndNew = useCallback(async (onSave: () => Promise<void>) => {
+    await onSave();
+    // Limpa o item e reseta dirty — permanece em 'new'
+    setEditingItem(null);
+    setIsDirtyState(false);
+    setConfirmOpen(false);
+    // Incrementa resetKey para forçar remount do form (limpa campos + foco)
+    setResetKey((k) => k + 1);
+  }, [setEditingItem]);
+
   return {
     mode, editingItem, isDirty, setDirty,
     openNew, openView, openEdit, startEdit,
-    requestBack, saveAndBack, saveAndStay,
+    requestBack, saveAndBack, saveAndStay, saveAndNew,
+    resetKey,
     confirmOpen, confirmDiscard, cancelDiscard,
   };
 }

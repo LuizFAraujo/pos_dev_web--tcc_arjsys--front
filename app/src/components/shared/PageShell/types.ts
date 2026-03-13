@@ -28,6 +28,10 @@ export interface PageModeState<T> {
   requestBack: () => void;
   saveAndBack: (onSave: () => Promise<void>) => Promise<void>;
   saveAndStay: (onSave: () => Promise<void>) => Promise<void>;
+  /** Salva e reseta para novo cadastro (modo new → limpa form, permanece em new) */
+  saveAndNew: (onSave: () => Promise<void>) => Promise<void>;
+  /** Chave de reset — incrementa a cada saveAndNew para forçar remount do form */
+  resetKey: number;
   confirmOpen: boolean;
   confirmDiscard: () => void;
   cancelDiscard: () => void;

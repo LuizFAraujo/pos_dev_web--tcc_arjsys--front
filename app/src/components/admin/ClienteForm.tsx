@@ -6,6 +6,12 @@
  *   edit — inputs editáveis
  *   new  — inputs editáveis, campos vazios
  *
+ * Usa useFormTabNavigation para:
+ *   - Foco automático no primeiro campo ao montar
+ *   - Foco no primeiro campo ao trocar de aba
+ *   - Tab no último campo → próxima aba
+ *   - Shift+Tab no primeiro campo → aba anterior
+ *
  * Bug fix: onDirty é chamado a cada alteração sem guard interno.
  * O controle de isDirty fica exclusivamente no usePageMode.
  * Setar true múltiplas vezes em useState é inofensivo.
@@ -15,6 +21,7 @@ import { useEffect, useImperativeHandle, useState, forwardRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFormTabNavigation } from '@/hooks/useFormTabNavigation';
 import type { Cliente, ClienteFormData } from '@/types/admin/cliente.types';
 import type { PageMode } from '@/components/shared/PageShell';
 
@@ -34,6 +41,8 @@ const EMPTY: ClienteFormData = {
   contatoComercial: '', telefone: '', email: '', endereco: '',
   cidade: '', estado: '', cep: '',
 };
+
+const TABS = ['identificacao', 'contato', 'endereco'];
 
 // ─── Campo ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +80,11 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
     const readOnly = mode === 'view';
     const [data, setData] = useState<ClienteFormData>({ ...EMPTY });
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const { activeTab, setActiveTab, formFieldsRef, handleFieldsKeyDown } = useFormTabNavigation({
+      tabs: TABS,
+      defaultTab: 'identificacao',
+    });
 
     // Reseta form ao trocar de item ou modo
     useEffect(() => {
@@ -124,7 +138,7 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
 
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        <Tabs defaultValue="identificacao" className="flex flex-col h-full gap-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full gap-0">
 
           <div className="shrink-0 px-6 pt-4 pb-0">
             <TabsList>
@@ -136,7 +150,8 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
 
           {/* Identificação */}
           <TabsContent value="identificacao" className="flex-1 overflow-auto mt-0 px-6 py-5">
-            <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+            <div ref={formFieldsRef} onKeyDown={handleFieldsKeyDown}
+              className="grid grid-cols-3 gap-x-6 gap-y-5">
               <Field id="nome" label="Nome *" value={data.nome}
                 onChange={(v) => set('nome', v)} readOnly={readOnly}
                 error={errors.nome} span="col-span-3" />
@@ -151,7 +166,8 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
 
           {/* Contato */}
           <TabsContent value="contato" className="flex-1 overflow-auto mt-0 px-6 py-5">
-            <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+            <div ref={formFieldsRef} onKeyDown={handleFieldsKeyDown}
+              className="grid grid-cols-3 gap-x-6 gap-y-5">
               <Field id="contatoComercial" label="Contato Comercial" value={data.contatoComercial ?? ''}
                 onChange={(v) => set('contatoComercial', v)} readOnly={readOnly} span="col-span-2" />
               <Field id="telefone" label="Telefone" value={data.telefone ?? ''}
@@ -164,7 +180,8 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
 
           {/* Endereço */}
           <TabsContent value="endereco" className="flex-1 overflow-auto mt-0 px-6 py-5">
-            <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+            <div ref={formFieldsRef} onKeyDown={handleFieldsKeyDown}
+              className="grid grid-cols-3 gap-x-6 gap-y-5">
               <Field id="endereco" label="Endereço" value={data.endereco ?? ''}
                 onChange={(v) => set('endereco', v)} readOnly={readOnly} span="col-span-3" />
               <Field id="cidade" label="Cidade" value={data.cidade ?? ''}
