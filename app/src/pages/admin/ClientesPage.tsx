@@ -141,7 +141,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         const ok = await formRef.current?.submit();
         if (!ok) throw new Error('VALIDATION');
       });
-      toast.success('Salvo com sucesso.');
     } catch (e: any) {
       if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
     } finally {
@@ -156,7 +155,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         const ok = await formRef.current?.submit();
         if (!ok) throw new Error('VALIDATION');
       });
-      toast.success('Salvo! Adicione outro.');
     } catch (e: any) {
       if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
     } finally {
@@ -189,6 +187,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     if (clienteDelete.id === selectedCardId) setSelectedCardId(null);
     setDeleteDialogOpen(false);
     setClienteDelete(null);
+    toast.success('Registro excluído.');
   }, [clienteDelete, deleteCliente, selectedCardId, setSelectedCardId]);
 
   const handleViewMode = useCallback((mode: 'list' | 'cards') => {

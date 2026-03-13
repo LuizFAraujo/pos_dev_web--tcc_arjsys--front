@@ -19,6 +19,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useTabState } from '@/hooks/useTabState';
 import type { PageMode, PageModeState } from './types';
 
@@ -133,6 +134,7 @@ export function usePageMode<T>(
   const cancelDiscard  = useCallback(() => setConfirmOpen(false), []);
 
   const saveAndBack = useCallback(async (onSave: () => Promise<void>) => {
+    const wasNew = mode === 'new';
     await onSave();
     if (editingItem && getItemId) {
       const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
@@ -143,11 +145,13 @@ export function usePageMode<T>(
     setPreviousMode('list');
     setIsDirtyState(false);
     setConfirmOpen(false);
-  }, [editingItem, getItemId, tabId, setMode, setEditingItem]);
+    toast.success(wasNew ? 'Registro adicionado.' : 'Registro atualizado.');
+  }, [mode, editingItem, getItemId, tabId, setMode, setEditingItem]);
 
   const saveAndStay = useCallback(async (onSave: () => Promise<void>) => {
     await onSave();
     setIsDirtyState(false);
+    toast.success('Registro atualizado.');
   }, []);
 
   /** Salva e reseta para novo cadastro — permanece em mode 'new' com form limpo */
@@ -159,6 +163,7 @@ export function usePageMode<T>(
     setConfirmOpen(false);
     // Incrementa resetKey para forçar remount do form (limpa campos + foco)
     setResetKey((k) => k + 1);
+    toast.success('Registro adicionado. Adicione outro.');
   }, [setEditingItem]);
 
   return {
