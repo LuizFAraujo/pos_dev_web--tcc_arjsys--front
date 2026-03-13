@@ -9,6 +9,8 @@ export interface PageShellProps {
   title: string;
   /** Tag discreta exibida ao lado do título (ex: modo da página) */
   tag?: string;
+  /** Modo da página — se passado sem tag, gera tag automaticamente */
+  mode?: PageMode;
   headerRight?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;

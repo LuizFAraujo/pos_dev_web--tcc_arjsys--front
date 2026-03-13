@@ -9,11 +9,25 @@
  * ├──────────────────────────────────────────────┤
  * │ FOOTER (opcional)                             │
  * └──────────────────────────────────────────────┘
+ *
+ * Se `mode` for passado sem `tag`, gera a tag automaticamente:
+ *   view → 'visualização', edit → 'edição', new → 'novo', list → sem tag
  */
 
-import type { PageShellProps } from './types';
+import { useMemo } from 'react';
+import type { PageShellProps, PageMode } from './types';
 
-export function PageShell({ module, title, tag, headerRight, footer, children }: PageShellProps) {
+/** Mapa mode → texto da tag */
+const MODE_TAG: Record<PageMode, string | undefined> = {
+  list: undefined,
+  view: 'visualização',
+  edit: 'edição',
+  new: 'novo',
+};
+
+export function PageShell({ module, title, tag, mode, headerRight, footer, children }: PageShellProps) {
+  const resolvedTag = useMemo(() => tag ?? (mode ? MODE_TAG[mode] : undefined), [tag, mode]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* HEADER */}
@@ -25,9 +39,9 @@ export function PageShell({ module, title, tag, headerRight, footer, children }:
               {module && <>{module} <span className="mx-1">/</span> </>}
               <span className="text-base font-bold text-slate-900 dark:text-slate-100 uppercase">{title}</span>
             </h1>
-            {tag && (
+            {resolvedTag && (
               <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 leading-none">
-                {tag}
+                {resolvedTag}
               </span>
             )}
           </div>

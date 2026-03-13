@@ -117,18 +117,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
 
   // ─── Navegação ───────────────────────────────────────────────────────────────
 
-  const handleView = useCallback((c: Cliente) => page.openView(c), [page]);
-
-  const handleEdit = useCallback((c: Cliente) => {
-    try { page.openEdit(c); }
-    catch { toast.error('Este cliente já está sendo editado em outra aba.'); }
-  }, [page]);
-
-  const handleStartEdit = useCallback(() => {
-    try { page.startEdit(); }
-    catch { toast.error('Este cliente já está sendo editado em outra aba.'); }
-  }, [page]);
-
   const handleDelete = useCallback((c: Cliente) => {
     setClienteDelete(c);
     setDeleteDialogOpen(true);
@@ -148,15 +136,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     if (mode === 'list') { setSelectedCardId(null); cardGridRef.current?.clearSelection(); }
     else setSelectedItem(null);
   }, [setViewMode, setSelectedCardId]);
-
-  // ─── Tag de modo ──────────────────────────────────────────────────────────────
-
-  const modeTag = useMemo(() => {
-    if (page.mode === 'view') return 'visualização';
-    if (page.mode === 'edit') return 'edição';
-    if (page.mode === 'new') return 'novo';
-    return undefined;
-  }, [page.mode]);
 
   // ─── Colunas ─────────────────────────────────────────────────────────────────
 
@@ -187,15 +166,13 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <PageShell module="Admin" title="Clientes" tag={modeTag}
+    <PageShell module="Admin" title="Clientes" mode={page.mode}
       headerRight={
         <PageActions
           page={page}
           activeItem={activeItem}
-          onView={handleView}
-          onEdit={handleEdit}
           onDelete={handleDelete}
-          onStartEdit={handleStartEdit}
+          lockMessage="Este cliente já está sendo editado em outra aba."
           searchColumns={SEARCH_COLUMNS}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -219,7 +196,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
             loading={isLoading} loadingText="Carregando clientes..."
             emptyTitle="Nenhum cliente encontrado" emptyDescription="Crie o primeiro cliente"
             onSelect={(item) => setSelectedItem(item as Cliente | null)}
-            onActivate={(item) => handleView(item as Cliente)}
+            onActivate={(item) => page.openView(item as Cliente)}
             emptyAction={
               <Button onClick={() => page.openNew()}>
                 <Plus className="mr-2 h-4 w-4" /> Criar Primeiro

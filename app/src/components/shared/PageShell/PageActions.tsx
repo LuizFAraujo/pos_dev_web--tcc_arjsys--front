@@ -48,17 +48,11 @@ export interface PageActionsProps<T> {
   /** Item selecionado no grid/cards — habilita View/Edit/Delete */
   activeItem?: T | null;
 
-  /** Callback ao clicar View no modo list */
-  onView?: (item: T) => void;
-
-  /** Callback ao clicar Edit no modo list (com tratamento de lock) */
-  onEdit?: (item: T) => void;
-
   /** Callback ao clicar Delete */
   onDelete?: (item: T) => void;
 
-  /** Callback ao clicar Editar no modo view (startEdit com tratamento de lock) */
-  onStartEdit?: () => void;
+  /** Mensagem de toast quando item está bloqueado em outra aba */
+  lockMessage?: string;
 
   // ── SearchBar (opção B — template monta) ──────────────────────────────────
 
@@ -139,10 +133,8 @@ function Sep() {
 export function PageActions<T>({
   page,
   activeItem,
-  onView,
-  onEdit,
   onDelete,
-  onStartEdit,
+  lockMessage = 'Este item já está sendo editado em outra aba.',
   searchColumns,
   searchTerm = '',
   onSearchChange,
@@ -169,6 +161,22 @@ export function PageActions<T>({
   const inForm = page.mode !== 'list';
 
   const [isSaving, setIsSaving] = useState(false);
+
+  // ── Navegação interna (view/edit com tratamento de lock) ──────────────────
+
+  const handleView = useCallback((item: T) => {
+    page.openView(item);
+  }, [page]);
+
+  const handleEdit = useCallback((item: T) => {
+    try { page.openEdit(item); }
+    catch { toast.error(lockMessage); }
+  }, [page, lockMessage]);
+
+  const handleStartEdit = useCallback(() => {
+    try { page.startEdit(); }
+    catch { toast.error(lockMessage); }
+  }, [page, lockMessage]);
 
   // ── Save interno (template cuida de try/catch/isSaving) ───────────────────
 
@@ -345,12 +353,12 @@ export function PageActions<T>({
             </Tooltip>
           )}
 
-          {!hide.has('view') && onView && (
+          {!hide.has('view') && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8"
                   disabled={!activeItem}
-                  onClick={() => { if (activeItem) onView(activeItem); }}>
+                  onClick={() => { if (activeItem) handleView(activeItem); }}>
                   <Eye className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -360,12 +368,12 @@ export function PageActions<T>({
             </Tooltip>
           )}
 
-          {!hide.has('edit') && onEdit && (
+          {!hide.has('edit') && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8"
                   disabled={!activeItem}
-                  onClick={() => { if (activeItem) onEdit(activeItem); }}>
+                  onClick={() => { if (activeItem) handleEdit(activeItem); }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -448,16 +456,14 @@ export function PageActions<T>({
     return (
       <div className="flex items-center">
         <div className="flex items-center gap-1">
-          {onStartEdit && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={onStartEdit}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Editar</p></TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleStartEdit}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Editar</p></TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8"
