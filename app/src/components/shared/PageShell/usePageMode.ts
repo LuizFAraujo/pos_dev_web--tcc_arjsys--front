@@ -1,9 +1,21 @@
 /**
  * usePageMode.ts — Hook para páginas de cadastro com modos list/view/new/edit
  *
- * previousMode é um useState simples (não persiste entre trocas de aba).
- * Isso é intencional: ao trocar de aba e voltar, o modo é restaurado via
- * useTabState, mas a origem (previousMode) é resetada para 'list'.
+ * Fluxo:
+ *   list → new  → Salvar e Sair → list
+ *               → Salvar → permanece
+ *               → Cancelar (sem dirty) → list
+ *               → Cancelar (com dirty) → dialog
+ *
+ *   list → view → Fechar → list
+ *               → Editar → edit → Salvar e Sair → list
+ *                               → Salvar → permanece em edit
+ *                               → Voltar (sem dirty) → view  [previousMode → list]
+ *                               → Voltar (com dirty) → dialog
+ *
+ * Bug 1 fix: isDirtyRef no ClienteForm — resolvido no ClienteForm (onDirty sem guard)
+ * Bug 2 fix: ao voltar edit→view, previousMode é setado para 'list' explicitamente,
+ *            evitando que o próximo Fechar tente voltar para 'view' (modo já atual)
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -34,7 +46,7 @@ export function usePageMode<T>(
   const [mode, setMode] = useTabState<PageMode>(tabId + '-mode', 'list');
   const [editingItem, setEditingItem] = useTabState<T | null>(tabId + '-editing-item', null);
 
-  // previousMode como useState simples — atualiza sincronamente
+  // previousMode como useState simples — atualiza sincronamente, sem stale closure
   const [previousMode, setPreviousMode] = useState<PageMode>('list');
 
   const [isDirty, setIsDirtyState] = useState(false);
@@ -59,16 +71,15 @@ export function usePageMode<T>(
   // ─── Transições ──────────────────────────────────────────────────────────────
 
   const goTo = useCallback((next: PageMode, from: PageMode, item: T | null = null) => {
-    setPreviousMode(from);   // atualiza previousMode ANTES do setMode
+    setPreviousMode(from);
     setMode(next);
     setEditingItem(item);
     setIsDirtyState(false);
     setConfirmOpen(false);
   }, [setMode, setEditingItem]);
 
-  const openNew = useCallback(() => goTo('new', mode, null), [goTo, mode]);
-  const openView = useCallback((item: T) => goTo('view', mode, item), [goTo, mode]);
-
+  const openNew  = useCallback((            ) => goTo('new',  mode,   null), [goTo, mode]);
+  const openView = useCallback((item: T     ) => goTo('view', mode,   item), [goTo, mode]);
   const openEdit = useCallback((item: T) => {
     if (getItemId) {
       const lockKey = `${tabId.split('-')[0]}-${getItemId(item)}`;
@@ -83,6 +94,7 @@ export function usePageMode<T>(
       const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
       if (!acquireLock(lockKey, tabId)) throw new Error('ITEM_LOCKED');
     }
+    // previousMode = 'view' — ao cancelar edit, volta para view
     setPreviousMode(mode);
     setMode('edit');
     setIsDirtyState(false);
@@ -91,24 +103,33 @@ export function usePageMode<T>(
   // ─── Saída ───────────────────────────────────────────────────────────────────
 
   const backToPrevious = useCallback(() => {
-    // previousMode é useState — valor sempre atual, sem stale closure
     if (previousMode === 'list' && editingItem && getItemId) {
       const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
       releaseLock(lockKey, tabId);
     }
+
     setMode(previousMode);
-    if (previousMode === 'list') setEditingItem(null);
+
+    if (previousMode === 'list') {
+      setEditingItem(null);
+      // Próximo previousMode já será 'list' por padrão
+    } else {
+      // Voltando para 'view' (vindo de edit):
+      // seta previousMode para 'list' para que o próximo Fechar funcione corretamente
+      setPreviousMode('list');
+    }
+
     setIsDirtyState(false);
     setConfirmOpen(false);
   }, [previousMode, editingItem, getItemId, tabId, setMode, setEditingItem]);
 
-  const requestBack = useCallback(() => {
+  const requestBack    = useCallback(() => {
     if (!isDirty) { backToPrevious(); return; }
     setConfirmOpen(true);
   }, [isDirty, backToPrevious]);
 
   const confirmDiscard = useCallback(() => backToPrevious(), [backToPrevious]);
-  const cancelDiscard = useCallback(() => setConfirmOpen(false), []);
+  const cancelDiscard  = useCallback(() => setConfirmOpen(false), []);
 
   const saveAndBack = useCallback(async (onSave: () => Promise<void>) => {
     await onSave();
@@ -118,6 +139,7 @@ export function usePageMode<T>(
     }
     setMode('list');
     setEditingItem(null);
+    setPreviousMode('list');
     setIsDirtyState(false);
     setConfirmOpen(false);
   }, [editingItem, getItemId, tabId, setMode, setEditingItem]);

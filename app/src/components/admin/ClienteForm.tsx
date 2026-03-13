@@ -2,14 +2,16 @@
  * ClienteForm.tsx — Form inline de cadastro/edição/visualização de cliente
  *
  * Modos:
- *   view — inputs readOnly, aparência idêntica ao edit
+ *   view — inputs readOnly
  *   edit — inputs editáveis
  *   new  — inputs editáveis, campos vazios
  *
- * Layout: largura total, abas shadcn padrão (Identificação / Contato / Endereço)
+ * Bug fix: onDirty é chamado a cada alteração sem guard interno.
+ * O controle de isDirty fica exclusivamente no usePageMode.
+ * Setar true múltiplas vezes em useState é inofensivo.
  */
 
-import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
+import { useEffect, useImperativeHandle, useState, forwardRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,23 +71,22 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
     const readOnly = mode === 'view';
     const [data, setData] = useState<ClienteFormData>({ ...EMPTY });
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const isDirtyRef = useRef(false);
 
+    // Reseta form ao trocar de item ou modo
     useEffect(() => {
-      isDirtyRef.current = false;
       setErrors({});
       setData(cliente ? {
-        nome: cliente.nome ?? '',
-        cpfCnpj: cliente.cpfCnpj ?? '',
-        razaoSocial: cliente.razaoSocial ?? '',
+        nome:              cliente.nome              ?? '',
+        cpfCnpj:          cliente.cpfCnpj           ?? '',
+        razaoSocial:      cliente.razaoSocial        ?? '',
         inscricaoEstadual: cliente.inscricaoEstadual ?? '',
-        contatoComercial: cliente.contatoComercial ?? '',
-        telefone: cliente.telefone ?? '',
-        email: cliente.email ?? '',
-        endereco: cliente.endereco ?? '',
-        cidade: cliente.cidade ?? '',
-        estado: cliente.estado ?? '',
-        cep: cliente.cep ?? '',
+        contatoComercial: cliente.contatoComercial   ?? '',
+        telefone:         cliente.telefone           ?? '',
+        email:            cliente.email              ?? '',
+        endereco:         cliente.endereco           ?? '',
+        cidade:           cliente.cidade             ?? '',
+        estado:           cliente.estado             ?? '',
+        cep:              cliente.cep                ?? '',
       } : { ...EMPTY });
     }, [cliente, mode]);
 
@@ -98,32 +99,33 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
         setErrors(e);
         if (Object.keys(e).length > 0) return false;
         await onSave({
-          nome: data.nome.trim(),
-          cpfCnpj: data.cpfCnpj?.trim() || undefined,
-          razaoSocial: data.razaoSocial?.trim() || undefined,
+          nome:              data.nome.trim(),
+          cpfCnpj:          data.cpfCnpj?.trim()           || undefined,
+          razaoSocial:      data.razaoSocial?.trim()        || undefined,
           inscricaoEstadual: data.inscricaoEstadual?.trim() || undefined,
-          contatoComercial: data.contatoComercial?.trim() || undefined,
-          telefone: data.telefone?.trim() || undefined,
-          email: data.email?.trim() || undefined,
-          endereco: data.endereco?.trim() || undefined,
-          cidade: data.cidade?.trim() || undefined,
-          estado: data.estado?.trim().toUpperCase() || undefined,
-          cep: data.cep?.trim() || undefined,
+          contatoComercial: data.contatoComercial?.trim()   || undefined,
+          telefone:         data.telefone?.trim()           || undefined,
+          email:            data.email?.trim()              || undefined,
+          endereco:         data.endereco?.trim()           || undefined,
+          cidade:           data.cidade?.trim()             || undefined,
+          estado:           data.estado?.trim().toUpperCase() || undefined,
+          cep:              data.cep?.trim()                || undefined,
         });
         return true;
       },
     }));
 
+    // Sem isDirtyRef — onDirty chamado a cada keystroke
+    // useState no usePageMode aguenta múltiplos setDirty(true) sem problema
     const set = (field: keyof ClienteFormData, value: string) => {
       setData((prev) => ({ ...prev, [field]: value }));
-      if (!isDirtyRef.current) { isDirtyRef.current = true; onDirty(); }
+      onDirty();
     };
 
     return (
       <div className="h-full flex flex-col overflow-hidden">
         <Tabs defaultValue="identificacao" className="flex flex-col h-full gap-0">
 
-          {/* Tab list */}
           <div className="shrink-0 px-6 pt-4 pb-0">
             <TabsList>
               <TabsTrigger value="identificacao">Identificação</TabsTrigger>
