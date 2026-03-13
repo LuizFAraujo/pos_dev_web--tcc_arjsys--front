@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useImperativeHandle, useState, forwardRef } from 'react';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +45,14 @@ const EMPTY: ClienteFormData = {
 
 const TABS = ['identificacao', 'contato', 'endereco'];
 
+/** Mapa campo → aba (para navegar até o erro) */
+const FIELD_TAB: Record<string, string> = {
+  nome: 'identificacao', cpfCnpj: 'identificacao',
+  razaoSocial: 'identificacao', inscricaoEstadual: 'identificacao',
+  contatoComercial: 'contato', telefone: 'contato', email: 'contato',
+  endereco: 'endereco', cidade: 'endereco', estado: 'endereco', cep: 'endereco',
+};
+
 // ─── Campo ────────────────────────────────────────────────────────────────────
 
 function Field({
@@ -57,7 +66,7 @@ function Field({
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${span ?? 'col-span-1'}`}>
-      <Label htmlFor={id} className="text-xs font-medium text-slate-500 dark:text-slate-400">
+      <Label htmlFor={id} className={`text-xs font-medium ${error ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
         {label}
       </Label>
       <Input
@@ -66,9 +75,14 @@ function Field({
         onChange={(e) => !readOnly && onChange?.(e.target.value)}
         className={`h-9 text-sm bg-white dark:bg-slate-950 ${
           readOnly ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0' : ''
-        }`}
+        } ${error ? 'border-red-400 dark:border-red-500 focus-visible:ring-red-400/30' : ''}`}
       />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && (
+        <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+          <span className="inline-block h-1 w-1 rounded-full bg-red-400 shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -111,7 +125,22 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
         if (data.email && !data.email.includes('@')) e.email = 'E-mail inválido';
         if (data.estado && data.estado.length !== 2) e.estado = 'UF deve ter 2 letras';
         setErrors(e);
-        if (Object.keys(e).length > 0) return false;
+        if (Object.keys(e).length > 0) {
+          // Navega pra aba do primeiro erro e foca no campo
+          const firstErrorField = Object.keys(e)[0];
+          const targetTab = FIELD_TAB[firstErrorField];
+          if (targetTab) {
+            setActiveTab(targetTab);
+            // Delay duplo: requestAnimationFrame pro React + setTimeout pro Radix montar a aba
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                document.getElementById(firstErrorField)?.focus();
+              }, 50);
+            });
+          }
+          toast.error('Corrija os campos destacados.');
+          return false;
+        }
         await onSave({
           nome:              data.nome.trim(),
           cpfCnpj:          data.cpfCnpj?.trim()           || undefined,
@@ -133,6 +162,14 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
     // useState no usePageMode aguenta múltiplos setDirty(true) sem problema
     const set = (field: keyof ClienteFormData, value: string) => {
       setData((prev) => ({ ...prev, [field]: value }));
+      // Limpa erro do campo ao editar — próximo Salvar revalida tudo
+      if (errors[field]) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next[field];
+          return next;
+        });
+      }
       onDirty();
     };
 
