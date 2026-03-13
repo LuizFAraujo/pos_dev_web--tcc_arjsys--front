@@ -14,6 +14,11 @@ export interface PageShellProps {
   children: ReactNode;
 }
 
+/** Interface genérica que todo form inline deve expor via forwardRef */
+export interface FormHandle {
+  submit: () => Promise<boolean>;
+}
+
 export type PageMode = 'list' | 'view' | 'new' | 'edit';
 
 export interface PageModeState<T> {

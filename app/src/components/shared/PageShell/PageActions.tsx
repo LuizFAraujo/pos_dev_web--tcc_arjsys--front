@@ -16,17 +16,22 @@
  *   searchBarOverride — substitui o SearchBar padrão por um customizado
  */
 
-import { useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useEffect, useCallback, useState } from 'react';
 import {
   Plus, Pencil, Trash2, FilterX, List, LayoutGrid,
   Settings, Eye, Save, ArrowLeft, X, FilePlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { SearchBar } from '@/components/shared/SearchBar';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import type { DataGridHandle } from '@/components/shared/DataGrid';
-import type { PageModeState } from './types';
+import type { PageModeState, FormHandle } from './types';
 import type { ReactNode } from 'react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -94,19 +99,10 @@ export interface PageActionsProps<T> {
   /** Callback ao trocar modo de visualização */
   onViewModeChange?: (mode: 'list' | 'cards') => void;
 
-  // ── Save callbacks ────────────────────────────────────────────────────────
+  // ── Save ───────────────────────────────────────────────────────────────────
 
-  /** Callback Salvar e Sair (new/edit) */
-  onSaveAndBack?: () => Promise<void>;
-
-  /** Callback Salvar e permanecer (edit) */
-  onSaveAndStay?: () => Promise<void>;
-
-  /** Callback Salvar e adicionar outro (new) */
-  onSaveAndNew?: () => Promise<void>;
-
-  /** Flag de salvamento em andamento */
-  isSaving?: boolean;
+  /** Ref do form inline — deve expor FormHandle { submit(): Promise<boolean> } */
+  formRef?: React.RefObject<FormHandle | null>;
 
   // ── Customização ──────────────────────────────────────────────────────────
 
@@ -158,10 +154,7 @@ export function PageActions<T>({
   gridRef,
   viewMode = 'list',
   onViewModeChange,
-  onSaveAndBack,
-  onSaveAndStay,
-  onSaveAndNew,
-  isSaving = false,
+  formRef,
   extraActions,
   hideButtons = [],
   newTooltip = 'Novo',
@@ -174,6 +167,86 @@ export function PageActions<T>({
   const hide = useMemo(() => new Set(hideButtons), [hideButtons]);
   const isListMode = viewMode === 'list';
   const inForm = page.mode !== 'list';
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  // ── Save interno (template cuida de try/catch/isSaving) ───────────────────
+
+  const submitForm = useCallback(async () => {
+    const ok = await formRef?.current?.submit();
+    if (!ok) throw new Error('VALIDATION');
+  }, [formRef]);
+
+  const doSaveAndBack = useCallback(async () => {
+    if (!formRef) return;
+    setIsSaving(true);
+    try {
+      await page.saveAndBack(submitForm);
+    } catch (e: any) {
+      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+      throw e;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [formRef, page, submitForm]);
+
+  const doSaveAndStay = useCallback(async () => {
+    if (!formRef) return;
+    setIsSaving(true);
+    try {
+      await page.saveAndStay(submitForm);
+    } catch (e: any) {
+      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [formRef, page, submitForm]);
+
+  const doSaveAndNew = useCallback(async () => {
+    if (!formRef) return;
+    setIsSaving(true);
+    try {
+      await page.saveAndNew(submitForm);
+    } catch (e: any) {
+      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [formRef, page, submitForm]);
+
+  // ── Salvar a partir do dialog de confirmação (trata erro de validação) ────
+
+  const handleSaveFromDialog = useCallback(async () => {
+    try {
+      await doSaveAndBack();
+    } catch {
+      // Erro de validação ou outro — fecha o dialog pra mostrar os campos
+      page.cancelDiscard();
+    }
+  }, [doSaveAndBack, page]);
+
+  // ── Dialog de confirmação (sair sem salvar) ───────────────────────────────
+
+  const dirtyDialog = (
+    <AlertDialog open={page.confirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Há alterações não salvas. O que deseja fazer?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={page.cancelDiscard}>Continuar editando</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive hover:bg-destructive/90"
+            onClick={page.confirmDiscard}>Descartar</AlertDialogAction>
+          <AlertDialogAction onClick={handleSaveFromDialog} disabled={isSaving}>
+            {isSaving ? 'Salvando...' : 'Salvar e Sair'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 
   // ── Atalhos de teclado (Ctrl+S / Ctrl+Shift+S) ───────────────────────────
 
@@ -189,16 +262,16 @@ export function PageActions<T>({
 
     if (e.shiftKey) {
       // Ctrl+Shift+S → Salvar e Sair
-      onSaveAndBack?.();
+      doSaveAndBack();
     } else {
       // Ctrl+S → Salvar e permanecer
       if (page.mode === 'new') {
-        onSaveAndNew?.();
+        doSaveAndNew();
       } else {
-        onSaveAndStay?.();
+        doSaveAndStay();
       }
     }
-  }, [page.mode, page.isDirty, isSaving, onSaveAndBack, onSaveAndStay, onSaveAndNew]);
+  }, [page.mode, page.isDirty, isSaving, doSaveAndBack, doSaveAndStay, doSaveAndNew]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyboard);
@@ -419,15 +492,16 @@ export function PageActions<T>({
 
   if (page.mode === 'new') {
     return (
+    <>
       <div className="flex items-center">
         <div className="flex items-center gap-1">
           {/* Salvar e Sair */}
-          {onSaveAndBack && (
+          {formRef && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon" className="h-8 w-8"
                   disabled={isSaving || !page.isDirty}
-                  onClick={onSaveAndBack}>
+                  onClick={doSaveAndBack}>
                   <Save className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -438,12 +512,12 @@ export function PageActions<T>({
           )}
 
           {/* Salvar e Adicionar Outro */}
-          {onSaveAndNew && (
+          {formRef && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8"
                   disabled={isSaving || !page.isDirty}
-                  onClick={onSaveAndNew}>
+                  onClick={doSaveAndNew}>
                   <FilePlus className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -472,6 +546,8 @@ export function PageActions<T>({
           </>
         )}
       </div>
+      {dirtyDialog}
+    </>
     );
   }
 
@@ -480,15 +556,16 @@ export function PageActions<T>({
   // ════════════════════════════════════════════════════════════════════════════
 
   return (
+    <>
     <div className="flex items-center">
       <div className="flex items-center gap-1">
         {/* Salvar e Sair */}
-        {onSaveAndBack && (
+        {formRef && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button size="icon" className="h-8 w-8"
                 disabled={isSaving || !page.isDirty}
-                onClick={onSaveAndBack}>
+                onClick={doSaveAndBack}>
                 <Save className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -499,12 +576,12 @@ export function PageActions<T>({
         )}
 
         {/* Salvar (permanecer editando) */}
-        {onSaveAndStay && (
+        {formRef && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" className="h-8 w-8"
                 disabled={isSaving || !page.isDirty}
-                onClick={onSaveAndStay}>
+                onClick={doSaveAndStay}>
                 <Save className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -533,5 +610,7 @@ export function PageActions<T>({
         </>
       )}
     </div>
+    {dirtyDialog}
+    </>
   );
 }

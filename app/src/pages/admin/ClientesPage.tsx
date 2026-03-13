@@ -12,10 +12,6 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useClientesStore } from '@/stores/admin/clientesStore';
 import { useTabState } from '@/hooks/useTabState';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
@@ -76,7 +72,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   const [selectedCardId, setSelectedCardId] = useTabState<number | null>(tab.id + '-card-sel', null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clienteDelete, setClienteDelete] = useState<Cliente | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   const page = usePageMode<Cliente>(tab.id, (c) => String(c.id));
 
@@ -110,7 +105,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   const activeItem = viewMode === 'list' ? selectedItem : selectedCard;
   const inForm = page.mode !== 'list';
 
-  // ─── Save ────────────────────────────────────────────────────────────────────
+  // ─── Save (callback específico da página — o que salvar) ──────────────────
 
   const handleSave = useCallback(async (data: ClienteFormData) => {
     if (page.mode === 'edit' && page.editingItem) {
@@ -119,48 +114,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
       await createCliente(data);
     }
   }, [page.mode, page.editingItem, updateCliente, createCliente]);
-
-  const doSaveAndBack = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      await page.saveAndBack(async () => {
-        const ok = await formRef.current?.submit();
-        if (!ok) throw new Error('VALIDATION');
-      });
-    } catch (e: any) {
-      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [page]);
-
-  const doSaveAndStay = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      await page.saveAndStay(async () => {
-        const ok = await formRef.current?.submit();
-        if (!ok) throw new Error('VALIDATION');
-      });
-    } catch (e: any) {
-      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [page]);
-
-  const doSaveAndNew = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      await page.saveAndNew(async () => {
-        const ok = await formRef.current?.submit();
-        if (!ok) throw new Error('VALIDATION');
-      });
-    } catch (e: any) {
-      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [page]);
 
   // ─── Navegação ───────────────────────────────────────────────────────────────
 
@@ -251,10 +204,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
           gridRef={gridRef}
           viewMode={viewMode}
           onViewModeChange={handleViewMode}
-          onSaveAndBack={doSaveAndBack}
-          onSaveAndStay={doSaveAndStay}
-          onSaveAndNew={doSaveAndNew}
-          isSaving={isSaving}
+          formRef={formRef}
           newTooltip="Novo cliente"
           noSelectionText="Selecione um cliente"
         />
@@ -302,25 +252,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
           onSave={handleSave}
         />
       )}
-
-      <AlertDialog open={page.confirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sair sem salvar?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Há alterações não salvas. O que deseja fazer?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={page.cancelDiscard}>Continuar editando</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive hover:bg-destructive/90"
-              onClick={page.confirmDiscard}>Descartar</AlertDialogAction>
-            <AlertDialogAction onClick={doSaveAndBack} disabled={isSaving}>
-              {isSaving ? 'Salvando...' : 'Salvar e Sair'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <DeleteClienteDialog
         open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}
