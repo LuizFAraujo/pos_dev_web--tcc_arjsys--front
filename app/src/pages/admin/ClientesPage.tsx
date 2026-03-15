@@ -18,7 +18,7 @@ import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
-import { DeleteClienteDialog } from '@/components/admin/DeleteClienteDialog';
+import { ClienteDeleteDialog } from '@/components/admin/ClienteDeleteDialog';
 import { ClienteForm } from '@/components/admin/ClienteForm';
 import type { ClienteFormHandle } from '@/components/admin/ClienteForm';
 import type { Cliente, ClienteFormData } from '@/types/admin/cliente.types';
@@ -196,7 +196,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         />
       )}
 
-      <DeleteClienteDialog
+      <ClienteDeleteDialog
         open={del.open} onOpenChange={del.setOpen}
         cliente={del.item} onConfirm={del.confirmDelete}
       />

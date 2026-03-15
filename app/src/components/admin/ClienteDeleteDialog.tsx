@@ -1,14 +1,14 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Cliente } from '@/types/admin/cliente.types';
 
-interface DeleteClienteDialogProps {
+interface ClienteDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cliente: Cliente | null;
   onConfirm: () => void;
 }
 
-export function DeleteClienteDialog({ open, onOpenChange, cliente, onConfirm }: DeleteClienteDialogProps) {
+export function ClienteDeleteDialog({ open, onOpenChange, cliente, onConfirm }: ClienteDeleteDialogProps) {
   if (!cliente) return null;
 
   return (

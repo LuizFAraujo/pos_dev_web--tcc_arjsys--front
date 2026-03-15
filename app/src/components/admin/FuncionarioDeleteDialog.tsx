@@ -1,14 +1,14 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Funcionario } from '@/types/admin/funcionario.types';
 
-interface DeleteFuncionarioDialogProps {
+interface FuncionarioDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   funcionario: Funcionario | null;
   onConfirm: () => void;
 }
 
-export function DeleteFuncionarioDialog({ open, onOpenChange, funcionario, onConfirm }: DeleteFuncionarioDialogProps) {
+export function FuncionarioDeleteDialog({ open, onOpenChange, funcionario, onConfirm }: FuncionarioDeleteDialogProps) {
   if (!funcionario) return null;
 
   return (

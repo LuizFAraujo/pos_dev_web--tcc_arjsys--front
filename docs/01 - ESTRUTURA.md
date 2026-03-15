@@ -37,11 +37,10 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── components/
         │   ├── admin/             # Componentes Admin
+        │   │   ├── ClienteDeleteDialog.tsx        ✅
         │   │   ├── ClienteForm.tsx                ✅
-        │   │   ├── ClienteFormModal.tsx           ✅
-        │   │   ├── DeleteClienteDialog.tsx        ✅
-        │   │   ├── DeleteFuncionarioDialog.tsx    ✅
-        │   │   └── FuncionarioFormModal.tsx       ✅
+        │   │   ├── FuncionarioDeleteDialog.tsx    ✅
+        │   │   └── FuncionarioForm.tsx            ✅
         │   │
         │   ├── comercial/         # Componentes Comercial
         │   │   ├── DeletePedidoDialog.tsx         ✅
