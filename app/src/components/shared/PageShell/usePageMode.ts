@@ -61,9 +61,12 @@ export function usePageMode<T>(
   }, [tabId]);
 
   // Re-registra lock ao montar (componente remonta ao trocar de aba no workspace)
+  // Usa refs pra acessar valores atuais, não os do primeiro render
   useEffect(() => {
-    if (editingItem && getItemId && mode === 'edit') {
-      const lockKey = `${lockPrefix}-${getItemId(editingItem)}`;
+    const item = editingItemRef.current;
+    const currentMode = modeRef.current;
+    if (item && getItemId && currentMode === 'edit') {
+      const lockKey = `${lockPrefix}-${getItemId(item)}`;
       acquireEdit(lockKey, tabId);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
