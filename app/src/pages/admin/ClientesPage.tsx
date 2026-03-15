@@ -73,7 +73,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clienteDelete, setClienteDelete] = useState<Cliente | null>(null);
 
-  const page = usePageMode<Cliente>(tab.id, (c) => String(c.id));
+  const page = usePageMode<Cliente>(tab.id, (c) => String(c.id), tab.type);
 
   const clientes = useClientesStore((s) => s.clientes);
   const isLoading = useClientesStore((s) => s.isLoading);

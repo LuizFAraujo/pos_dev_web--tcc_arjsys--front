@@ -1,41 +1,34 @@
 /**
  * usePageMode.ts — Hook para páginas de cadastro com modos list/view/new/edit
  *
- * Fluxo:
- *   list → new  → Salvar e Sair → list
- *               → Salvar (novo) → salva, limpa form, continua em new
- *               → Cancelar (sem dirty) → list
- *               → Cancelar (com dirty) → dialog
+ * Lock de edição:
+ *   - editLock: Map<lockKey, tabId> — só uma aba pode editar um item por vez
+ *   - Visualização nunca é bloqueada
+ *   - Lock usa tabType como prefixo (comum entre abas do mesmo tipo)
  *
- *   list → view → Fechar → list
- *               → Editar → edit → Salvar e Sair → list
- *                               → Salvar → permanece em edit
- *                               → Voltar (sem dirty) → view  [previousMode → list]
- *                               → Voltar (com dirty) → dialog
- *
- * Bug 1 fix: isDirtyRef no ClienteForm — resolvido no ClienteForm (onDirty sem guard)
- * Bug 2 fix: ao voltar edit→view, previousMode é setado para 'list' explicitamente,
- *            evitando que o próximo Fechar tente voltar para 'view' (modo já atual)
+ * TODO: Lock robusto (view + edição, cross-window) será implementado via backend
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useTabState } from '@/hooks/useTabState';
+import { useTabsStore } from '@/stores/tabsStore';
 import type { PageMode, PageModeState } from './types';
 
 // ─── Lock global ──────────────────────────────────────────────────────────────
 
-const editingLock = new Map<string, string>();
+/** Lock exclusivo de edição: lockKey → tabId */
+const editLock = new Map<string, string>();
 
-function acquireLock(lockKey: string, tabId: string): boolean {
-  const current = editingLock.get(lockKey);
+function acquireEdit(lockKey: string, tabId: string): boolean {
+  const current = editLock.get(lockKey);
   if (current && current !== tabId) return false;
-  editingLock.set(lockKey, tabId);
+  editLock.set(lockKey, tabId);
   return true;
 }
 
-function releaseLock(lockKey: string, tabId: string) {
-  if (editingLock.get(lockKey) === tabId) editingLock.delete(lockKey);
+function releaseEdit(lockKey: string, tabId: string) {
+  if (editLock.get(lockKey) === tabId) editLock.delete(lockKey);
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -43,32 +36,67 @@ function releaseLock(lockKey: string, tabId: string) {
 export function usePageMode<T>(
   tabId: string,
   getItemId?: (item: T) => string | number,
+  /** Tipo da aba (ex: 'adm-clientes') — prefixo do lock entre abas do mesmo tipo */
+  tabType?: string,
 ): PageModeState<T> {
   const [mode, setMode] = useTabState<PageMode>(tabId + '-mode', 'list');
   const [editingItem, setEditingItem] = useTabState<T | null>(tabId + '-editing-item', null);
 
-  // previousMode como useState simples — atualiza sincronamente, sem stale closure
   const [previousMode, setPreviousMode] = useState<PageMode>('list');
-
   const [isDirty, setIsDirtyState] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+
+  const lockPrefix = tabType || tabId;
+
+  // Ref pro cleanup acessar valor atual
+  const editingItemRef = useRef(editingItem);
+  editingItemRef.current = editingItem;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   useEffect(() => {
     setIsDirtyState(false);
     setConfirmOpen(false);
   }, [tabId]);
 
+  // Re-registra lock ao montar (componente remonta ao trocar de aba no workspace)
   useEffect(() => {
-    return () => {
-      if (editingItem && getItemId) {
-        const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
-        releaseLock(lockKey, tabId);
-      }
-    };
+    if (editingItem && getItemId && mode === 'edit') {
+      const lockKey = `${lockPrefix}-${getItemId(editingItem)}`;
+      acquireEdit(lockKey, tabId);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Cleanup ao desmontar — libera lock só se a aba foi realmente fechada
+  // (trocar de aba ativa desmonta/remonta, mas a aba continua existindo no store)
+  useEffect(() => {
+    const tid = tabId;
+    const prefix = lockPrefix;
+    return () => {
+      // Delay mínimo pra dar tempo do tabsStore atualizar após closeTab
+      setTimeout(() => {
+        const tabExists = useTabsStore.getState().tabs.some((t) => t.id === tid);
+        if (!tabExists) {
+          // Aba foi realmente fechada — libera lock
+          const item = editingItemRef.current;
+          if (item && getItemId) {
+            const lockKey = `${prefix}-${getItemId(item)}`;
+            releaseEdit(lockKey, tid);
+          }
+        }
+      }, 50);
+    };
+  }, [tabId, lockPrefix, getItemId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const setDirty = useCallback((dirty: boolean) => setIsDirtyState(dirty), []);
+
+  // ─── Helper ───────────────────────────────────────────────────────────────
+
+  const getLockKey = useCallback((item: T): string | null => {
+    if (!getItemId) return null;
+    return `${lockPrefix}-${getItemId(item)}`;
+  }, [getItemId, lockPrefix]);
 
   // ─── Transições ──────────────────────────────────────────────────────────────
 
@@ -80,52 +108,54 @@ export function usePageMode<T>(
     setConfirmOpen(false);
   }, [setMode, setEditingItem]);
 
-  const openNew  = useCallback((            ) => goTo('new',  mode,   null), [goTo, mode]);
-  const openView = useCallback((item: T     ) => goTo('view', mode,   item), [goTo, mode]);
+  const openNew = useCallback(() => goTo('new', mode, null), [goTo, mode]);
+
+  const openView = useCallback((item: T) => {
+    goTo('view', mode, item);
+  }, [goTo, mode]);
+
   const openEdit = useCallback((item: T) => {
-    if (getItemId) {
-      const lockKey = `${tabId.split('-')[0]}-${getItemId(item)}`;
-      if (!acquireLock(lockKey, tabId)) throw new Error('ITEM_LOCKED');
-    }
+    const lockKey = getLockKey(item);
+    if (lockKey && !acquireEdit(lockKey, tabId)) throw new Error('ITEM_LOCKED');
     goTo('edit', mode, item);
-  }, [getItemId, tabId, goTo, mode]);
+  }, [getLockKey, tabId, goTo, mode]);
 
   const startEdit = useCallback(() => {
     if (!editingItem) return;
-    if (getItemId) {
-      const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
-      if (!acquireLock(lockKey, tabId)) throw new Error('ITEM_LOCKED');
-    }
-    // previousMode = 'view' — ao cancelar edit, volta para view
+    const lockKey = getLockKey(editingItem);
+    if (lockKey && !acquireEdit(lockKey, tabId)) throw new Error('ITEM_LOCKED');
     setPreviousMode(mode);
     setMode('edit');
     setIsDirtyState(false);
-  }, [editingItem, getItemId, tabId, mode, setMode]);
+  }, [editingItem, getLockKey, tabId, mode, setMode]);
 
   // ─── Saída ───────────────────────────────────────────────────────────────────
 
   const backToPrevious = useCallback(() => {
-    if (previousMode === 'list' && editingItem && getItemId) {
-      const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
-      releaseLock(lockKey, tabId);
+    if (editingItem && getItemId) {
+      const lockKey = `${lockPrefix}-${getItemId(editingItem)}`;
+      if (previousMode === 'list') {
+        // Voltando pra lista: limpa lock
+        releaseEdit(lockKey, tabId);
+      } else {
+        // Voltando pra view (vindo de edit): libera lock de edição
+        releaseEdit(lockKey, tabId);
+      }
     }
 
     setMode(previousMode);
 
     if (previousMode === 'list') {
       setEditingItem(null);
-      // Próximo previousMode já será 'list' por padrão
     } else {
-      // Voltando para 'view' (vindo de edit):
-      // seta previousMode para 'list' para que o próximo Fechar funcione corretamente
       setPreviousMode('list');
     }
 
     setIsDirtyState(false);
     setConfirmOpen(false);
-  }, [previousMode, editingItem, getItemId, tabId, setMode, setEditingItem]);
+  }, [previousMode, editingItem, getItemId, lockPrefix, tabId, setMode, setEditingItem]);
 
-  const requestBack    = useCallback(() => {
+  const requestBack = useCallback(() => {
     if (!isDirty) { backToPrevious(); return; }
     setConfirmOpen(true);
   }, [isDirty, backToPrevious]);
@@ -137,8 +167,8 @@ export function usePageMode<T>(
     const wasNew = mode === 'new';
     await onSave();
     if (editingItem && getItemId) {
-      const lockKey = `${tabId.split('-')[0]}-${getItemId(editingItem)}`;
-      releaseLock(lockKey, tabId);
+      const lockKey = `${lockPrefix}-${getItemId(editingItem)}`;
+      releaseEdit(lockKey, tabId);
     }
     setMode('list');
     setEditingItem(null);
@@ -146,7 +176,7 @@ export function usePageMode<T>(
     setIsDirtyState(false);
     setConfirmOpen(false);
     toast.success(wasNew ? 'Registro adicionado.' : 'Registro atualizado.');
-  }, [mode, editingItem, getItemId, tabId, setMode, setEditingItem]);
+  }, [mode, editingItem, getItemId, lockPrefix, tabId, setMode, setEditingItem]);
 
   const saveAndStay = useCallback(async (onSave: () => Promise<void>) => {
     await onSave();
@@ -154,14 +184,11 @@ export function usePageMode<T>(
     toast.success('Registro atualizado.');
   }, []);
 
-  /** Salva e reseta para novo cadastro — permanece em mode 'new' com form limpo */
   const saveAndNew = useCallback(async (onSave: () => Promise<void>) => {
     await onSave();
-    // Limpa o item e reseta dirty — permanece em 'new'
     setEditingItem(null);
     setIsDirtyState(false);
     setConfirmOpen(false);
-    // Incrementa resetKey para forçar remount do form (limpa campos + foco)
     setResetKey((k) => k + 1);
     toast.success('Registro adicionado. Adicione outro.');
   }, [setEditingItem]);
