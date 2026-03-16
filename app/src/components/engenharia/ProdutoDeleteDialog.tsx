@@ -1,14 +1,14 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Produto } from '@/types/engenharia/produto.types';
 
-interface DeleteProdutoDialogProps {
+interface ProdutoDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   produto: Produto | null;
   onConfirm: () => void;
 }
 
-export function DeleteProdutoDialog({ open, onOpenChange, produto, onConfirm }: DeleteProdutoDialogProps) {
+export function ProdutoDeleteDialog({ open, onOpenChange, produto, onConfirm }: ProdutoDeleteDialogProps) {
   if (!produto) return null;
 
   return (

@@ -49,24 +49,15 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── StatusPedidoActions.tsx        ✅
         │   │
         │   ├── engenharia/         # Componentes Engenharia
-        │   │   ├── AddComponenteModal.tsx         📍 FALTA
         │   │   ├── BOMFlatView.tsx                ✅
         │   │   ├── BOMTreeNode.tsx                ✅
         │   │   ├── BOMTreeView.tsx                ✅
         │   │   ├── DeleteGrupoDialog.tsx          ✅
-        │   │   ├── DeleteProdutoDialog.tsx        ✅
         │   │   ├── GrupoFormModal.tsx             ✅
-        │   │   ├── DesenhoThumbnail.tsx           📍 FALTA
-        │   │   ├── EditComponenteModal.tsx        📍 FALTA
-        │   │   ├── EstruturaListView.tsx          📍 FALTA
-        │   │   ├── EstruturaTreeView.tsx          📍 FALTA
         │   │   ├── NovaEstruturaDialog.tsx        ✅
-        │   │   ├── ProdutoCard.tsx                ✅
-        │   │   ├── ProdutoFormModal.tsx           ✅
-        │   │   ├── ProdutoSelect.tsx              ✅
-        │   │   ├── RemoveComponenteDialog.tsx     📍 FALTA
-        │   │   ├── UploadDesenhoModal.tsx         📍 FALTA
-        │   │   └── VisualizadorDesenhoModal.tsx   📍 FALTA
+        │   │   ├── ProdutoDeleteDialog.tsx        ✅
+        │   │   ├── ProdutoForm.tsx                ✅
+        │   │   └── ProdutoSelect.tsx              ✅
         │   │
         │   ├── projetos/           # Componentes Projetos
         │   │   ├── AlterarStatusDialog.tsx        📍 FALTA
