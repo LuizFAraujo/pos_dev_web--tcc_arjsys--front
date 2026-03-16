@@ -2,14 +2,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { NIVEL_LABELS } from '@/types/engenharia/grupo.types';
 import type { GrupoProduto } from '@/types/engenharia/grupo.types';
 
-interface DeleteGrupoDialogProps {
+interface GrupoDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   grupo: GrupoProduto | null;
   onConfirm: () => void;
 }
 
-export function DeleteGrupoDialog({ open, onOpenChange, grupo, onConfirm }: DeleteGrupoDialogProps) {
+export function GrupoDeleteDialog({ open, onOpenChange, grupo, onConfirm }: GrupoDeleteDialogProps) {
   if (!grupo) return null;
 
   return (

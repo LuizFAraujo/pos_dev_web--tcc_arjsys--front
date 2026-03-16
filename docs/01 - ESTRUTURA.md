@@ -52,8 +52,8 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── BOMFlatView.tsx                ✅
         │   │   ├── BOMTreeNode.tsx                ✅
         │   │   ├── BOMTreeView.tsx                ✅
-        │   │   ├── DeleteGrupoDialog.tsx          ✅
-        │   │   ├── GrupoFormModal.tsx             ✅
+        │   │   ├── GrupoDeleteDialog.tsx          ✅
+        │   │   ├── GrupoForm.tsx                  ✅
         │   │   ├── NovaEstruturaDialog.tsx        ✅
         │   │   ├── ProdutoDeleteDialog.tsx        ✅
         │   │   ├── ProdutoForm.tsx                ✅

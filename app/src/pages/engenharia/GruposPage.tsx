@@ -1,98 +1,219 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, FolderOpen, Search } from 'lucide-react';
+/**
+ * GruposPage.tsx — Página de grupos de produto com modos list/view/new/edit
+ *
+ * Template: PageShell + PageActions + usePageMode
+ * Hooks: useListState, useDeleteDialog
+ */
+
+import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { Plus, FolderOpen } from 'lucide-react';
+import { toast } from 'sonner';
 import { useGruposStore } from '@/stores/engenharia/gruposStore';
-import { useTabState } from '@/hooks/useTabState';
-import { PageShell } from '@/components/shared/PageShell';
-import { DataGrid } from '@/components/shared/DataGrid/DataGrid';
-import type { DataGridColumn } from '@/components/shared/DataGrid/DataGrid';
+import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
+import { DataGrid } from '@/components/shared/DataGrid';
+import type { GridColumn } from '@/components/shared/DataGrid';
+import { CardGrid } from '@/components/shared/CardGrid';
+import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { GrupoFormModal } from '@/components/engenharia/GrupoFormModal';
-import { DeleteGrupoDialog } from '@/components/engenharia/DeleteGrupoDialog';
+import { useListState } from '@/hooks/useListState';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { GrupoDeleteDialog } from '@/components/engenharia/GrupoDeleteDialog';
+import { GrupoForm } from '@/components/engenharia/GrupoForm';
+import type { GrupoFormHandle } from '@/components/engenharia/GrupoForm';
+import type { GrupoProduto, GrupoProdutoFormData } from '@/types/engenharia/grupo.types';
 import { NIVEL_LABELS } from '@/types/engenharia/grupo.types';
-import type { GrupoProduto, NivelGrupo } from '@/types/engenharia/grupo.types';
 
 interface GruposPageProps {
   tab: { id: string; type: string; title: string };
 }
 
-const nivelColor = (nivel: NivelGrupo) => {
-  switch (nivel) {
-    case 'Coluna1': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-    case 'Coluna2': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-    case 'Coluna3': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
-    default: return '';
-  }
-};
+const SEARCH_COLUMNS: SearchColumn[] = [
+  { key: 'codigo', label: 'Código' },
+  { key: 'descricao', label: 'Descrição' },
+];
 
 const NIVEL_OPTIONS = [
   { label: 'Coluna 1 (Grupo)', value: 'Coluna1' },
   { label: 'Coluna 2 (Subgrupo)', value: 'Coluna2' },
-  { label: 'Coluna 3 (Familia)', value: 'Coluna3' },
+  { label: 'Coluna 3 (Família)', value: 'Coluna3' },
 ];
 
-const ATIVO_OPTIONS = [
+const SIM_NAO_OPTIONS = [
   { label: 'Sim', value: 'true' },
-  { label: 'Nao', value: 'false' },
+  { label: 'Não', value: 'false' },
 ];
+
+function GrupoCard({ grupo }: { grupo: GrupoProduto }) {
+  return (
+    <div className="p-4">
+      <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
+        {grupo.codigo || '-'}
+      </p>
+      <p className="text-xs text-muted-foreground mt-1 truncate">{grupo.descricao}</p>
+      <p className="text-xs text-muted-foreground mt-1">
+        {NIVEL_LABELS[grupo.nivel] || grupo.nivel}
+      </p>
+      {grupo.pathDocumentos && (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+          <FolderOpen className="h-3 w-3" />
+          <span className="font-mono truncate">{grupo.pathDocumentos}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function GruposPage({ tab }: GruposPageProps) {
-  const [searchTerm, setSearchTerm] = useTabState(tab.id, '');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [grupoEdit, setGrupoEdit] = useState<GrupoProduto | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [grupoDelete, setGrupoDelete] = useState<GrupoProduto | null>(null);
+  const formRef = useRef<GrupoFormHandle>(null);
+
+  const page = usePageMode<GrupoProduto>(tab.id, (g) => String(g.id), tab.type);
+
+  // ─── Store ────────────────────────────────────────────────────────────────────
 
   const grupos = useGruposStore((s) => s.grupos);
   const isLoading = useGruposStore((s) => s.isLoading);
   const error = useGruposStore((s) => s.error);
   const fetchGrupos = useGruposStore((s) => s.fetchGrupos);
+  const createGrupo = useGruposStore((s) => s.createGrupo);
+  const updateGrupo = useGruposStore((s) => s.updateGrupo);
   const deleteGrupo = useGruposStore((s) => s.deleteGrupo);
 
   useEffect(() => { fetchGrupos(); }, [fetchGrupos]);
+  useEffect(() => { if (error) toast.error(error); }, [error]);
 
-  const filtrados = useMemo(() => {
-    if (!searchTerm) return grupos || [];
-    const term = searchTerm.toLowerCase();
-    return (grupos || []).filter((g) => (g.codigo || '').toLowerCase().includes(term) || (g.descricao || '').toLowerCase().includes(term));
-  }, [grupos, searchTerm]);
+  // ─── Lista ────────────────────────────────────────────────────────────────────
 
-  const columns: DataGridColumn<GrupoProduto>[] = [
-    { key: 'codigo', header: 'Codigo', filterType: 'exact', render: (g) => <span className="font-mono font-medium">{g.codigo || '-'}</span> },
-    { key: 'descricao', header: 'Descricao' },
-    { key: 'nivel', header: 'Nivel', filterType: 'select', filterOptions: NIVEL_OPTIONS, render: (g) => <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${nivelColor(g.nivel)}`}>{NIVEL_LABELS[g.nivel] || g.nivel}</span> },
-    { key: 'qtdCaracteres', header: 'Chars', align: 'center', className: 'font-mono', filterType: 'number' },
-    { key: 'pathDocumentos', header: 'Path Documentos', render: (g) => g.pathDocumentos ? <div className="flex items-center gap-1 text-xs font-mono text-muted-foreground"><FolderOpen className="h-3 w-3" />{g.pathDocumentos}</div> : <span className="text-xs text-muted-foreground">-</span> },
-    { key: 'ativo', header: 'Ativo', align: 'center', filterType: 'select', filterOptions: ATIVO_OPTIONS, render: (g) => <Badge variant={g.ativo ? 'default' : 'secondary'} className="text-[10px]">{g.ativo ? 'Sim' : 'Nao'}</Badge> },
-    { key: 'acoes', header: 'Acoes', sortable: false, filterable: false, resizable: false, render: (g) => (<div className="flex gap-1"><Button variant="ghost" size="sm" onClick={() => { setGrupoEdit(g); setModalOpen(true); }} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600" onClick={() => { setGrupoDelete(g); setDeleteDialogOpen(true); }} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button></div>) },
-  ];
+  const list = useListState<GrupoProduto>({
+    tabId: tab.id,
+    data: grupos,
+    searchColumns: SEARCH_COLUMNS,
+    defaultSearchCols: ['codigo', 'descricao'],
+  });
+
+  // ─── Delete ───────────────────────────────────────────────────────────────────
+
+  const del = useDeleteDialog<GrupoProduto>({
+    onDelete: (g) => deleteGrupo(g.id),
+    onAfterDelete: (g) => {
+      if (g.id === list.selectedCardId) list.setSelectedCardId(null);
+    },
+  });
+
+  // ─── Save ─────────────────────────────────────────────────────────────────────
+
+  const handleSave = useCallback(async (data: GrupoProdutoFormData) => {
+    if (page.mode === 'edit' && page.editingItem) {
+      await updateGrupo(page.editingItem.id, data);
+    } else {
+      await createGrupo(data);
+    }
+  }, [page.mode, page.editingItem, updateGrupo, createGrupo]);
+
+  // ─── Colunas ──────────────────────────────────────────────────────────────────
+
+  const columns: GridColumn<GrupoProduto>[] = useMemo(() => [
+    {
+      key: 'codigo', header: 'CÓDIGO', width: 120, minWidth: 80, contentAlign: 'center',
+      render: (g) => <span className="font-mono font-medium">{g.codigo || '-'}</span>,
+    },
+    { key: 'descricao', header: 'DESCRIÇÃO', width: 250, minWidth: 150 },
+    {
+      key: 'nivel', header: 'NÍVEL', width: 180, minWidth: 130, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: NIVEL_OPTIONS,
+      render: (g) => NIVEL_LABELS[g.nivel] || g.nivel,
+    },
+    {
+      key: 'qtdCaracteres', header: 'CHARS', width: 80, minWidth: 60,
+      contentAlign: 'center', className: 'font-mono', filterType: 'number',
+    },
+    {
+      key: 'pathDocumentos', header: 'PATH DOCUMENTOS', width: 250, minWidth: 120,
+      render: (g) => g.pathDocumentos
+        ? <div className="flex items-center gap-1 text-xs font-mono text-muted-foreground"><FolderOpen className="h-3 w-3" />{g.pathDocumentos}</div>
+        : <span className="text-muted-foreground">-</span>,
+    },
+    {
+      key: 'ativo', header: 'ATIVO', width: 80, minWidth: 60, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS,
+      render: (g) => g.ativo ? 'Sim' : 'Não',
+    },
+  ], []);
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
+  const inForm = page.mode !== 'list';
 
   return (
-    <PageShell
-      breadcrumbs={[{ label: 'Engenharia' }, { label: 'Grupos de Produto' }]}
-      title="Grupos de Produto"
-      tooltip="Gerencie a hierarquia de grupos (Coluna1 > Coluna2 > Coluna3)"
-      headerRight={<Button onClick={() => { setGrupoEdit(null); setModalOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Novo Grupo</Button>}
-      headerExtra={
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar por codigo ou descricao..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
-        </div>
+    <PageShell module="Engenharia" title="Grupos de Produto" mode={page.mode}
+      headerRight={
+        <PageActions
+          page={page}
+          activeItem={list.activeItem}
+          onDelete={del.requestDelete}
+          lockMessage="Este grupo já está sendo editado em outra aba."
+          searchColumns={SEARCH_COLUMNS}
+          searchTerm={list.searchTerm}
+          onSearchChange={list.setSearchTerm}
+          searchSelectedColumns={list.searchCols}
+          onSearchColumnsChange={list.setSearchCols}
+          gridRef={list.gridRef}
+          viewMode={list.viewMode}
+          onViewModeChange={list.handleViewMode}
+          formRef={formRef}
+          newTooltip="Novo grupo"
+          noSelectionText="Selecione um grupo"
+        />
       }
-      footer={<p className="text-sm text-muted-foreground">{filtrados.length} de {grupos?.length || 0} grupos</p>}
     >
-      {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
-      <DataGrid columns={columns} data={filtrados} loading={isLoading} loadingText="Carregando grupos..." emptyTitle="Nenhum grupo encontrado"
-        emptyDescription={grupos?.length === 0 ? 'Crie o primeiro grupo de produto' : 'Tente ajustar a busca'}
-        emptyAction={grupos?.length === 0 ? <Button onClick={() => { setGrupoEdit(null); setModalOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Criar Primeiro Grupo</Button> : undefined}
+      {!inForm && (
+        list.isListMode ? (
+          <DataGrid
+            ref={list.gridRef} tabId={tab.id} storageId="grupos"
+            columns={columns} data={list.filtrados}
+            loading={isLoading} loadingText="Carregando grupos..."
+            emptyTitle="Nenhum grupo encontrado" emptyDescription="Crie o primeiro grupo"
+            onSelect={(item) => list.setSelectedItem(item as GrupoProduto | null)}
+            onActivate={(item) => page.openView(item as GrupoProduto)}
+            emptyAction={
+              <Button onClick={() => page.openNew()}>
+                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+              </Button>
+            }
+          />
+        ) : (
+          <CardGrid
+            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+            onSelect={(g) => list.setSelectedCardId(g?.id ?? null)}
+            onActivate={(item) => page.openView(item as GrupoProduto)}
+            loading={isLoading} loadingText="Carregando grupos..."
+            emptyTitle="Nenhum grupo encontrado" emptyDescription="Crie o primeiro grupo"
+            renderCard={(g) => <GrupoCard grupo={g} />}
+            emptyAction={
+              <Button onClick={() => page.openNew()}>
+                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+              </Button>
+            }
+          />
+        )
+      )}
+
+      {inForm && (
+        <GrupoForm
+          key={page.resetKey}
+          ref={formRef}
+          mode={page.mode as 'view' | 'new' | 'edit'}
+          grupo={page.editingItem}
+          onDirty={() => page.setDirty(true)}
+          onSave={handleSave}
+        />
+      )}
+
+      <GrupoDeleteDialog
+        open={del.open} onOpenChange={del.setOpen}
+        grupo={del.item} onConfirm={del.confirmDelete}
       />
 
-      <GrupoFormModal open={modalOpen} onOpenChange={setModalOpen} grupo={grupoEdit} />
-      <DeleteGrupoDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} grupo={grupoDelete}
-        onConfirm={async () => { if (grupoDelete) { await deleteGrupo(grupoDelete.id); setDeleteDialogOpen(false); setGrupoDelete(null); } }}
-      />
     </PageShell>
   );
 }
