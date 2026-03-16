@@ -52,10 +52,19 @@ export const useProdutosStore = create<ProdutosState>((set, get) => ({
   updateProduto: async (id, data) => {
     set({ error: null });
     try {
-      const atualizado = await apiPut<Produto>(`/api/engenharia/Produtos/${id}`, data);
-      set((state) => ({
-        produtos: state.produtos.map((p) => (p.id === id ? atualizado : p)),
-      }));
+      const atualizado = await apiPut<Produto | null>(`/api/engenharia/Produtos/${id}`, data);
+      if (atualizado && atualizado.id) {
+        set((state) => ({
+          produtos: state.produtos.map((p) => (p.id === id ? atualizado : p)),
+        }));
+      } else {
+        // 204 No Content — mescla dados locais
+        set((state) => ({
+          produtos: state.produtos.map((p) =>
+            p.id === id ? { ...p, ...data } : p
+          ),
+        }));
+      }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar produto';
       set({ error: message });

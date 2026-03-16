@@ -148,14 +148,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     },
     {
       key: 'descricao', header: 'DESCRIÇÃO', width: 250, minWidth: 200,
-      render: (p) => (
-        <div>
-          <p className="font-medium">{p.descricao}</p>
-          {p.descricaoCompleta && (
-            <p className="line-clamp-1 text-xs text-muted-foreground">{p.descricaoCompleta}</p>
-          )}
-        </div>
-      ),
+      render: (p) => (<span className="font-medium">{p.descricao}</span>),
     },
     {
       key: 'tipo', header: 'TIPO', width: 130, minWidth: 110,

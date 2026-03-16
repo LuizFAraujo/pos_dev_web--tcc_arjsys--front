@@ -99,9 +99,10 @@ export function useListState<T extends { id: number | string }>({
   // ── Filtro ──────────────────────────────────────────────────────────────────
 
   const filtrados = useMemo(() => {
-    if (!searchTerm) return data || [];
+    const safeData = (data || []).filter(Boolean);
+    if (!searchTerm) return safeData;
     const term = searchTerm.toLowerCase();
-    return (data || []).filter((item) =>
+    return safeData.filter((item) =>
       searchCols.some((col) => {
         const val = (item as any)[col];
         return val && String(val).toLowerCase().includes(term);

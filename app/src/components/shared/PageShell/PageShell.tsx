@@ -15,6 +15,7 @@
  */
 
 import { useMemo } from 'react';
+import { Keyboard } from 'lucide-react';
 import type { PageShellProps, PageMode } from './types';
 
 /** Mapa mode → texto da tag */
@@ -27,6 +28,32 @@ const MODE_TAG: Record<PageMode, string | undefined> = {
 
 export function PageShell({ module, title, tag, mode, headerRight, footer, children }: PageShellProps) {
   const resolvedTag = useMemo(() => tag ?? (mode ? MODE_TAG[mode] : undefined), [tag, mode]);
+
+  // Footer automático baseado no mode (se footer explícito não foi passado)
+  const resolvedFooter = useMemo(() => {
+    if (footer) return footer;
+    if (!mode || mode === 'list') return null;
+
+    if (mode === 'edit' || mode === 'new') {
+      return (
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <Keyboard className="h-3.5 w-3.5 shrink-0" />
+          <span><kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-mono">Ctrl+S</kbd> Salvar</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-mono">Ctrl+Shift+S</kbd> Salvar e sair</span>
+        </div>
+      );
+    }
+
+    if (mode === 'view') {
+      return (
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span>Pressione Editar para modificar o registro</span>
+        </div>
+      );
+    }
+
+    return null;
+  }, [footer, mode]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -61,9 +88,9 @@ export function PageShell({ module, title, tag, mode, headerRight, footer, child
       </div>
 
       {/* FOOTER */}
-      {footer && (
+      {resolvedFooter && (
         <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5">
-          {footer}
+          {resolvedFooter}
         </div>
       )}
     </div>
