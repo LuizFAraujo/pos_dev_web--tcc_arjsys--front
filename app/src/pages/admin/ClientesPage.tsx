@@ -173,6 +173,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(c) => list.setSelectedCardId(c?.id ?? null)}
+            onActivate={(item) => page.openView(item as Cliente)}
             loading={isLoading} loadingText="Carregando clientes..."
             emptyTitle="Nenhum cliente encontrado" emptyDescription="Crie o primeiro cliente"
             renderCard={(c) => <ClienteCard cliente={c} />}

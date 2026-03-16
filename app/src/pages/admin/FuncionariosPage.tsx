@@ -167,6 +167,7 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(f) => list.setSelectedCardId(f?.id ?? null)}
+			onActivate={(item) => page.openView(item as Funcionario)}
             loading={isLoading} loadingText="Carregando funcionários..."
             emptyTitle="Nenhum funcionário encontrado" emptyDescription="Crie o primeiro funcionário"
             renderCard={(f) => <FuncionarioCard funcionario={f} />}

@@ -4,6 +4,8 @@
  * Funcionalidades:
  * - Hover e seleção com as mesmas cores do DataGrid (sky-200 / slate-100)
  * - Navegação por teclado: setas ←→↑↓ entre cards
+ * - Enter com card selecionado → onActivate (abre visualização)
+ * - Duplo clique no card → onActivate
  * - Sem botões de ação internos — ações ficam no header da página
  * - Colunas configuráveis (1–4), responsivo por padrão
  * - Cores de hover e seleção configuráveis via props
@@ -44,6 +46,12 @@ export interface CardGridProps<T extends { id: number | string }> {
 
   /** Callback ao clicar ou navegar para um card. null = deselecionar */
   onSelect: (item: T | null) => void;
+
+  /**
+   * Chamado ao "ativar" um card: Enter com card selecionado, ou duplo clique.
+   * Usado para abrir visualização diretamente pelo card.
+   */
+  onActivate?: (item: T) => void;
 
   /** Estado de loading */
   loading?: boolean;
@@ -99,6 +107,7 @@ function CardGridInner<T extends { id: number | string }>(
     renderCard,
     selectedId,
     onSelect,
+    onActivate,
     loading = false,
     loadingText = 'Carregando...',
     emptyTitle = 'Nenhum item encontrado',
@@ -112,6 +121,8 @@ function CardGridInner<T extends { id: number | string }>(
   ref: React.ForwardedRef<CardGridHandle>,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const onActivateRef = useRef(onActivate);
+  onActivateRef.current = onActivate;
 
   // Índice do item selecionado no array atual
   const selectedIndex = data.findIndex((item) => item.id === selectedId);
@@ -180,6 +191,15 @@ function CardGridInner<T extends { id: number | string }>(
           e.preventDefault();
           selectByIndex(current < 0 ? 0 : current - effectiveCols);
           break;
+        case 'Enter': {
+          e.preventDefault();
+          // Se tem item selecionado, ativa (abre visualização)
+          if (selectedIndex >= 0) {
+            const item = data[selectedIndex];
+            setTimeout(() => onActivateRef.current?.(item), 0);
+          }
+          break;
+        }
         case 'Home':
           e.preventDefault();
           selectByIndex(0);
@@ -192,7 +212,7 @@ function CardGridInner<T extends { id: number | string }>(
           break;
       }
     },
-    [data.length, selectedIndex, selectByIndex, getMeasuredCols],
+    [data, selectedIndex, selectByIndex, getMeasuredCols],
   );
 
   // Auto-scroll pro card selecionado quando muda por teclado
@@ -252,17 +272,11 @@ function CardGridInner<T extends { id: number | string }>(
             tabIndex={-1}
             aria-selected={isSelected}
             onClick={() => onSelect(isSelected ? null : item)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onSelect(isSelected ? null : item);
-              }
-            }}
+            onDoubleClick={() => onActivateRef.current?.(item)}
             className={[
               'rounded-lg border cursor-pointer outline-none',
               'transition-colors duration-100',
               'border-slate-200 dark:border-slate-800',
-              // selected sobrescreve hover (ordem importa)
               isSelected
                 ? selectedClass
                 : ['bg-white dark:bg-slate-900', hoverClass].join(' '),

@@ -217,6 +217,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
+			onActivate={(item) => page.openView(item as Produto)}
             loading={isLoading} loadingText="Carregando produtos..."
             emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
             renderCard={(p) => <ProdutoCard produto={p} />}
