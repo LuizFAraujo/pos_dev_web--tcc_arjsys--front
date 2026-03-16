@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 // ============================================
 
 /** Tipos de filtro disponíveis por coluna */
-export type GridFilterType = 'text' | 'exact' | 'select' | 'number';
+export type GridFilterType = 'text' | 'exact' | 'select' | 'number' | 'checklist';
 
 /** Definição de uma coluna do DataGrid */
 export interface GridColumn<T> {
@@ -92,6 +92,8 @@ export interface CompoundFilter {
   valor?: string;
   min?: string;
   max?: string;
+  // Checklist multi-select (usado por filterType 'checklist')
+  checkedValues?: string[];
   // Legado: campos texto antigos (mantidos pra compatibilidade)
   contem?: string;
   comeca?: string;

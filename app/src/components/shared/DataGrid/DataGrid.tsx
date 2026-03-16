@@ -3,7 +3,7 @@
  *
  * Grid baseado em TanStack Table com:
  * - Sort por coluna (click no header)
- * - Filtros por coluna (popover com multi-condição, E/OU)
+ * - Filtros por coluna (popover com multi-condição, E/OU, checklist)
  * - Resize de colunas (drag na borda, localStorage)
  * - Linha selecionada (clique + setas cima/baixo)
  * - Enter com linha selecionada → onActivate (abre edição)
@@ -69,6 +69,13 @@ const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
       if (fv.min && n < parseFloat(fv.min)) return false;
       if (fv.max && n > parseFloat(fv.max)) return false;
       return true;
+    }
+    case 'checklist': {
+      // undefined = sem filtro (todos marcados), mostra tudo
+      if (!fv.checkedValues) return true;
+      // Array vazio = nenhum marcado, esconde tudo
+      if (fv.checkedValues.length === 0) return false;
+      return fv.checkedValues.some(v => v.toLowerCase() === cv);
     }
     default: return true;
   }
@@ -239,8 +246,6 @@ function DataGridInner<T extends Record<string, any>>({
         const row = rowsRef.current[idx];
         if (!row) return;
         const item = row.original;
-        // setTimeout 0: aguarda o evento terminar antes de abrir o modal,
-        // evitando que o Enter acione botões dentro do modal ao abrir.
         setTimeout(() => onActivateRef.current?.(item), 0);
       }
     };
@@ -284,7 +289,7 @@ function DataGridInner<T extends Record<string, any>>({
           </colgroup>
 
           {/* HEADER */}
-          <thead className="sticky top-0 z-10 bg-slate-700 dark:bg-slate-800 text-slate-100">
+          <thead className="sticky top-0 z-10 text-slate-100">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="border-b-2 border-slate-300">
                 {hg.headers.map((h) => {
@@ -300,7 +305,7 @@ function DataGridInner<T extends Record<string, any>>({
                   return (
                     <th key={h.id}
                       style={{ height: headerHeight }}
-                      className="px-2 py-0 text-xs font-medium relative select-none whitespace-nowrap overflow-hidden border-r border-slate-600 last:border-r-0"
+                      className="px-2 py-0 text-xs font-medium relative select-none whitespace-nowrap overflow-hidden border-r border-slate-600 last:border-r-0 bg-slate-700 dark:bg-slate-800"
                     >
                       <div className="flex items-center gap-1 w-full">
                         {canSort ? (

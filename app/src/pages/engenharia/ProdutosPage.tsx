@@ -44,6 +44,18 @@ const TIPO_OPTIONS = [
   { label: 'Serviço', value: 'Servico' },
 ];
 
+const UNIDADE_OPTIONS = [
+  { label: 'Unidade', value: 'UN' },
+  { label: 'Peça', value: 'PC' },
+  { label: 'Conjunto', value: 'CJ' },
+  { label: 'Quilograma', value: 'KG' },
+  { label: 'Kit', value: 'KT' },
+  { label: 'Metro', value: 'MT' },
+  { label: 'Metro²', value: 'M2' },
+  { label: 'Metro³', value: 'M3' },
+  { label: 'Litro', value: 'LT' },
+];
+
 const SIM_NAO_OPTIONS = [
   { label: 'Sim', value: 'true' },
   { label: 'Não', value: 'false' },
@@ -147,10 +159,13 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     },
     {
       key: 'tipo', header: 'TIPO', width: 130, minWidth: 110,
-      filterType: 'select', filterOptions: TIPO_OPTIONS, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: TIPO_OPTIONS, contentAlign: 'center',
       render: (p) => TIPO_PRODUTO_LABELS[p.tipo] || p.tipo,
     },
-    { key: 'unidade', header: 'UN', width: 75, minWidth: 65, contentAlign: 'center' },
+    {
+      key: 'unidade', header: 'UN', width: 75, minWidth: 65, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: UNIDADE_OPTIONS
+    },
     {
       key: 'peso', header: 'PESO (KG)', width: 80, minWidth: 70,
       filterType: 'number', contentAlign: 'right',
@@ -158,14 +173,14 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     },
     {
       key: 'temDocumento', header: 'DOC.', width: 80, minWidth: 75,
-      filterType: 'select', filterOptions: SIM_NAO_OPTIONS, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS, contentAlign: 'center',
       render: (p) => p.temDocumento
         ? <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         : <span className="text-muted-foreground">-</span>,
     },
     {
       key: 'ativo', header: 'ATIVO', width: 80, minWidth: 80,
-      filterType: 'select', filterOptions: SIM_NAO_OPTIONS, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS, contentAlign: 'center',
       render: (p) => p.ativo ? 'Sim' : 'Não',
     },
   ], []);
@@ -217,7 +232,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
-			onActivate={(item) => page.openView(item as Produto)}
+            onActivate={(item) => page.openView(item as Produto)}
             loading={isLoading} loadingText="Carregando produtos..."
             emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
             renderCard={(p) => <ProdutoCard produto={p} />}

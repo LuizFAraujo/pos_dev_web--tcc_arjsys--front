@@ -7,6 +7,7 @@
  * - exact: input único de valor exato
  * - select: dropdown com opções
  * - number: range min/max
+ * - checklist: checkboxes multi-select (todos marcados = sem filtro)
  *
  * Ícone fica amarelo preenchido quando filtro ativo.
  * Botão limpar tudo + contagem ficam ao lado do título.
@@ -28,6 +29,8 @@ import type { GridFilterType, CompoundFilter, FilterCondition } from './types';
 export function isFilterActive(f?: CompoundFilter): boolean {
   if (!f) return false;
   if (f.conditions && f.conditions.some(c => c.value.trim())) return true;
+  // checkedValues existe (mesmo vazio) = filtro ativo. undefined = sem filtro (todos)
+  if (f.checkedValues !== undefined) return true;
   return !!(f.contem || f.comeca || f.termina || f.naoContem || f.valor || f.min || f.max);
 }
 
@@ -51,7 +54,7 @@ export function matchSingleCondition(cellValue: string, cond: FilterCondition): 
 
 interface ColFilterPopoverProps {
   type: GridFilterType;                              // tipo de filtro da coluna
-  options?: { label: string; value: string }[];      // opções pra filterType 'select'
+  options?: { label: string; value: string }[];      // opções pra filterType 'select' ou 'checklist'
   value: CompoundFilter;                             // valor atual do filtro
   onChange: (f: CompoundFilter) => void;              // callback ao mudar filtro
   onClear: () => void;                               // callback ao limpar filtro
@@ -86,6 +89,8 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
     }
   };
 
+  const popWidth = type === 'checklist' ? 'w-38' : type === 'text' ? 'w-72' : 'w-52';
+
   return (
     <Popover onOpenChange={(open) => { if (open) ensureConditions(); }}>
       {/* Ícone — amarelo preenchido quando ativo */}
@@ -95,7 +100,7 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
         </button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-72 space-y-1.5 max-h-[70vh] overflow-y-auto" align="start">
+      <PopoverContent className={`${popWidth} space-y-1.5 max-h-[70vh] overflow-y-auto`} align="start">
 
         {/* Título + contagem + limpar valores + resetar filtro */}
         <div className="flex items-center justify-between">
@@ -122,11 +127,23 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
                 <TooltipTrigger asChild>
                   <button onClick={() => {
                     onChange({ type: value.type, conditions: [{ operator: 'contem', value: '', logic: 'E' }] });
-                  }} className="p-0.5 rounded text-red-400 ...">
+                  }} className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
                     <FilterX className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent><p>Resetar filtro</p></TooltipContent>
+              </Tooltip>
+            )}
+            {/* Limpar checklist — aparece quando filtro checklist está ativo */}
+            {type === 'checklist' && value.checkedValues !== undefined && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button onClick={() => onChange({ ...value, checkedValues: undefined })}
+                    className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                    <FilterX className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent><p>Limpar filtro</p></TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -198,6 +215,61 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
             <div><label className="text-[10px] text-muted-foreground">Máx</label><Input className="h-7 text-xs" type="number" value={value.max || ''} onChange={(e) => onChange({ ...value, max: e.target.value })} /></div>
           </div>
         )}
+
+        {/* ===== CHECKLIST: checkboxes multi-select ===== */}
+        {type === 'checklist' && options && (() => {
+          const allValues = options.map(o => o.value);
+          const checked = value.checkedValues ?? allValues;
+          const allChecked = checked.length === allValues.length;
+
+          // Marcar todos = sem filtro (remove checkedValues)
+          const setAll = () => {
+            onChange({ ...value, checkedValues: undefined });
+          };
+          const toggleAll = () => {
+            if (allChecked) {
+              onChange({ ...value, checkedValues: [] });
+            } else {
+              setAll();
+            }
+          };
+          const toggleOne = (val: string) => {
+            const next = checked.includes(val)
+              ? checked.filter(v => v !== val)
+              : [...checked, val];
+            // Se marcou todos, limpa o filtro
+            if (next.length === allValues.length) {
+              setAll();
+            } else {
+              onChange({ ...value, checkedValues: next });
+            }
+          };
+
+          return (
+            <div className="space-y-1">
+              <button onClick={toggleAll}
+                className="flex items-center gap-2 w-full px-1 py-0.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${allChecked ? 'bg-slate-700 border-slate-700 dark:bg-slate-300 dark:border-slate-300' : 'border-slate-300 dark:border-slate-600'}`}>
+                  {allChecked && <span className="text-[8px] text-white dark:text-slate-900">✓</span>}
+                </div>
+                <span className="font-medium">Todos</span>
+              </button>
+              <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
+              {options.map((o) => {
+                const isChecked = checked.includes(o.value);
+                return (
+                  <button key={o.value} onClick={() => toggleOne(o.value)}
+                    className="flex items-center gap-2 w-full px-1 py-0.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+                    <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isChecked ? 'bg-slate-700 border-slate-700 dark:bg-slate-300 dark:border-slate-300' : 'border-slate-300 dark:border-slate-600'}`}>
+                      {isChecked && <span className="text-[8px] text-white dark:text-slate-900">✓</span>}
+                    </div>
+                    <span>{o.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
       </PopoverContent>
     </Popover>
