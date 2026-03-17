@@ -43,10 +43,8 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── FuncionarioForm.tsx            ✅
         │   │
         │   ├── comercial/         # Componentes Comercial
-        │   │   ├── DeletePedidoDialog.tsx         ✅
-        │   │   ├── PedidoDetalheModal.tsx         ✅
-        │   │   ├── PedidoFormModal.tsx            ✅
-        │   │   └── StatusPedidoActions.tsx        ✅
+        │   │   ├── PedidoForm.tsx                 ✅
+        │   │   └── PedidoDeleteDialog.tsx         ✅
         │   │
         │   ├── engenharia/         # Componentes Engenharia
         │   │   ├── BOMFlatView.tsx                ✅

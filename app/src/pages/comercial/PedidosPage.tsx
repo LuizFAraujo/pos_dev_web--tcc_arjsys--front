@@ -1,84 +1,312 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, Eye, Search } from 'lucide-react';
+/**
+ * PedidosPage.tsx — Página de pedidos de venda com modos list/view/new/edit
+ *
+ * Template: PageShell + PageActions + usePageMode (header, botões, modos)
+ * Hooks: useListState (search, filtro, seleção), useDeleteDialog (exclusão)
+ * Página: colunas, form, card, callbacks de CRUD
+ *
+ * Diferenças em relação às páginas CRUD simples:
+ *   - Edit/delete só permitido quando status === 'Orcamento'
+ *   - Botões de transição de status no view mode via extraActions
+ *   - Itens do pedido gerenciados dentro do PedidoForm (não no grid)
+ *   - Filtro checklist no status
+ */
+
+import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { usePedidosStore } from '@/stores/comercial/pedidosStore';
-import { useTabState } from '@/hooks/useTabState';
-import { PageShell } from '@/components/shared/PageShell';
-import { DataGrid } from '@/components/shared/DataGrid/DataGrid';
-import type { DataGridColumn } from '@/components/shared/DataGrid/DataGrid';
+import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
+import { DataGrid } from '@/components/shared/DataGrid';
+import type { GridColumn } from '@/components/shared/DataGrid';
+import { CardGrid } from '@/components/shared/CardGrid';
+import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { PedidoFormModal } from '@/components/comercial/PedidoFormModal';
-import { PedidoDetalheModal } from '@/components/comercial/PedidoDetalheModal';
-import { DeletePedidoDialog } from '@/components/comercial/DeletePedidoDialog';
-import { StatusPedidoActions } from '@/components/comercial/StatusPedidoActions';
-import { STATUS_LABELS, STATUS_COLORS } from '@/types/comercial/pedido.types';
-import type { PedidoVenda } from '@/types/comercial/pedido.types';
+import { useListState } from '@/hooks/useListState';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { PedidoDeleteDialog } from '@/components/comercial/PedidoDeleteDialog';
+import { PedidoForm } from '@/components/comercial/PedidoForm';
+import type { PedidoFormHandle } from '@/components/comercial/PedidoForm';
+import { STATUS_LABELS, STATUS_COLORS, TRANSICOES_STATUS } from '@/types/comercial/pedido.types';
+import type { PedidoVenda, PedidoVendaFormData, StatusPedido } from '@/types/comercial/pedido.types';
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+interface PedidosPageProps {
+  tab: { id: string; type: string; title: string };
+}
+
+const SEARCH_COLUMNS: SearchColumn[] = [
+  { key: 'codigo', label: 'Código' },
+  { key: 'clienteNome', label: 'Cliente' },
+];
 
 const STATUS_OPTIONS = [
-  { label: 'Orcamento', value: 'Orcamento' },
+  { label: 'Orçamento', value: 'Orcamento' },
   { label: 'Aprovado', value: 'Aprovado' },
-  { label: 'Em Producao', value: 'EmProducao' },
-  { label: 'Concluido', value: 'Concluido' },
+  { label: 'Em Produção', value: 'EmProducao' },
+  { label: 'Concluído', value: 'Concluido' },
   { label: 'Entregue', value: 'Entregue' },
   { label: 'Cancelado', value: 'Cancelado' },
 ];
 
-interface PedidosPageProps { tab: { id: string; type: string; title: string }; }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatCurrency(val?: number) {
+  if (val == null) return '-';
+  return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatDate(val?: string) {
+  if (!val) return '-';
+  return new Date(val).toLocaleDateString('pt-BR');
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
+function PedidoCard({ pedido }: { pedido: PedidoVenda }) {
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between">
+        <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
+          {pedido.codigo || '-'}
+        </p>
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[pedido.status] || ''}`}>
+          {STATUS_LABELS[pedido.status] || pedido.status}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1 truncate">{pedido.clienteNome || '-'}</p>
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs text-muted-foreground">{pedido.totalItens ?? 0} itens</span>
+        <span className="text-xs font-mono font-medium text-green-700 dark:text-green-400">
+          {formatCurrency((pedido as any).valorTotal ?? (pedido as any).total)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Componente ───────────────────────────────────────────────────────────────
 
 export function PedidosPage({ tab }: PedidosPageProps) {
-  const [searchTerm, setSearchTerm] = useTabState(tab.id, '');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [detalheOpen, setDetalheOpen] = useState(false);
-  const [pedidoEdit, setPedidoEdit] = useState<PedidoVenda | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [pedidoDelete, setPedidoDelete] = useState<PedidoVenda | null>(null);
-  const [pedidoDetalheId, setPedidoDetalheId] = useState<number | null>(null);
+  const formRef = useRef<PedidoFormHandle>(null);
+
+  const page = usePageMode<PedidoVenda>(tab.id, (p) => String(p.id), tab.type);
+
+  // ─── Store ──────────────────────────────────────────────────────────────────
 
   const pedidos = usePedidosStore((s) => s.pedidos);
   const isLoading = usePedidosStore((s) => s.isLoading);
   const error = usePedidosStore((s) => s.error);
   const fetchPedidos = usePedidosStore((s) => s.fetchPedidos);
+  const createPedido = usePedidosStore((s) => s.createPedido);
+  const updatePedido = usePedidosStore((s) => s.updatePedido);
   const deletePedido = usePedidosStore((s) => s.deletePedido);
+  const alterarStatus = usePedidosStore((s) => s.alterarStatus);
 
   useEffect(() => { fetchPedidos(); }, [fetchPedidos]);
+  useEffect(() => { if (error) toast.error(error); }, [error]);
 
-  const filtrados = useMemo(() => {
-    if (!searchTerm) return pedidos || [];
-    const term = searchTerm.toLowerCase();
-    return (pedidos || []).filter((p) => (p.codigo || '').toLowerCase().includes(term) || (p.clienteNome || '').toLowerCase().includes(term) || (p.status || '').toLowerCase().includes(term));
-  }, [pedidos, searchTerm]);
+  // ─── Lista (search, filtro, seleção, viewMode) ─────────────────────────────
 
-  const formatCurrency = (val?: number) => val == null ? '-' : val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const formatDate = (val?: string) => !val ? '-' : new Date(val).toLocaleDateString('pt-BR');
+  const list = useListState<PedidoVenda>({
+    tabId: tab.id,
+    data: pedidos,
+    searchColumns: SEARCH_COLUMNS,
+    defaultSearchCols: ['codigo'],
+  });
 
-  const columns: DataGridColumn<PedidoVenda>[] = [
-    { key: 'codigo', header: 'Codigo', filterType: 'exact', render: (p) => <span className="font-mono font-medium">{p.codigo || '-'}</span> },
-    { key: 'clienteNome', header: 'Cliente' },
-    { key: 'status', header: 'Status', filterType: 'select', filterOptions: STATUS_OPTIONS, render: (p) => <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || ''}`}>{STATUS_LABELS[p.status] || p.status}</span> },
-    { key: 'totalItens', header: 'Itens', align: 'right', filterType: 'number' },
-    { key: 'valorTotal', header: 'Valor Total', align: 'right', filterType: 'number', render: (p) => <span className="font-mono">{formatCurrency(p.valorTotal)}</span> },
-    { key: 'criadoEm', header: 'Data', render: (p) => formatDate(p.criadoEm) },
-    { key: 'acoes', header: 'Acoes', sortable: false, filterable: false, resizable: false, render: (p) => (
-        <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={() => { setPedidoDetalheId(p.id); setDetalheOpen(true); }} title="Ver"><Eye className="h-3.5 w-3.5" /></Button>
-          {p.status === 'Orcamento' && (<><Button variant="ghost" size="sm" onClick={() => { setPedidoEdit(p); setModalOpen(true); }} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600" onClick={() => { setPedidoDelete(p); setDeleteDialogOpen(true); }} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button></>)}
-          <StatusPedidoActions pedido={p} />
-        </div>
+  // ─── Delete ─────────────────────────────────────────────────────────────────
+
+  const del = useDeleteDialog<PedidoVenda>({
+    onDelete: (p) => deletePedido(p.id),
+    onAfterDelete: (p) => {
+      if (p.id === list.selectedCardId) list.setSelectedCardId(null);
+    },
+    successMessage: 'Pedido excluído.',
+  });
+
+  // ─── Save (cabeçalho) ──────────────────────────────────────────────────────
+
+  const handleSave = useCallback(async (data: PedidoVendaFormData) => {
+    if (page.mode === 'edit' && page.editingItem) {
+      await updatePedido(page.editingItem.id, data);
+    } else {
+      const novo = await createPedido(data);
+      // Após criar, abre em edit pra poder adicionar itens
+      if (novo) {
+        await fetchPedidos();
+        page.openEdit(novo);
+      }
+    }
+  }, [page.mode, page.editingItem, updatePedido, createPedido, fetchPedidos, page]);
+
+  // ─── Status actions (extraActions no view mode) ─────────────────────────────
+
+  const statusActions = useMemo(() => {
+    if (page.mode !== 'view' || !page.editingItem) return null;
+    const pedido = page.editingItem;
+    const transicoes = TRANSICOES_STATUS[pedido.status] || [];
+    if (transicoes.length === 0) return null;
+
+    const handleChange = async (novoStatus: StatusPedido) => {
+      try {
+        await alterarStatus(pedido.id, novoStatus);
+        await fetchPedidos();
+        // Atualiza o item no view com o novo status
+        const atualizado = { ...pedido, status: novoStatus };
+        page.openView(atualizado);
+        toast.success(`Status alterado para ${STATUS_LABELS[novoStatus]}.`);
+      } catch {
+        toast.error('Erro ao alterar status.');
+      }
+    };
+
+    return (
+      <div className="flex items-center gap-1">
+        {transicoes.map((novoStatus) => (
+          <Button
+            key={novoStatus}
+            variant="outline"
+            size="sm"
+            className={`text-xs h-7 ${novoStatus === 'Cancelado' ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : ''}`}
+            onClick={() => handleChange(novoStatus)}
+          >
+            → {STATUS_LABELS[novoStatus]}
+          </Button>
+        ))}
+      </div>
+    );
+  }, [page.mode, page.editingItem, alterarStatus, fetchPedidos, page]);
+
+  // ─── Regras de negócio: edit/delete só em Orcamento ─────────────────────────
+
+  /** Callback de delete que valida status antes de abrir dialog */
+  const handleRequestDelete = useCallback((p: PedidoVenda) => {
+    if (p.status !== 'Orcamento') {
+      toast.error('Só é possível excluir pedidos com status Orçamento.');
+      return;
+    }
+    del.requestDelete(p);
+  }, [del]);
+
+  // ─── Colunas ────────────────────────────────────────────────────────────────
+
+  const columns: GridColumn<PedidoVenda>[] = useMemo(() => [
+    {
+      key: 'codigo', header: 'Código', width: 170, minWidth: 120,
+      filterType: 'exact',
+      render: (p) => <span className="font-mono font-medium">{p.codigo || '-'}</span>,
+    },
+    {
+      key: 'clienteNome', header: 'Cliente', width: 250, minWidth: 150,
+    },
+    {
+      key: 'status', header: 'Status', width: 140, minWidth: 100,
+      filterType: 'checklist', filterOptions: STATUS_OPTIONS,
+      render: (p) => (
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || ''}`}>
+          {STATUS_LABELS[p.status] || p.status}
+        </span>
       ),
     },
-  ];
+    {
+      key: 'totalItens', header: 'Itens', width: 80, minWidth: 60,
+      contentAlign: 'right',
+      render: (p) => <span className="font-mono">{p.totalItens ?? 0}</span>,
+    },
+    {
+      key: 'valorTotal', header: 'Valor Total', width: 140, minWidth: 100,
+      contentAlign: 'right',
+      render: (p) => (
+        <span className="font-mono">
+          {formatCurrency((p as any).valorTotal ?? (p as any).total)}
+        </span>
+      ),
+    },
+    {
+      key: 'criadoEm', header: 'Data', width: 110, minWidth: 80,
+      contentAlign: 'center',
+      render: (p) => formatDate(p.criadoEm),
+    },
+  ], []);
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
+  const inForm = page.mode !== 'list';
 
   return (
-    <PageShell breadcrumbs={[{ label: 'Comercial' }, { label: 'Pedidos de Venda' }]} title="Pedidos de Venda" tooltip="Gerencie pedidos de venda"
-      headerRight={<Button onClick={() => { setPedidoEdit(null); setModalOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Novo Pedido</Button>}
-      headerExtra={<div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Buscar por codigo, cliente ou status..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" /></div>}
-      footer={<p className="text-sm text-muted-foreground">{filtrados.length} de {pedidos?.length || 0} pedidos</p>}
+    <PageShell module="Comercial" title="Pedidos de Venda" mode={page.mode}
+      headerRight={
+        <PageActions
+          page={page}
+          activeItem={list.activeItem}
+          onDelete={handleRequestDelete}
+          lockMessage="Este pedido já está sendo editado em outra aba."
+          searchColumns={SEARCH_COLUMNS}
+          searchTerm={list.searchTerm}
+          onSearchChange={list.setSearchTerm}
+          searchSelectedColumns={list.searchCols}
+          onSearchColumnsChange={list.setSearchCols}
+          gridRef={list.gridRef}
+          viewMode={list.viewMode}
+          onViewModeChange={list.handleViewMode}
+          formRef={formRef}
+          extraActions={statusActions}
+          newTooltip="Novo pedido"
+          noSelectionText="Selecione um pedido"
+        />
+      }
     >
-      {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
-      <DataGrid columns={columns} data={filtrados} loading={isLoading} loadingText="Carregando pedidos..." emptyTitle="Nenhum pedido encontrado" emptyDescription={pedidos?.length === 0 ? 'Crie o primeiro pedido' : 'Tente ajustar a busca'} emptyAction={pedidos?.length === 0 ? <Button onClick={() => { setPedidoEdit(null); setModalOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Criar Primeiro</Button> : undefined} />
-      <PedidoFormModal open={modalOpen} onOpenChange={setModalOpen} pedido={pedidoEdit} />
-      <PedidoDetalheModal open={detalheOpen} onOpenChange={setDetalheOpen} pedidoId={pedidoDetalheId} />
-      <DeletePedidoDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} pedido={pedidoDelete} onConfirm={async () => { if (pedidoDelete) { await deletePedido(pedidoDelete.id); setDeleteDialogOpen(false); setPedidoDelete(null); } }} />
+
+      {!inForm && (
+        list.isListMode ? (
+          <DataGrid
+            ref={list.gridRef} tabId={tab.id} storageId="pedidos-venda"
+            columns={columns} data={list.filtrados}
+            loading={isLoading} loadingText="Carregando pedidos..."
+            emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
+            onSelect={(item) => list.setSelectedItem(item as PedidoVenda | null)}
+            onActivate={(item) => page.openView(item as PedidoVenda)}
+            emptyAction={
+              <Button onClick={() => page.openNew()}>
+                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+              </Button>
+            }
+          />
+        ) : (
+          <CardGrid
+            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+            onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
+            onActivate={(item) => page.openView(item as PedidoVenda)}
+            loading={isLoading} loadingText="Carregando pedidos..."
+            emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
+            renderCard={(p) => <PedidoCard pedido={p} />}
+            emptyAction={
+              <Button onClick={() => page.openNew()}>
+                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+              </Button>
+            }
+          />
+        )
+      )}
+
+      {inForm && (
+        <PedidoForm
+          key={page.resetKey}
+          ref={formRef}
+          mode={page.mode as 'view' | 'new' | 'edit'}
+          pedido={page.editingItem}
+          onDirty={() => page.setDirty(true)}
+          onSave={handleSave}
+        />
+      )}
+
+      <PedidoDeleteDialog
+        open={del.open} onOpenChange={del.setOpen}
+        pedido={del.item} onConfirm={del.confirmDelete}
+      />
+
     </PageShell>
   );
 }
