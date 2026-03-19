@@ -6,20 +6,46 @@ import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
 import type { Produto, ProdutoFormData } from '@/types/engenharia/produto.types';
 
+// ─── Tipos dos novos endpoints ────────────────────────────────────────────────
+
+interface AbrirPastaResult {
+  path: string;
+  aberto: boolean;
+}
+
+interface ExtensoesDocumentoResult {
+  path: string;
+  extensoes: string[];
+}
+
+interface AbrirDocumentoResult {
+  path: string;
+  extensao: string;
+  aberto: boolean;
+}
+
+// ─── Interface da store ───────────────────────────────────────────────────────
+
 interface ProdutosState {
-  // Estado
   produtos: Produto[];
   isLoading: boolean;
   error: string | null;
 
-  // Actions
   fetchProdutos: () => Promise<void>;
   createProduto: (data: ProdutoFormData) => Promise<void>;
   updateProduto: (id: number, data: ProdutoFormData) => Promise<void>;
   deleteProduto: (id: number) => Promise<void>;
   varreduraDocumentos: (prefixo?: string) => Promise<void>;
+
+  // Novos — documentos
+  abrirPasta: (id: number) => Promise<AbrirPastaResult>;
+  extensoesDocumento: (id: number) => Promise<ExtensoesDocumentoResult>;
+  abrirDocumento: (id: number, extensao?: string) => Promise<AbrirDocumentoResult>;
+
   clearError: () => void;
 }
+
+// ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useProdutosStore = create<ProdutosState>((set, get) => ({
   produtos: [],
@@ -58,7 +84,6 @@ export const useProdutosStore = create<ProdutosState>((set, get) => ({
           produtos: state.produtos.map((p) => (p.id === id ? atualizado : p)),
         }));
       } else {
-        // 204 No Content — mescla dados locais
         set((state) => ({
           produtos: state.produtos.map((p) =>
             p.id === id ? { ...p, ...data } : p
@@ -93,12 +118,35 @@ export const useProdutosStore = create<ProdutosState>((set, get) => ({
         ? `/api/engenharia/Produtos/varredura-documentos?prefixo=${prefixo}`
         : '/api/engenharia/Produtos/varredura-documentos';
       await apiPost(endpoint);
-      // Recarrega produtos para pegar temDocumento atualizado
       await get().fetchProdutos();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro na varredura de documentos';
       set({ error: message });
     }
+  },
+
+  // ── Abrir pasta no Explorer ─────────────────────────────────────────────────
+
+  abrirPasta: async (id) => {
+    const result = await apiPost<AbrirPastaResult>(`/api/engenharia/Produtos/${id}/abrir-pasta`);
+    return result;
+  },
+
+  // ── Listar extensões disponíveis ────────────────────────────────────────────
+
+  extensoesDocumento: async (id) => {
+    const result = await apiGet<ExtensoesDocumentoResult>(`/api/engenharia/Produtos/${id}/extensoes-documento`);
+    return result;
+  },
+
+  // ── Abrir documento com programa padrão ─────────────────────────────────────
+
+  abrirDocumento: async (id, extensao) => {
+    const url = extensao
+      ? `/api/engenharia/Produtos/${id}/abrir-documento?extensao=${extensao}`
+      : `/api/engenharia/Produtos/${id}/abrir-documento`;
+    const result = await apiPost<AbrirDocumentoResult>(url);
+    return result;
   },
 
   clearError: () => set({ error: null }),

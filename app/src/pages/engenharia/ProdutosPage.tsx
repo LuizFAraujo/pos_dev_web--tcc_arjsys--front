@@ -4,10 +4,12 @@
  * Template: PageShell + PageActions + usePageMode
  * Hooks: useListState, useDeleteDialog
  * Extra: botão Varredura via extraActions do PageActions
+ * Coluna DOC.: dois botões — abrir pasta (esq) e abrir documento (dir)
+ *   DocButtons recebe prop extensao: se passada, abre direto; se não, lista extensões
  */
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, ScanSearch, FileText } from 'lucide-react';
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { Plus, ScanSearch, FolderOpen, FileText, FileX2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
@@ -16,6 +18,7 @@ import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { useListState } from '@/hooks/useListState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
@@ -61,6 +64,8 @@ const SIM_NAO_OPTIONS = [
   { label: 'Não', value: 'false' },
 ];
 
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
 function ProdutoCard({ produto }: { produto: Produto }) {
   return (
     <div className="p-4">
@@ -77,6 +82,179 @@ function ProdutoCard({ produto }: { produto: Produto }) {
     </div>
   );
 }
+
+// ─── Botões DOC na coluna da grid ─────────────────────────────────────────────
+
+function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string }) {
+  const abrirPasta = useProdutosStore((s) => s.abrirPasta);
+  const extensoesDocumento = useProdutosStore((s) => s.extensoesDocumento);
+  const abrirDocumento = useProdutosStore((s) => s.abrirDocumento);
+
+  const [extOpen, setExtOpen] = useState(false);
+  const [extensoes, setExtensoes] = useState<string[]>([]);
+
+  const temPasta = (produto as any).temPasta ?? false;
+  const temDoc = produto.temDocumento ?? false;
+
+  if (!temPasta && !temDoc) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+
+  const handleAbrirPasta = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await abrirPasta(produto.id);
+    } catch (err: any) {
+      toast.error(err?.body?.erro || err?.message || 'Erro ao abrir pasta');
+    }
+  };
+
+  const handleDocClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!temDoc) return;
+
+    // Se passou extensão, abre direto
+    if (extensao) {
+      try {
+        await abrirDocumento(produto.id, extensao);
+      } catch (err: any) {
+        toast.error(err?.body?.erro || err?.message || 'Erro ao abrir documento');
+      }
+      return;
+    }
+
+    // Sem extensão → busca lista e decide
+    try {
+      const result = await extensoesDocumento(produto.id);
+      const exts = result.extensoes || [];
+
+      if (exts.length === 0) {
+        toast.error('Nenhum documento encontrado.');
+        return;
+      }
+
+      if (exts.length === 1) {
+        await abrirDocumento(produto.id, exts[0]);
+        return;
+      }
+
+      setExtensoes(exts);
+      setExtOpen(true);
+    } catch (err: any) {
+      toast.error(err?.body?.erro || err?.message || 'Erro ao buscar extensões');
+    }
+  };
+
+  const handleAbrirExt = async (ext: string) => {
+    setExtOpen(false);
+    try {
+      await abrirDocumento(produto.id, ext);
+    } catch (err: any) {
+      toast.error(err?.body?.erro || err?.message || 'Erro ao abrir documento');
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-0.5">
+      {/* Botão pasta */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={handleAbrirPasta}
+            disabled={!temPasta}
+            className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${
+              temPasta
+                ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer'
+                : 'text-muted-foreground/40 cursor-default'
+            }`}
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{temPasta ? 'Abrir pasta' : 'Sem pasta'}</p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Botão documento */}
+      {/* Botão documento */}
+      {extensao ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={handleDocClick}
+              disabled={!temDoc}
+              className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${
+                temDoc
+                  ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                  : temPasta
+                    ? 'text-muted-foreground/50 cursor-default'
+                    : 'text-muted-foreground/40 cursor-default'
+              }`}
+            >
+              {temDoc
+                ? <FileText className="h-3.5 w-3.5" />
+                : <FileX2 className="h-3.5 w-3.5" />
+              }
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{temDoc ? 'Abrir documento' : temPasta ? 'Pasta sem documento' : 'Sem documento'}</p>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <Popover open={extOpen} onOpenChange={setExtOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleDocClick}
+                  disabled={!temDoc}
+                  className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${
+                    temDoc
+                      ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                      : temPasta
+                        ? 'text-muted-foreground/50 cursor-default'
+                        : 'text-muted-foreground/40 cursor-default'
+                  }`}
+                >
+                  {temDoc
+                    ? <FileText className="h-3.5 w-3.5" />
+                    : <FileX2 className="h-3.5 w-3.5" />
+                  }
+                </button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{temDoc ? 'Abrir documento' : temPasta ? 'Pasta sem documento' : 'Sem documento'}</p>
+            </TooltipContent>
+          </Tooltip>
+          <PopoverContent className="w-auto p-1" align="center">
+            <div className="flex flex-col">
+              <p className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">Extensão</p>
+              {extensoes.map((ext) => (
+                <button
+                  key={ext}
+                  type="button"
+                  onClick={() => handleAbrirExt(ext)}
+                  className="px-3 py-1.5 text-xs text-left hover:bg-muted rounded transition-colors font-mono"
+                >
+                  .{ext}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
+      
+    </div>
+  );
+}
+
+// ─── Página ───────────────────────────────────────────────────────────────────
 
 export function ProdutosPage({ tab }: ProdutosPageProps) {
   const formRef = useRef<ProdutoFormHandle>(null);
@@ -165,11 +343,10 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       render: (p) => p.peso ? p.peso.toFixed(2) : '-',
     },
     {
-      key: 'temDocumento', header: 'DOC.', width: 80, minWidth: 75,
+      key: 'temDocumento', header: 'DOC.', width: 90, minWidth: 80,
       filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS, contentAlign: 'center',
-      render: (p) => p.temDocumento
-        ? <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        : <span className="text-muted-foreground">-</span>,
+      sortable: false,
+      render: (p) => <DocButtons produto={p} extensao="pdf" />,
     },
     {
       key: 'ativo', header: 'ATIVO', width: 80, minWidth: 80,
