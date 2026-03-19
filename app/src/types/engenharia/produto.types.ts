@@ -46,6 +46,7 @@ export interface Produto {
   tipo: TipoProduto;
   peso?: number;
   ativo: boolean;
+  temPasta: boolean;
   temDocumento: boolean;
 }
 

@@ -119,6 +119,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── select.tsx                     ✅
         │   │   ├── sheet.tsx                      ✅
         │   │   ├── sonner.tsx                     ✅
+        │   │   ├── switch.tsx                     ✅
         │   │   ├── table.tsx                      ✅
         │   │   ├── tabs.tsx                       ✅
         │   │   ├── textarea.tsx                   ✅
