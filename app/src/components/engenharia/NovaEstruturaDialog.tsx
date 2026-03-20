@@ -1,17 +1,14 @@
 /**
- * NovaEstruturaDialog.tsx — Modal para criar nova estrutura de produto.
+ * NovaEstruturaDialog.tsx — Dialog para criar nova estrutura de produto (BOM)
+ *
+ * Controlado pela página via open/onOpenChange (não mais interno).
+ * Seleciona um produto FABRICADO que ainda não tem estrutura.
  */
 
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -20,11 +17,12 @@ import { useBOMStore } from '@/stores/engenharia/bomStore';
 import { ProdutoSelect } from './ProdutoSelect';
 
 interface NovaEstruturaDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onEstruturaCreated: (codigoProduto: string) => void;
 }
 
-export function NovaEstruturaDialog({ onEstruturaCreated }: NovaEstruturaDialogProps) {
-  const [open, setOpen] = useState(false);
+export function NovaEstruturaDialog({ open, onOpenChange, onEstruturaCreated }: NovaEstruturaDialogProps) {
   const [selectedProdutoId, setSelectedProdutoId] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -37,6 +35,14 @@ export function NovaEstruturaDialog({ onEstruturaCreated }: NovaEstruturaDialogP
       fetchProdutos();
     }
   }, [produtos.length, fetchProdutos]);
+
+  // Limpa seleção ao abrir
+  useEffect(() => {
+    if (open) {
+      setSelectedProdutoId(null);
+      setIsCreating(false);
+    }
+  }, [open]);
 
   // Filtrar apenas FABRICADOS que ainda NÃO têm estrutura
   const produtosDisponiveis = produtos.filter(
@@ -54,26 +60,19 @@ export function NovaEstruturaDialog({ onEstruturaCreated }: NovaEstruturaDialogP
     // TODO: Implementar criação real via API
     setTimeout(() => {
       setIsCreating(false);
-      setOpen(false);
+      onOpenChange(false);
       setSelectedProdutoId(null);
       onEstruturaCreated(produto.codigo);
     }, 300);
   };
 
   const handleCancel = () => {
-    setOpen(false);
+    onOpenChange(false);
     setSelectedProdutoId(null);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Estrutura
-        </Button>
-      </DialogTrigger>
-
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-162.5">
         <DialogHeader>
           <DialogTitle>Criar Nova Estrutura de Produto</DialogTitle>
