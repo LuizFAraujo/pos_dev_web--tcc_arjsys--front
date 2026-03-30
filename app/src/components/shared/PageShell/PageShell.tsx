@@ -26,7 +26,8 @@ const MODE_TAG: Record<PageMode, string | undefined> = {
   new: 'novo',
 };
 
-export function PageShell({ module, title, tag, mode, headerRight, footer, children }: PageShellProps) {
+
+export function PageShell({ module, title, tag, extraTag, mode, headerRight, footer, children }: PageShellProps) {
   const resolvedTag = useMemo(() => tag ?? (mode ? MODE_TAG[mode] : undefined), [tag, mode]);
 
   // Footer automático baseado no mode (se footer explícito não foi passado)
@@ -69,6 +70,11 @@ export function PageShell({ module, title, tag, mode, headerRight, footer, child
             {resolvedTag && (
               <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 leading-none">
                 {resolvedTag}
+              </span>
+            )}
+            {extraTag && (
+              <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400 font-mono border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 leading-none">
+                {extraTag}
               </span>
             )}
           </div>

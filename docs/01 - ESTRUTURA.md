@@ -47,7 +47,9 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── PedidoDeleteDialog.tsx         ✅
         │   │
         │   ├── engenharia/         # Componentes Engenharia
+        │   │   ├── BomDeleteDialog.tsx            ✅
         │   │   ├── BOMFlatView.tsx                ✅
+        │   │   ├── BOMForm.tsx                    ✅
         │   │   ├── BOMTreeNode.tsx                ✅
         │   │   ├── BOMTreeView.tsx                ✅
         │   │   ├── GrupoDeleteDialog.tsx          ✅
