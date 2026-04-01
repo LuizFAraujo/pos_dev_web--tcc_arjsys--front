@@ -50,8 +50,6 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── BomDeleteDialog.tsx            ✅
         │   │   ├── BOMFlatView.tsx                ✅
         │   │   ├── BOMForm.tsx                    ✅
-        │   │   ├── BOMTreeNode.tsx                ✅
-        │   │   ├── BOMTreeView.tsx                ✅
         │   │   ├── GrupoDeleteDialog.tsx          ✅
         │   │   ├── GrupoForm.tsx                  ✅
         │   │   ├── NovaEstruturaDialog.tsx        ✅
@@ -75,6 +73,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   ├── index.ts                   ✅
         │   │   │   ├── ColFilterPopover.tsx       ✅
         │   │   │   ├── DataGrid.tsx               ✅
+        │   │   │   ├── DataGridTree.tsx           ✅
         │   │   │   ├── FilterConditionRow.tsx     ✅
         │   │   │   └── types.ts                   ✅
         │   │   ├── PageShell/
