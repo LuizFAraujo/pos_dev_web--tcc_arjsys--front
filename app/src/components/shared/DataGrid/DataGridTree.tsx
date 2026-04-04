@@ -38,6 +38,10 @@ export interface DataGridTreeProps<T> {
   className?: string;
   onSelect?: (item: T | null) => void;
   onActivate?: (item: T) => void;
+  /** Classe CSS extra por linha (ex: visual de edição por status) */
+  rowClassName?: (item: T) => string;
+  /** Conteúdo extra no rodapé (ex: dicas de edição) */
+  footerExtra?: ReactNode;
 }
 
 const filterFn = (cv: string, fv: CompoundFilter): boolean => {
@@ -85,7 +89,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   loading = false, loadingText = 'Carregando...',
   emptyTitle = 'Nenhum registro encontrado', emptyDescription, emptyAction,
   headerHeight = DEFAULT_HEADER_HEIGHT, rowHeight = DEFAULT_ROW_HEIGHT,
-  className = '', onSelect, onActivate,
+  className = '', onSelect, onActivate, rowClassName, footerExtra,
 }: DataGridTreeProps<T>, ref: Ref<DataGridHandle>) {
   const [sorting, setSorting] = useTabState<{ id: string; desc: boolean }[]>(tabId + '-tsort', []);
   const [colFilters, setColFilters] = useTabState<Record<string, CompoundFilter>>(tabId + '-tfilters', {});
@@ -188,7 +192,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
             {sorted.map((row, i) => {
               const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpanded(row); const isSel = selectedIdx === i; return (
                 <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={() => onActRef.current?.(row)}
-                  className={`border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default ${isSel ? 'bg-sky-200 dark:bg-sky-900' : i % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50 dark:bg-slate-900'} ${!isSel ? 'hover:bg-slate-200 dark:hover:bg-slate-700' : ''}`}>
+                  className={`group border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default ${isSel ? 'bg-sky-200 dark:bg-sky-900' : (rowClassName?.(row) || (i % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50 dark:bg-slate-900'))} ${!isSel ? 'hover:bg-slate-200 dark:hover:bg-slate-700' : ''}`}>
                   {gc.map((col) => {
                     if (col.key === codeColumnKey) {
                       const indent = (level - 1) * indentPx;
@@ -205,6 +209,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
       <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground flex items-center justify-between">
         <span>{sorted.length} {sorted.length === 1 ? 'registro' : 'registros'}{sorted.length !== flatRows.length ? ` de ${flatRows.length}` : ''}</span>
         {hasFilters && (<Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setColFilters({})}><X className="mr-1 h-3 w-3" /> Limpar filtros</Button>)}
+        {footerExtra}
       </div>
     </div>
   );

@@ -149,6 +149,7 @@ pos_dev_web--tcc_front--arjsys/
         │       └── mockPedidos.ts                 📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
         │
         ├── hooks/                  # Custom hooks
+        │   ├── useBomEditState.ts                 ✅
         │   ├── useBOMFlatState.ts                 ✅
         │   ├── useDeleteDialog.ts                 ✅
         │   ├── useFormTabNavigation.ts            ✅
