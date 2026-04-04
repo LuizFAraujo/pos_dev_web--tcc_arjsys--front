@@ -18,10 +18,7 @@
  */
 
 import { useState } from 'react';
-import { Header } from './Header';
-import { Sidebar } from './Sidebar';
-import { MainContent } from './MainContent';
-import { RightSidebar } from './RightSidebar';
+import { Header, Sidebar, MainContent, RightSidebar } from '@/layouts';
 import { ConfirmCloseDialog } from '@/components/workspace/ConfirmCloseDialog';
 import { CommandPalette } from '@/components/workspace/CommandPalette';
 import { SettingsContent } from '@/components/sidebars/SettingsContent';

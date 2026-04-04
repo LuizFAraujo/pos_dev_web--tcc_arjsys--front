@@ -159,11 +159,17 @@ pos_dev_web--tcc_front--arjsys/
         │   └── useTabState.ts                     ✅
         │
         ├── layouts/                # Layouts principais
+        │   ├── Sidebar/
+        │   │   ├── index.tsx                      ✅
+        │   │   ├── constants.tsx                  ✅
+        │   │   ├── Sidebar.tsx                    ✅
+        │   │   ├── SidebarCompact.tsx             ✅
+        │   │   ├── SidebarItemButton.tsx          ✅
+        │   │   └── SidebarNormal.tsx              ✅
         │   ├── AuthLayout.tsx                     ✅
         │   ├── Header.tsx                         ✅
         │   ├── MainContent.tsx                    ✅
         │   ├── RightSidebar.tsx                   ✅
-        │   ├── Sidebar.tsx                        ✅
         │   └── WorkspaceLayout.tsx                ✅
         │
         ├── lib/                    # Utilitários

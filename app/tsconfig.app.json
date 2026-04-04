@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+
+    /* Silencia warning de baseUrl deprecado no TS 7.0 — remover quando migrar paths */
+    "ignoreDeprecations": "6.0",
+
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
     "useDefineForClassFields": true,
