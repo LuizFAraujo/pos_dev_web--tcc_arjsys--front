@@ -5,7 +5,7 @@
  * Sem TooltipProvider do shadcn.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { Pin, ChevronRight, ChevronsRight, ChevronsDown, Search, X, Star, Clock, Trash2 } from 'lucide-react';
 import { useTabsStore, useSidebarStore, useFavoritesStore, useRecentsStore } from '@stores';
@@ -56,27 +56,65 @@ export function SidebarNormal() {
     }).filter(cat => Object.keys(cat.items).length > 0);
   }, [searchTerm]);
 
-  const accordionValue = useMemo(() => {
-    if (searchTerm.trim()) return filteredCategories.map(cat => cat.id);
-    return openAccordions;
-  }, [searchTerm, filteredCategories, openAccordions]);
+const filteredFavorites = useMemo(() => {
+    if (!searchTerm.trim()) return favorites;
+    const term = searchTerm.toLowerCase();
+    return favorites.filter((favType) => {
+      const config = CATEGORIES.flatMap(cat => Object.entries(getTabsByCategory(cat.id)))
+        .find(([type]) => type === favType)?.[1];
+      return config?.defaultTitle.toLowerCase().includes(term);
+    }) as typeof favorites;
+  }, [searchTerm, favorites]);
+
+const filteredRecents = useMemo(() => {
+    if (!searchTerm.trim()) return recents;
+    const term = searchTerm.toLowerCase();
+    return recents.filter((recentType) => {
+      const config = CATEGORIES.flatMap(cat => Object.entries(getTabsByCategory(cat.id)))
+        .find(([type]) => type === recentType)?.[1];
+      return config?.defaultTitle.toLowerCase().includes(term);
+    }) as typeof recents;
+  }, [searchTerm, recents]);
+
+const [searchAccordions, setSearchAccordions] = useState<string[]>([]);
+
+  // Quando muda o searchTerm ou os resultados filtrados, expande tudo automaticamente
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const ids: string[] = filteredCategories.map(cat => cat.id);
+      if (filteredFavorites.length > 0) ids.unshift('favorites');
+      if (filteredRecents.length > 0) ids.unshift('recents');
+      setSearchAccordions(ids);
+    }
+  }, [searchTerm, filteredCategories, filteredFavorites, filteredRecents]);
+
+  const isSearching = searchTerm.trim().length > 0;
+  const accordionValue = isSearching ? searchAccordions : openAccordions;
 
   const handleOpenTab = (type: string, title: string) => {
     openTab(type as any, title);
   };
 
-  const handleCollapseAll = () => setOpenAccordions([]);
+const handleCollapseAll = () => {
+    if (isSearching) setSearchAccordions([]);
+    else setOpenAccordions([]);
+  };
 
   const handleExpandAll = () => {
     const allIds: string[] = [];
-    if (favorites.length > 0) allIds.push('favorites');
-    if (recents.length > 0) allIds.push('recents');
+    if (isSearching) {
+      if (filteredFavorites.length > 0) allIds.push('favorites');
+      if (filteredRecents.length > 0) allIds.push('recents');
+    } else {
+      if (favorites.length > 0) allIds.push('favorites');
+      if (recents.length > 0) allIds.push('recents');
+    }
     filteredCategories.forEach(cat => {
       if (Object.keys(cat.items).length > 0) allIds.push(cat.id);
     });
-    setOpenAccordions(allIds);
+    if (isSearching) setSearchAccordions(allIds);
+    else setOpenAccordions(allIds);
   };
-
   return (
     <aside className="w-60 border-r border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out">
       {/* Subheader */}
@@ -136,22 +174,22 @@ export function SidebarNormal() {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
-        <Accordion type="multiple" className="w-full" value={accordionValue} onValueChange={setOpenAccordions}>
+        <Accordion type="multiple" className="w-full" value={accordionValue} onValueChange={isSearching ? setSearchAccordions : setOpenAccordions}>
 
           {/* FAVORITOS */}
-          {favorites.length > 0 && (
+          {filteredFavorites.length > 0 && (
             <AccordionItem value="favorites" className="border-none">
               <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&[data-state]>svg]:hidden [&>div>svg]:data-[state=open]:rotate-90">
                 <div className="flex items-center gap-2 w-full">
                   <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
                   <span className="flex-1 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 text-left">Favoritos</span>
-                  <span className="text-xs text-slate-400 mr-1">({favorites.length})</span>
+                  <span className="text-xs text-slate-400 mr-1">({filteredFavorites.length})</span>
                   <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200" />
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pb-0 pt-1">
                 <div className="ml-4 space-y-1">
-                  {favorites.map((favType) => {
+                  {filteredFavorites.map((favType) => {
                     const config = CATEGORIES.flatMap(cat => Object.entries(getTabsByCategory(cat.id)))
                       .find(([type]) => type === favType)?.[1];
                     if (!config) return null;
@@ -187,13 +225,13 @@ export function SidebarNormal() {
           )}
 
           {/* RECENTES */}
-          {recents.length > 0 && (
+          {filteredRecents.length > 0 && (
             <AccordionItem value="recents" className="border-none">
               <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors [&[data-state]>svg]:hidden [&>div>svg]:data-[state=open]:rotate-90 group">
                 <div className="flex items-center gap-2 w-full">
                   <Clock className="h-4 w-4 text-blue-500 shrink-0" />
                   <span className="flex-1 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 text-left">Recentes</span>
-                  <span className="text-xs text-slate-400 mr-1">({recents.length})</span>
+                  <span className="text-xs text-slate-400 mr-1">({filteredRecents.length})</span>
 
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -210,7 +248,7 @@ export function SidebarNormal() {
               </AccordionTrigger>
               <AccordionContent className="pb-0 pt-1">
                 <div className="ml-4 space-y-1">
-                  {recents.map((recentType) => {
+                  {filteredRecents.map((recentType) => {
                     const config = CATEGORIES.flatMap(cat => Object.entries(getTabsByCategory(cat.id)))
                       .find(([type]) => type === recentType)?.[1];
                     if (!config) return null;
