@@ -92,10 +92,10 @@ function calcProximaPosicao(m: number): number { return (Math.floor(m / 10) + 1)
 
 function getStatusRowClasses(status: BomRowStatus): string {
   switch (status) {
-    case 'added':   return 'bg-emerald-50 dark:bg-emerald-950/30';
+    case 'added': return 'bg-emerald-50 dark:bg-emerald-950/30';
     case 'changed': return 'bg-amber-50 dark:bg-amber-950/30';
     case 'deleted': return 'bg-red-50 dark:bg-red-950/30 line-through decoration-red-800/50 dark:decoration-red-400/50 decoration-2';
-    default:        return '';
+    default: return '';
   }
 }
 
@@ -117,7 +117,7 @@ function TreeDocButtons({ item }: { item: BomTreeItemNum }) {
 
 // ─── EditableCell ─────────────────────────────────────────────────────────────
 
-interface EditableCellProps { displayValue: string; editValue: string; onConfirm: (v: string) => void; enabled: boolean; displayClassName?: string; align?: 'left'|'center'|'right'; cellId: string; activeCellId: string|null; onActivate: (id: string|null) => void; }
+interface EditableCellProps { displayValue: string; editValue: string; onConfirm: (v: string) => void; enabled: boolean; displayClassName?: string; align?: 'left' | 'center' | 'right'; cellId: string; activeCellId: string | null; onActivate: (id: string | null) => void; }
 
 function EditableCell({ displayValue, editValue, onConfirm, enabled, displayClassName, align = 'right', cellId, activeCellId, onActivate }: EditableCellProps) {
   const ref = useRef<HTMLInputElement>(null);
@@ -146,7 +146,7 @@ function BomCodeAutocomplete({ onConfirm, onCancel, excludeProductIds, circularI
   const skipRef = useRef(false);
   const [, setCodigo] = useState(initialValue);
   const produtos = useProdutosStore((s) => s.produtos);
-  
+
   useEffect(() => {
     setTimeout(() => {
       if (inputRef.current) {
@@ -556,7 +556,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       if (codigoPai && !expandedKeys.includes('-1')) {
         setExpandedKeys((p) => [...p, '-1']);
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleQtdeConfirm = useCallback((item: BomTreeItemNum, raw: string) => { const v = parseFloat(raw.replace(',', '.')); if (isNaN(v) || v < 0) return; if (item.id <= -100) editState.changeAddedQuantidade(item.id, v); else { const o = bomFlat.find((b) => b.id === item.id); if (o) editState.changeQuantidade(item.id, o.quantidade, v, o.posicao); } }, [bomFlat, editState]);
@@ -577,11 +577,23 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     const columns: GridColumn<BomTreeItemNum>[] = useMemo(() => [
       { key: '_rowNum', header: '#', width: 45, minWidth: 40, contentAlign: 'center', sortable: false, filterType: false as const, render: (i) => <span className="text-slate-400 text-xs">{i._rowNum}</span> },
       { key: 'nivel', header: 'NÍVEL', width: 60, minWidth: 50, contentAlign: 'center', sortable: false, render: (i) => <span className="font-bold text-slate-800 dark:text-slate-200">{i.nivel}</span> },
-      { key: 'posicao', header: 'POS.', width: 70, minWidth: 55, contentAlign: 'center', sortable: false,
-        render: (item) => { if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const ep = getEffPos(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`pos-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatPos(ep)} editValue={String(ep)} onConfirm={(r) => handlePosConfirm(item, r)} enabled align="center" displayClassName="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums" />; return <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">{formatPos(ep)}</span>; } },
-      { key: 'quantidade', header: 'QTDE', width: 110, minWidth: 80, contentAlign: 'right', sortable: false, filterType: 'number',
-        render: (item) => { if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const eq = getEffQtde(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`qtde-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatQtde(eq)} editValue={String(eq)} onConfirm={(r) => handleQtdeConfirm(item, r)} enabled align="right" displayClassName="font-bold text-emerald-700 dark:text-emerald-400" />; return <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(eq)}</span>; } },
-      { key: 'codigo', header: 'CÓDIGO', width: 300, minWidth: 180, sortable: false,
+      {
+        key: 'posicao', header: 'POS.', width: 70, minWidth: 55, contentAlign: 'center', sortable: false,
+        render: (item) => {
+          if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const ep = getEffPos(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`pos-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatPos(ep)} editValue={String(ep)} onConfirm={(r) => handlePosConfirm(item, r)} enabled align="center" displayClassName="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums" />;
+          return <div className="w-full h-6 px-1 flex items-center justify-center rounded"><span className="truncate text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">{formatPos(ep)}</span></div>;
+        }
+      },
+      {
+        key: 'quantidade', header: 'QTDE', width: 110, minWidth: 80, contentAlign: 'right', sortable: false, filterType: 'number',
+        render: (item) => {
+          if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const eq = getEffQtde(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`qtde-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatQtde(eq)} editValue={String(eq)} onConfirm={(r) => handleQtdeConfirm(item, r)} enabled align="right" displayClassName="font-bold text-emerald-700 dark:text-emerald-400" />;
+          return <div className="w-full h-6 px-1 flex items-center justify-end rounded"><span className="truncate font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(eq)}</span></div>;
+        }
+
+      },
+      {
+        key: 'codigo', header: 'CÓDIGO', width: 300, minWidth: 180, sortable: false,
         render: (item) => {
           if (newRow && item.id === newRow.tempId && !newRow.confirmed) return <BomCodeAutocomplete onConfirm={handleAutocompleteConfirm} onCancel={handleAutocompleteCancel} excludeProductIds={newRowIds.exclude} circularIds={newRowIds.circular} onDescriptionChange={(d, c) => { setAutocompleteDesc(d); setAutocompleteIsCircular(c); }} initialValue={newRow.initialCode} />;
           const status = editState.getRowStatus(item); const isDel = status === 'deleted'; const isAdd = status === 'added';
@@ -598,8 +610,10 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
                 <Tooltip><TooltipTrigger asChild><button type="button" onClick={(e) => { e.stopPropagation(); handleAddChildOf(item); }} className="shrink-0 inline-flex items-center justify-center h-5 w-5 rounded transition-colors text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 opacity-0 group-hover:opacity-100 cursor-pointer"><Plus className="h-3 w-3" /></button></TooltipTrigger><TooltipContent><p>Adicionar filho em {item.codigo}</p></TooltipContent></Tooltip>
               )}
             </div>);
-        } },
-      { key: 'descricao', header: 'DESCRIÇÃO', width: 500, minWidth: 200, sortable: false,
+        }
+      },
+      {
+        key: 'descricao', header: 'DESCRIÇÃO', width: 500, minWidth: 200, sortable: false,
         render: (item) => {
           if (newRow && item.id === newRow.tempId && !newRow.confirmed) {
             if (autocompleteDesc) {
@@ -610,7 +624,8 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
             return <span className="text-muted-foreground italic text-xs">descrição atualiza ao digitar</span>;
           }
           return <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{item.descricao}</span>;
-        } },
+        }
+      },
       { key: 'unidade', header: 'UN', width: 70, minWidth: 55, contentAlign: 'center', sortable: false, render: (i) => <span className="text-slate-600">{i.unidade}</span> },
       { key: 'temDocumento', header: 'DOC.', width: 90, minWidth: 80, contentAlign: 'center', sortable: false, render: (i) => <TreeDocButtons item={i} /> },
     ], [isEditing, editState, activeCellId, newRow, newRowIds, autocompleteDesc, autocompleteIsCircular, getEffQtde, getEffPos, handleQtdeConfirm, handlePosConfirm, handleAutocompleteConfirm, handleAutocompleteCancel, handleAddChildOf, handleToggleDelete, handleReopenAutocomplete]);
