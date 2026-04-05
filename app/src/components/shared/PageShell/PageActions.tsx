@@ -498,6 +498,77 @@ export function PageActions<T>({
 
   if (page.mode === 'new') {
     return (
+      <>
+        <div className="flex items-center">
+          <div className="flex items-center gap-1">
+            {/* Salvar e Sair */}
+            {formRef && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" className="h-8 w-8"
+                    disabled={isSaving || !page.isDirty}
+                    onClick={doSaveAndBack}>
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar e Sair (Ctrl+Shift+S)'}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Salvar e Adicionar Outro */}
+            {formRef && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-8 w-8"
+                    disabled={isSaving || !page.isDirty}
+                    onClick={doSaveAndNew}>
+                    <FilePlus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar e Adicionar Outro (Ctrl+S)'}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Cancelar */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8"
+                  onClick={() => page.requestBack()}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Cancelar</p></TooltipContent>
+            </Tooltip>
+          </div>
+
+          {extraActions && (
+            <>
+              <Sep />
+              {extraActions}
+            </>
+          )}
+
+          {btnConfig && (
+            <>
+              <Sep />
+              {btnConfig}
+            </>
+          )}
+        </div>
+        {dirtyDialog}
+      </>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // EDIT MODE
+  // ════════════════════════════════════════════════════════════════════════════
+
+  return (
     <>
       <div className="flex items-center">
         <div className="flex items-center gap-1">
@@ -517,23 +588,23 @@ export function PageActions<T>({
             </Tooltip>
           )}
 
-          {/* Salvar e Adicionar Outro */}
+          {/* Salvar (permanecer editando) */}
           {formRef && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8"
                   disabled={isSaving || !page.isDirty}
-                  onClick={doSaveAndNew}>
-                  <FilePlus className="h-4 w-4" />
+                  onClick={doSaveAndStay}>
+                  <Save className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar e Adicionar Outro (Ctrl+S)'}</p>
+                <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar (Ctrl+S)'}</p>
               </TooltipContent>
             </Tooltip>
           )}
 
-          {/* Cancelar */}
+          {/* Voltar para Visualização */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8"
@@ -541,9 +612,16 @@ export function PageActions<T>({
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p>Cancelar</p></TooltipContent>
+            <TooltipContent><p>Voltar para Visualização</p></TooltipContent>
           </Tooltip>
         </div>
+
+        {extraActions && (
+          <>
+            <Sep />
+            {extraActions}
+          </>
+        )}
 
         {btnConfig && (
           <>
@@ -553,70 +631,6 @@ export function PageActions<T>({
         )}
       </div>
       {dirtyDialog}
-    </>
-    );
-  }
-
-  // ════════════════════════════════════════════════════════════════════════════
-  // EDIT MODE
-  // ════════════════════════════════════════════════════════════════════════════
-
-  return (
-    <>
-    <div className="flex items-center">
-      <div className="flex items-center gap-1">
-        {/* Salvar e Sair */}
-        {formRef && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" className="h-8 w-8"
-                disabled={isSaving || !page.isDirty}
-                onClick={doSaveAndBack}>
-                <Save className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar e Sair (Ctrl+Shift+S)'}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {/* Salvar (permanecer editando) */}
-        {formRef && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8"
-                disabled={isSaving || !page.isDirty}
-                onClick={doSaveAndStay}>
-                <Save className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{!page.isDirty ? 'Nenhuma alteração' : isSaving ? 'Salvando...' : 'Salvar (Ctrl+S)'}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {/* Voltar para Visualização */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8"
-              onClick={() => page.requestBack()}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Voltar para Visualização</p></TooltipContent>
-        </Tooltip>
-      </div>
-
-      {btnConfig && (
-        <>
-          <Sep />
-          {btnConfig}
-        </>
-      )}
-    </div>
-    {dirtyDialog}
     </>
   );
 }

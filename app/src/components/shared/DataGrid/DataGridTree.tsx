@@ -192,7 +192,13 @@ function DataGridTreeInner<T extends Record<string, any>>({
             {sorted.map((row, i) => {
               const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpanded(row); const isSel = selectedIdx === i; return (
                 <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={() => onActRef.current?.(row)}
-                  className={`group border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default ${isSel ? 'bg-sky-200 dark:bg-sky-900' : (rowClassName?.(row) || (i % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50 dark:bg-slate-900'))} ${!isSel ? 'hover:bg-slate-200 dark:hover:bg-slate-700' : ''}`}>
+                  className={(() => {
+                    const rc = rowClassName?.(row) || '';
+                    const bgClasses = rc.split(' ').filter(c => c.startsWith('bg-')).join(' ');
+                    const nonBgClasses = rc.split(' ').filter(c => !c.startsWith('bg-')).join(' ');
+                    const bg = isSel ? 'bg-sky-200 dark:bg-sky-900' : (bgClasses || (i % 2 === 0 ? 'bg-white dark:bg-slate-950' : 'bg-slate-50 dark:bg-slate-900'));
+                    return `group border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default ${bg} ${nonBgClasses} ${!isSel ? 'hover:bg-slate-200 dark:hover:bg-slate-700' : ''}`;
+                  })()}>
                   {gc.map((col) => {
                     if (col.key === codeColumnKey) {
                       const indent = (level - 1) * indentPx;

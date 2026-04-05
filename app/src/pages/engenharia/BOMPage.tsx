@@ -9,6 +9,10 @@
  *   - view/edit: BOMForm inline (tree)
  *   - new: dialog autocomplete → edit
  *   - extraTag: código do produto
+ *
+ * Botão "+ Adicionar item" no header (mode edit/new):
+ *   - Sempre adiciona nível 2 (filho do raiz)
+ *   - Pra adicionar em outro nível: ícone "+" no hover de cada linha na tree
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
@@ -63,24 +67,15 @@ function BomDocButtons({ item, extensao }: { item: BomItem; extensao?: string })
   const temDoc = item.produtoFilhoTemDocumento ?? false;
   if (!temDoc) return <span className="text-muted-foreground">-</span>;
 
-  const handleAbrirPasta = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try { await abrirPasta(item.produtoFilhoId); }
-    catch (err: any) { toast.error(err?.body?.erro || err?.message || 'Erro ao abrir pasta'); }
-  };
-
-  const handleDocClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try { await abrirDocumento(item.produtoFilhoId, extensao || 'pdf'); }
-    catch (err: any) { toast.error(err?.body?.erro || err?.message || 'Erro ao abrir documento'); }
-  };
-
   return (
     <div className="flex items-center justify-center gap-0.5">
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" onClick={handleAbrirPasta}
-            className="inline-flex items-center justify-center h-6 w-6 rounded transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer">
+          <button type="button" onClick={async (e) => {
+            e.stopPropagation();
+            try { await abrirPasta(item.produtoFilhoId); }
+            catch (err: any) { toast.error(err?.body?.erro || err?.message || 'Erro ao abrir pasta'); }
+          }} className="inline-flex items-center justify-center h-6 w-6 rounded transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer">
             <FolderOpen className="h-3.5 w-3.5" />
           </button>
         </TooltipTrigger>
@@ -88,8 +83,11 @@ function BomDocButtons({ item, extensao }: { item: BomItem; extensao?: string })
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" onClick={handleDocClick}
-            className="inline-flex items-center justify-center h-6 w-6 rounded transition-colors text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer">
+          <button type="button" onClick={async (e) => {
+            e.stopPropagation();
+            try { await abrirDocumento(item.produtoFilhoId, extensao || 'pdf'); }
+            catch (err: any) { toast.error(err?.body?.erro || err?.message || 'Erro ao abrir documento'); }
+          }} className="inline-flex items-center justify-center h-6 w-6 rounded transition-colors text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer">
             <FileText className="h-3.5 w-3.5" />
           </button>
         </TooltipTrigger>
@@ -105,7 +103,6 @@ export function BOMPage({ tab }: BOMPageProps) {
   const formRef = useRef<BOMFormHandle>(null);
   const page = usePageMode<BomItem>(tab.id, (item) => String(item.id), tab.type);
 
-  // ── Store ─────────────────────────────────────────────────────────────────
   const bomFlat = useBOMStore((s) => s.bomFlat);
   const isLoading = useBOMStore((s) => s.isLoading);
   const error = useBOMStore((s) => s.error);
@@ -123,44 +120,34 @@ export function BOMPage({ tab }: BOMPageProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // ── Lista ─────────────────────────────────────────────────────────────────
   const list = useListState<BomItem>({
     tabId: tab.id, data: bomFlat, searchColumns: SEARCH_COLUMNS,
     defaultSearchCols: ['produtoPaiCodigo', 'produtoFilhoCodigo'],
   });
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const del = useDeleteDialog<BomItem>({
     onDelete: (item) => deleteBomItem(item.id),
     onAfterDelete: (item) => { if (item.id === list.selectedCardId) list.setSelectedCardId(null); },
     successMessage: 'Relação excluída.',
   });
 
-  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     toast.success('Estrutura salva.');
     await fetchBomFlat();
   }, [fetchBomFlat]);
 
-  // ── Novo → dialog ─────────────────────────────────────────────────────────
   const handleNew = useCallback(() => { setDialogOpen(true); }, []);
 
   const handleEstruturaCreated = useCallback((codigoProduto: string) => {
     setDialogOpen(false);
-    // Cria um BomItem fake com o código pai pra openEdit usar
     page.openEdit({ id: -1, produtoPaiCodigo: codigoProduto } as BomItem);
   }, [page]);
 
-  // ── Override openNew ──────────────────────────────────────────────────────
   const pageOverride = useMemo(() => ({ ...page, openNew: handleNew }), [page, handleNew]);
 
-  // ── codigoPai derivado do editingItem (não estado separado) ───────────────
   const codigoPai = page.editingItem?.produtoPaiCodigo || '';
-
-  // ── extraTag: código do produto nos modos view/edit ───────────────────────
   const extraTag = page.mode !== 'list' && codigoPai ? codigoPai : undefined;
 
-  // ── Colunas ───────────────────────────────────────────────────────────────
   const columns: GridColumn<BomItem>[] = useMemo(() => [
     { key: 'produtoPaiDescricao', header: 'DESC. PAI', width: 280, minWidth: 150,
       render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoPaiDescricao || '-'}</span> },
@@ -179,7 +166,6 @@ export function BOMPage({ tab }: BOMPageProps) {
       render: (i) => <BomDocButtons item={i} extensao="pdf" /> },
   ], []);
 
-  // ── Render ────────────────────────────────────────────────────────────────
   const inForm = page.mode !== 'list';
 
   return (
@@ -216,7 +202,7 @@ export function BOMPage({ tab }: BOMPageProps) {
         <BOMForm key={page.resetKey} ref={formRef}
           mode={page.mode as 'view' | 'new' | 'edit'}
           codigoPai={codigoPai} tabId={tab.id}
-          onDirty={() => page.setDirty(true)} onSave={handleSave}
+          onDirty={(dirty) => page.setDirty(dirty)} onSave={handleSave}
         />
       )}
 
