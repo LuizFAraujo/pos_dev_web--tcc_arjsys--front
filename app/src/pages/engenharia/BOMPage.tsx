@@ -1,18 +1,12 @@
 /**
  * BOMPage.tsx — Estrutura de Produtos (BOM)
  *
- * IGUAL ClientesPage:
- *   - mode={page.mode} SEMPRE
- *   - formRef pro PageActions
- *   - codigoPai derivado de page.editingItem (não estado separado)
- *   - list: DataGrid flat
- *   - view/edit: BOMForm inline (tree)
- *   - new: dialog autocomplete → edit
- *   - extraTag: código do produto
+ * Flat: DataGrid com todas as relações pai-filho.
+ *   - Botão deletar → exclui estrutura COMPLETA (todos filhos diretos do pai selecionado)
+ *   - Dialog de confirmação sério com quantidade de filhos
  *
- * Botão "+ Adicionar item" no header (mode edit/new):
- *   - Sempre adiciona nível 2 (filho do raiz)
- *   - Pra adicionar em outro nível: ícone "+" no hover de cada linha na tree
+ * Tree: BOMForm inline com edição em lote.
+ *   - Salvar sem filhos → aviso que estrutura será removida
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
@@ -27,7 +21,6 @@ import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { useListState } from '@/hooks/useListState';
-import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { BOMForm } from '@/components/engenharia/BOMForm';
 import type { BOMFormHandle } from '@/components/engenharia/BOMForm';
 import { NovaEstruturaDialog } from '@/components/engenharia/NovaEstruturaDialog';
@@ -109,7 +102,7 @@ export function BOMPage({ tab }: BOMPageProps) {
   const fetchBomFlat = useBOMStore((s) => s.fetchBomFlat);
   const produtosComEstrutura = useBOMStore((s) => s.produtosComEstrutura);
   const fetchProdutosPai = useBOMStore((s) => s.fetchProdutosPai);
-  const deleteBomItem = useBOMStore((s) => s.deleteBomItem);
+  const deleteEstrutura = useBOMStore((s) => s.deleteEstrutura);
 
   useEffect(() => {
     if (bomFlat.length === 0) fetchBomFlat();
@@ -120,21 +113,45 @@ export function BOMPage({ tab }: BOMPageProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // ── Delete estrutura completa ───────────────────────────────────────────────
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<BomItem | null>(null);
+
+  /** Conta filhos diretos do pai selecionado */
+  const deleteFilhosCount = useMemo(() => {
+    if (!deleteItem) return 0;
+    return bomFlat.filter((b) => b.produtoPaiId === deleteItem.produtoPaiId).length;
+  }, [deleteItem, bomFlat]);
+
+  const handleRequestDelete = useCallback((item: BomItem) => {
+    setDeleteItem(item);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteItem) return;
+    try {
+      await deleteEstrutura(deleteItem.produtoPaiId);
+      toast.success(`Estrutura de ${deleteItem.produtoPaiCodigo || 'produto'} excluída.`);
+      setDeleteDialogOpen(false);
+      setDeleteItem(null);
+    } catch (err: any) {
+      toast.error(err?.body?.erro || err?.message || 'Erro ao excluir estrutura');
+    }
+  }, [deleteItem, deleteEstrutura]);
+
+  // ── List state ──────────────────────────────────────────────────────────────
+
   const list = useListState<BomItem>({
     tabId: tab.id, data: bomFlat, searchColumns: SEARCH_COLUMNS,
     defaultSearchCols: ['produtoPaiCodigo', 'produtoFilhoCodigo'],
   });
 
-  const del = useDeleteDialog<BomItem>({
-    onDelete: (item) => deleteBomItem(item.id),
-    onAfterDelete: (item) => { if (item.id === list.selectedCardId) list.setSelectedCardId(null); },
-    successMessage: 'Relação excluída.',
-  });
-
   const handleSave = useCallback(async () => {
     toast.success('Estrutura salva.');
     await fetchBomFlat();
-  }, [fetchBomFlat]);
+    await fetchProdutosPai();
+  }, [fetchBomFlat, fetchProdutosPai]);
 
   const handleNew = useCallback(() => { setDialogOpen(true); }, []);
 
@@ -173,7 +190,7 @@ export function BOMPage({ tab }: BOMPageProps) {
       headerRight={
         <PageActions
           page={pageOverride} activeItem={list.activeItem}
-          onDelete={del.requestDelete}
+          onDelete={handleRequestDelete}
           lockMessage="Esta estrutura já está sendo editada em outra aba."
           searchColumns={SEARCH_COLUMNS} searchTerm={list.searchTerm}
           onSearchChange={list.setSearchTerm} searchSelectedColumns={list.searchCols}
@@ -181,8 +198,8 @@ export function BOMPage({ tab }: BOMPageProps) {
           viewMode={list.viewMode} onViewModeChange={list.handleViewMode}
           formRef={formRef} hideButtons={['cards']}
           newTooltip="Nova estrutura" viewTooltip="Abrir estrutura"
-          editTooltip="Editar estrutura" deleteTooltip="Excluir relação"
-          noSelectionText="Selecione uma relação"
+          editTooltip="Editar estrutura" deleteTooltip="Excluir estrutura"
+          noSelectionText="Selecione uma estrutura"
         />
       }
     >
@@ -207,7 +224,7 @@ export function BOMPage({ tab }: BOMPageProps) {
       )}
 
       <NovaEstruturaDialog open={dialogOpen} onOpenChange={setDialogOpen} onEstruturaCreated={handleEstruturaCreated} />
-      <BomDeleteDialog open={del.open} onOpenChange={del.setOpen} item={del.item} onConfirm={del.confirmDelete} />
+      <BomDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} item={deleteItem} quantidadeFilhos={deleteFilhosCount} onConfirm={handleConfirmDelete} />
     </PageShell>
   );
 }

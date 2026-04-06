@@ -62,9 +62,9 @@ function Field({
         id={id} type={type} value={value} maxLength={maxLength}
         readOnly={readOnly}
         onChange={(e) => !readOnly && onChange?.(e.target.value)}
-        className={`h-9 text-sm bg-white dark:bg-slate-950 ${
-          readOnly ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0' : ''
-        } ${error ? 'border-red-400 dark:border-red-500 focus-visible:ring-red-400/30' : ''}`}
+        className={`h-9 text-sm bg-white dark:bg-slate-950 ${readOnly ?
+          'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0' : ''
+          } ${error ? 'border-red-400 dark:border-red-500 focus-visible:ring-red-400/30' : ''}`}
       />
       {error && (
         <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
@@ -92,12 +92,12 @@ export const GrupoForm = forwardRef<GrupoFormHandle, GrupoFormProps>(
     useEffect(() => {
       setErrors({});
       setData(grupo ? {
-        codigo:         grupo.codigo         ?? '',
-        descricao:      grupo.descricao      ?? '',
-        nivel:          grupo.nivel          ?? 'Coluna1',
-        qtdCaracteres:  grupo.qtdCaracteres  ?? 2,
-        pathDocumentos: grupo.pathDocumentos  ?? '',
-        ativo:          grupo.ativo          ?? true,
+        codigo: grupo.codigo ?? '',
+        descricao: grupo.descricao ?? '',
+        nivel: grupo.nivel ?? 'Coluna1',
+        qtdCaracteres: grupo.qtdCaracteres ?? 2,
+        pathDocumentos: grupo.pathDocumentos ?? '',
+        ativo: grupo.ativo ?? true,
       } : { ...EMPTY });
     }, [grupo, mode]);
 
@@ -123,12 +123,12 @@ export const GrupoForm = forwardRef<GrupoFormHandle, GrupoFormProps>(
           return false;
         }
         await onSave({
-          codigo:         data.codigo.trim(),
-          descricao:      data.descricao.trim(),
-          nivel:          data.nivel,
-          qtdCaracteres:  data.qtdCaracteres,
+          codigo: data.codigo.trim(),
+          descricao: data.descricao.trim(),
+          nivel: data.nivel,
+          qtdCaracteres: data.qtdCaracteres,
           pathDocumentos: data.pathDocumentos?.trim() || undefined,
-          ativo:          data.ativo,
+          ativo: data.ativo,
         });
         return true;
       },

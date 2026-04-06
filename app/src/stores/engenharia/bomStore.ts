@@ -8,6 +8,7 @@
 //   POST /api/engenharia/Bom           → criar item BOM
 //   PUT  /api/engenharia/Bom/{id}      → atualizar item BOM
 //   DELETE /api/engenharia/Bom/{id}    → deletar item BOM
+//   DELETE /api/engenharia/Bom/estrutura/{produtoPaiId} → deletar estrutura completa
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
@@ -67,6 +68,8 @@ interface BOMState {
   createBomItem: (data: BomItemFormData) => Promise<void>;
   updateBomItem: (id: number, data: BomItemFormData) => Promise<void>;
   deleteBomItem: (id: number) => Promise<void>;
+  /** Deleta todos os filhos diretos de uma estrutura (nível 2) */
+  deleteEstrutura: (produtoPaiId: number) => Promise<void>;
   clearError: () => void;
 }
 
@@ -152,6 +155,19 @@ export const useBOMStore = create<BOMState>((set, get) => ({
       await get().fetchProdutosPai();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao excluir item BOM';
+      set({ error: message });
+      throw err;
+    }
+  },
+
+  deleteEstrutura: async (produtoPaiId) => {
+    set({ error: null });
+    try {
+      await apiDelete(`/api/engenharia/Bom/estrutura/${produtoPaiId}`);
+      await get().fetchBomFlat();
+      await get().fetchProdutosPai();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Erro ao excluir estrutura';
       set({ error: message });
       throw err;
     }

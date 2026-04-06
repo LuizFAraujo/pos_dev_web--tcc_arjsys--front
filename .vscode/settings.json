@@ -1,12 +1,44 @@
 {
+
+
+// ========================================================================================
+  // PRETTIER / FORMATAÇÃO
+  // ============
+
+  // Define o Prettier como formatador padrão do VS Code
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Formata automaticamente ao salvar (Ctrl+S) — RECOMENDADO
+  "editor.formatOnSave": true,
+
+
+
+
+  // ========================================================================================
+  // EDITOR — FORMATAÇÃO AUTOMÁTICA
+  // ============
+
+  // Formata ao colar texto — desativado pra não bagunçar código colado
   // "editor.formatOnPaste": false,
-  // "editor.formatOnSave": false,
+
+  // Formata ao digitar (a cada Enter) — desativado, formatOnSave já cobre
   // "editor.formatOnType": false,
+
+
+
+  // ========================================================================================
+  // INTEGRAÇÕES (opcionais, não necessárias com setup atual)
+  // ============
+
+  // Integra Prettier com ESLint — desnecessário, Prettier e ESLint já rodam separados
   // "prettier-eslint.eslintIntegration": true,
 
+  // Imports usam caminho completo — desnecessário, projeto já usa aliases (@/)
   // "javascript.preferences.importModuleSpecifier": "non-relative",
 
-  // ============
+
+
+  // ========================================================================================
   // OCULTAR ARQUIVOS E PASTAS NO EXPLORER
   // ============
 
@@ -122,6 +154,11 @@
   //   }
 }
 
+
+
+
+
+// =============================================================================================================================
 //    https://qastack.com.br/programming/30140112/how-do-i-hide-certain-files-from-the-sidebar-in-visual-studio-code
 
 //    https://rodrigoreisf.com.br/esconder-pastas-na-sidebar-do-vscode/#:~:text=Abra%20o%20Visual%20Studio%20Code,%7D%2C%20caso%20ainda%20n%C3%A3o%20exista

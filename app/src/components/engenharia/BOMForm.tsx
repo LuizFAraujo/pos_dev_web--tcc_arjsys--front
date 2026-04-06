@@ -2,24 +2,17 @@
  * BOMForm.tsx — Form inline de estrutura de produto (BOM)
  *
  * === Identidade por instância ===
- * Cada nó na tree tem _treePath (ex: "-1/5/12") — caminho único de _bomItemIds
- * do raiz até o nó. Usado pra expand/collapse independente (mesmo produto em
- * lugares diferentes expande/colapsa separadamente).
+ * _treePath: caminho único "-1/5/12" pra expand independente
+ * _produtoId: ID do produto real pra handleAddChildOf sem buscas
  *
- * === Edição em lote (mode edit/new) ===
- * Edição: duplo clique ou F2 em QTDE/POS
- * Exclusão: tecla Delete ou lixeira à esquerda do código (toggle)
- * Adicionar: botão header (nível 2) ou "+" à direita do código (filho)
- * Trocar produto: duplo clique no código de item added reabre autocomplete
- *
- * Anti-ciclo: verifica ancestrais pelo caminho na tree (não global)
- * POS reordena ao confirmar
- * Validação QTDE 0 ao salvar
- * Badge "N alterações" no rodapé
- * Descrição atualiza em tempo real no autocomplete
- *
- * Visual: added=verde, changed=amarelo, deleted=vermelho+riscado linha toda
- * Formatação: POS=0000, QTDE=pt-BR 3 decimais
+ * === Edição em lote ===
+ * QTDE/POS: duplo clique ou F2
+ * Exclusão: Delete ou lixeira (toggle)
+ * Adicionar: "+" no hover (qualquer nível)
+ * Trocar código: duplo clique em added (preserva QTDE)
+ * Anti-ciclo: global via bomFlat + toast + ⚠️
+ * Erro backend: flash vermelho 3s
+ * Estrutura vazia: aviso antes de salvar
  */
 
 import { useEffect, useImperativeHandle, useMemo, useCallback, forwardRef, useRef, useState } from 'react';
@@ -56,9 +49,7 @@ interface BomTreeItemNum extends BomTreeItem {
   _rowNum: number;
   children: BomTreeItemNum[];
   _bomItemId: number;
-  /** Caminho único na tree: "-1/5/12" (sequência de _bomItemIds) */
   _treePath: string;
-  /** ID do produto real (pra usar no handleAddChildOf sem buscas) */
   _produtoId: number;
 }
 
@@ -68,18 +59,9 @@ interface NewRowState {
   parentTreePath: string;
   posicao: number;
   confirmed: boolean;
-  /** Código inicial pra reabrir autocomplete (duplo clique em added) */
   initialCode?: string;
-  /** QTDE preservada ao reabrir autocomplete */
   preservedQtde?: number;
-  /** Dados originais do item pra restaurar se cancelar reopen */
-  reopenOriginal?: {
-    produtoFilhoId: number;
-    codigo: string;
-    descricao: string;
-    unidade: string;
-    temDocumento: boolean;
-  };
+  reopenOriginal?: { produtoFilhoId: number; codigo: string; descricao: string; unidade: string; temDocumento: boolean; };
 }
 
 interface ZeroQtdeInfo { addedIds: number[]; changedIds: number[]; codigos: string[]; }
@@ -128,16 +110,12 @@ function EditableCell({ displayValue, editValue, onConfirm, enabled, displayClas
   return <div onDoubleClick={(e) => { e.stopPropagation(); if (enabled) onActivate(cellId); }} className={`w-full h-6 px-1 flex items-center rounded ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'} ${enabled ? 'border border-transparent hover:border-slate-300 dark:hover:border-slate-600 cursor-text' : ''} ${displayClassName || ''}`} title={enabled ? 'Duplo clique ou F2 para editar' : undefined}><span className="truncate">{displayValue}</span></div>;
 }
 
-// ─── BomCodeAutocomplete — com descrição dinâmica ─────────────────────────────
+// ─── BomCodeAutocomplete ──────────────────────────────────────────────────────
 
 interface BomCodeAutocompleteProps {
   onConfirm: (produtoId: number, codigo: string, descricao: string, unidade: string, temDocumento: boolean) => void;
-  onCancel: () => void;
-  excludeProductIds: Set<number>;
-  circularIds: Set<number>;
-  /** Callback pra atualizar descrição em tempo real (descricao, isCircular) */
+  onCancel: () => void; excludeProductIds: Set<number>; circularIds: Set<number>;
   onDescriptionChange?: (descricao: string, isCircular: boolean) => void;
-  /** Valor inicial do input (pra reabrir com código preenchido) */
   initialValue?: string;
 }
 
@@ -147,38 +125,18 @@ function BomCodeAutocomplete({ onConfirm, onCancel, excludeProductIds, circularI
   const [, setCodigo] = useState(initialValue);
   const produtos = useProdutosStore((s) => s.produtos);
 
-  useEffect(() => {
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.value = initialValue;
-        inputRef.current.focus();
-        if (initialValue) inputRef.current.select();
-      }
-    }, 50);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Dispara descrição do initialValue na montagem
-  useEffect(() => {
-    if (initialValue && onDescriptionChange) {
-      const m = produtos.find((p) => p.codigo.toLowerCase() === initialValue.toLowerCase());
-      if (m) onDescriptionChange(m.descricao, circularIds.has(m.id) || excludeProductIds.has(m.id));
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setTimeout(() => { if (inputRef.current) { inputRef.current.value = initialValue; inputRef.current.focus(); if (initialValue) inputRef.current.select(); } }, 50); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (initialValue && onDescriptionChange) { const m = produtos.find((p) => p.codigo.toLowerCase() === initialValue.toLowerCase()); if (m) onDescriptionChange(m.descricao, circularIds.has(m.id) || excludeProductIds.has(m.id)); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value; setCodigo(val);
     if (skipRef.current) { skipRef.current = false; onDescriptionChange?.('', false); return; }
     if (val.length > 0 && inputRef.current) {
-      // Busca em TODOS os produtos (incluindo circulares) pra mostrar descrição
       const allMatch = produtos.find((p) => p.codigo.toLowerCase().startsWith(val.toLowerCase()));
-      if (allMatch) {
-        inputRef.current.value = allMatch.codigo;
-        inputRef.current.setSelectionRange(val.length, allMatch.codigo.length);
-        setCodigo(allMatch.codigo);
-        onDescriptionChange?.(allMatch.descricao, circularIds.has(allMatch.id) || excludeProductIds.has(allMatch.id));
-      } else { onDescriptionChange?.('', false); }
+      if (allMatch) { inputRef.current.value = allMatch.codigo; inputRef.current.setSelectionRange(val.length, allMatch.codigo.length); setCodigo(allMatch.codigo); onDescriptionChange?.(allMatch.descricao, circularIds.has(allMatch.id) || excludeProductIds.has(allMatch.id)); }
+      else { onDescriptionChange?.('', false); }
     } else { onDescriptionChange?.('', false); }
-  }, [produtos, circularIds, onDescriptionChange]);
+  }, [produtos, circularIds, excludeProductIds, onDescriptionChange]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -230,7 +188,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     const [autocompleteDesc, setAutocompleteDesc] = useState('');
     const [autocompleteIsCircular, setAutocompleteIsCircular] = useState(false);
     const [zeroQtdeDialog, setZeroQtdeDialog] = useState<ZeroQtdeInfo | null>(null);
-    /** IDs de itens com erro (ex: ciclo no backend) — flash vermelho 3x */
+    const [emptyStructureDialog, setEmptyStructureDialog] = useState(false);
     const [errorItemIds, setErrorItemIds] = useState<Set<number>>(new Set());
     const saveResolveRef = useRef<((r: boolean) => void) | null>(null);
     const [expandedKeys, setExpandedKeys] = useTabState<string[]>(tabId + '-tree-exp', []);
@@ -246,31 +204,20 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     const produtoPai = produtos.find((p) => p.codigo === codigoPai);
     const paiId = produtoPai?.id;
 
-    // ── Anti-ciclo por caminho na tree ────────────────────────────────────────
-    // Coleta os produtoIds no caminho do nó até o raiz (usando _treePath)
-    /** Coleta TODOS os ancestrais de um produtoId no bomFlat inteiro (anti-ciclo global) */
+    // ── Anti-ciclo global ─────────────────────────────────────────────────────
+
     const getAncestorIds = useCallback((produtoId: number): Set<number> => {
-      const ancestors = new Set<number>();
-      function walk(id: number) {
-        bomFlat.filter((b) => b.produtoFilhoId === id).forEach((pai) => {
-          if (!ancestors.has(pai.produtoPaiId)) { ancestors.add(pai.produtoPaiId); walk(pai.produtoPaiId); }
-        });
-      }
-      walk(produtoId);
-      return ancestors;
+      const a = new Set<number>();
+      function walk(id: number) { bomFlat.filter((b) => b.produtoFilhoId === id).forEach((p) => { if (!a.has(p.produtoPaiId)) { a.add(p.produtoPaiId); walk(p.produtoPaiId); } }); }
+      walk(produtoId); return a;
     }, [bomFlat]);
 
     const getExcludeAndCircularIds = useCallback((parentProductId: number) => {
-      const exclude = new Set<number>();
-      const circular = new Set<number>();
-      // Filhos diretos existentes
+      const exclude = new Set<number>(); const circular = new Set<number>();
       bomFlat.filter((b) => b.produtoPaiId === parentProductId).forEach((b) => exclude.add(b.produtoFilhoId));
       editState.pendingAdds.filter((a) => a.produtoPaiId === parentProductId && a.produtoFilhoId > 0).forEach((a) => exclude.add(a.produtoFilhoId));
-      // O próprio pai
       exclude.add(parentProductId);
-      // Ancestrais globais (evita ciclo em qualquer ramo da estrutura)
-      const ancestors = getAncestorIds(parentProductId);
-      ancestors.forEach((id) => { exclude.add(id); circular.add(id); });
+      getAncestorIds(parentProductId).forEach((id) => { exclude.add(id); circular.add(id); });
       return { exclude, circular };
     }, [bomFlat, editState.pendingAdds, getAncestorIds]);
 
@@ -280,6 +227,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     }, [newRow, getExcludeAndCircularIds]);
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
+
     useEffect(() => {
       if (!isEditing) return;
       const el = containerRef.current; if (!el) return;
@@ -306,7 +254,6 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       const maior = Math.max(...irm.map((b) => b.posicao), ...irmA.map((a) => a.posicao), 0);
       const pos = calcProximaPosicao(maior);
       const tempId = editState.addItem({ produtoPaiId: parentProductId, produtoFilhoId: 0, codigo: '', descricao: '', unidade: '', quantidade: 0, posicao: pos, temDocumento: false });
-      // Expand por treePath do pai
       if (!expandedKeys.includes(parentTreePath)) setExpandedKeys((p) => [...p, parentTreePath]);
       setNewRow({ tempId, parentProductId, parentTreePath, posicao: pos, confirmed: false });
       setAutocompleteDesc(''); setAutocompleteIsCircular(false);
@@ -324,7 +271,6 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       doAddItem(paiId, codigoPai, '-1');
     }, [paiId, codigoPai, doAddItem, canAdd]);
 
-    /** "+" na linha — usa _produtoId e _treePath do item (sem buscas, sem closures stale) */
     const handleAddChildOf = useCallback((item: BomTreeItemNum) => {
       if (!paiId || !canAdd()) return;
       if (item._produtoId > 0) doAddItem(item._produtoId, item.codigo, item._treePath);
@@ -341,18 +287,10 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       const added = editState.pendingAdds.find((a) => a.tempId === item.id);
       if (!added || added.produtoFilhoId <= 0) return;
       const { produtoPaiId, posicao, quantidade, codigo: oldCodigo } = added;
-      // Salva dados originais pra restaurar se cancelar
-      const reopenOriginal = {
-        produtoFilhoId: added.produtoFilhoId,
-        codigo: added.codigo,
-        descricao: added.descricao,
-        unidade: added.unidade,
-        temDocumento: added.temDocumento,
-      };
+      const reopenOriginal = { produtoFilhoId: added.produtoFilhoId, codigo: added.codigo, descricao: added.descricao, unidade: added.unidade, temDocumento: added.temDocumento };
       editState.removeAddedItem(item.id);
       const tempId = editState.addItem({ produtoPaiId, produtoFilhoId: 0, codigo: '', descricao: '', unidade: '', quantidade, posicao, temDocumento: false });
-      const pathParts = item._treePath.split('/');
-      pathParts.pop();
+      const pathParts = item._treePath.split('/'); pathParts.pop();
       const parentTreePath = pathParts.join('/') || '-1';
       setNewRow({ tempId, parentProductId: produtoPaiId, parentTreePath, posicao, confirmed: false, initialCode: oldCodigo, preservedQtde: quantidade, reopenOriginal });
       setAutocompleteDesc(''); setAutocompleteIsCircular(false);
@@ -362,42 +300,25 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
 
     const handleAutocompleteConfirm = useCallback((produtoId: number, codigo: string, descricao: string, unidade: string, temDocumento: boolean) => {
       const nr = newRowRef.current; if (!nr) return;
-      const qtde = nr.preservedQtde ?? 0; // Preserva QTDE se veio de reopen
+      const qtde = nr.preservedQtde ?? 0;
       editState.removeAddedItem(nr.tempId);
       const newTempId = editState.addItem({ produtoPaiId: nr.parentProductId, produtoFilhoId: produtoId, codigo, descricao, unidade, quantidade: qtde, posicao: nr.posicao, temDocumento });
-      const updated = { ...nr, tempId: newTempId, confirmed: true, initialCode: undefined, preservedQtde: undefined };
+      const updated = { ...nr, tempId: newTempId, confirmed: true, initialCode: undefined, preservedQtde: undefined, reopenOriginal: undefined };
       setNewRow(updated); newRowRef.current = updated;
       setAutocompleteDesc(''); setAutocompleteIsCircular(false);
-      // Se tem QTDE preservada, não abre edição de QTDE (já tem valor)
       if (!qtde) setTimeout(() => setActiveCellId(`qtde-${newTempId}`), 100);
     }, [editState]);
 
     const handleAutocompleteCancel = useCallback(() => {
-      const nr = newRowRef.current;
-      if (!nr) return;
-
+      const nr = newRowRef.current; if (!nr) return;
       if (nr.reopenOriginal) {
-        // Reopen cancelado — restaura item original com dados preservados
         editState.removeAddedItem(nr.tempId);
-        const restoredTempId = editState.addItem({
-          produtoPaiId: nr.parentProductId,
-          produtoFilhoId: nr.reopenOriginal.produtoFilhoId,
-          codigo: nr.reopenOriginal.codigo,
-          descricao: nr.reopenOriginal.descricao,
-          unidade: nr.reopenOriginal.unidade,
-          quantidade: nr.preservedQtde ?? 0,
-          posicao: nr.posicao,
-          temDocumento: nr.reopenOriginal.temDocumento,
-        });
-        // Marca como confirmado (item restaurado, não é placeholder)
+        const restoredTempId = editState.addItem({ produtoPaiId: nr.parentProductId, produtoFilhoId: nr.reopenOriginal.produtoFilhoId, codigo: nr.reopenOriginal.codigo, descricao: nr.reopenOriginal.descricao, unidade: nr.reopenOriginal.unidade, quantidade: nr.preservedQtde ?? 0, posicao: nr.posicao, temDocumento: nr.reopenOriginal.temDocumento });
         const restored = { ...nr, tempId: restoredTempId, confirmed: true, reopenOriginal: undefined, initialCode: undefined, preservedQtde: undefined };
         setNewRow(restored); newRowRef.current = restored;
       } else {
-        // Novo item cancelado — remove placeholder
-        editState.removeAddedItem(nr.tempId);
-        setNewRow(null); newRowRef.current = null;
+        editState.removeAddedItem(nr.tempId); setNewRow(null); newRowRef.current = null;
       }
-
       setAutocompleteDesc(''); setAutocompleteIsCircular(false);
     }, [editState]);
 
@@ -409,42 +330,27 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       const ops = editState.getPendingOperations();
       const igA = new Set(ignoreAddIds); const igC = new Set(ignoreChangeIds);
       const failedIds = new Set<number>();
-
       try {
         for (const id of ops.deletes) await deleteBomItem(id);
-        for (const c of ops.changes) {
-          if (igC.has(c.bomItemId)) continue;
-          const o = bomFlat.find((b) => b.id === c.bomItemId);
-          if (o) await updateBomItem(c.bomItemId, { produtoPaiId: o.produtoPaiId, produtoFilhoId: o.produtoFilhoId, quantidade: c.quantidadeNova, posicao: c.posicaoNova });
-        }
+        for (const c of ops.changes) { if (igC.has(c.bomItemId)) continue; const o = bomFlat.find((b) => b.id === c.bomItemId); if (o) await updateBomItem(c.bomItemId, { produtoPaiId: o.produtoPaiId, produtoFilhoId: o.produtoFilhoId, quantidade: c.quantidadeNova, posicao: c.posicaoNova }); }
         for (const a of ops.adds) {
           if (igA.has(a.tempId)) continue;
           if (a.produtoFilhoId > 0) {
-            try {
-              await createBomItem({ produtoPaiId: a.produtoPaiId, produtoFilhoId: a.produtoFilhoId, quantidade: a.quantidade, posicao: a.posicao });
-            } catch (itemErr: any) {
+            try { await createBomItem({ produtoPaiId: a.produtoPaiId, produtoFilhoId: a.produtoFilhoId, quantidade: a.quantidade, posicao: a.posicao }); }
+            catch (itemErr: any) {
               const msg = itemErr?.body?.erro || itemErr?.message || '';
-              if (msg.toLowerCase().includes('circular') || msg.toLowerCase().includes('ciclo')) {
-                failedIds.add(a.tempId);
-                toast.error(`Referência circular: ${a.codigo} rejeitado pelo servidor.`);
-              } else {
-                throw itemErr; // Re-throw erros não relacionados a ciclo
-              }
+              if (msg.toLowerCase().includes('circular') || msg.toLowerCase().includes('ciclo')) { failedIds.add(a.tempId); toast.error(`Referência circular: ${a.codigo} rejeitado pelo servidor.`); }
+              else throw itemErr;
             }
           }
         }
-
-        if (failedIds.size > 0) {
-          // Flash nas linhas com erro
-          setErrorItemIds(failedIds);
-          setTimeout(() => setErrorItemIds(new Set()), 3000); // Remove após 3s
-          return false;
-        }
-
+        if (failedIds.size > 0) { setErrorItemIds(failedIds); setTimeout(() => setErrorItemIds(new Set()), 3000); return false; }
         editState.resetPending(); setNewRow(null); newRowRef.current = null;
         await fetchBomFlat(); await onSave(); return true;
       } catch (err: any) { toast.error(err?.body?.erro || err?.message || 'Erro ao salvar'); return false; }
     }, [editState, bomFlat, deleteBomItem, updateBomItem, createBomItem, fetchBomFlat, onSave]);
+
+    // ── Dialog QTDE 0 ─────────────────────────────────────────────────────────
 
     const handleZeroRemoveAndSave = useCallback(async () => {
       if (!zeroQtdeDialog) return; setZeroQtdeDialog(null);
@@ -461,12 +367,29 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
 
     const handleZeroCancel = useCallback(() => { setZeroQtdeDialog(null); if (saveResolveRef.current) { saveResolveRef.current(false); saveResolveRef.current = null; } }, []);
 
+    // ── Dialog estrutura vazia ────────────────────────────────────────────────
+
+    const handleEmptyStructureConfirm = useCallback(async () => {
+      setEmptyStructureDialog(false);
+      const result = await doSave();
+      if (saveResolveRef.current) { saveResolveRef.current(result); saveResolveRef.current = null; }
+    }, [doSave]);
+
+    const handleEmptyStructureCancel = useCallback(() => {
+      setEmptyStructureDialog(false);
+      if (saveResolveRef.current) { saveResolveRef.current(false); saveResolveRef.current = null; }
+    }, []);
+
+    // ── Submit ────────────────────────────────────────────────────────────────
+
     useImperativeHandle(ref, () => ({
       submit: async () => {
         const nr = newRowRef.current;
         if (nr && !nr.confirmed) { editState.removeAddedItem(nr.tempId); setNewRow(null); newRowRef.current = null; }
         if (!editState.hasPendingChanges) { await onSave(); return true; }
         const ops = editState.getPendingOperations();
+
+        // Validação QTDE 0
         const az = ops.adds.filter((a) => a.produtoFilhoId > 0 && a.quantidade === 0);
         const cz = ops.changes.filter((c) => c.quantidadeNova === 0);
         if (az.length > 0 || cz.length > 0) {
@@ -474,12 +397,21 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
           cz.forEach((c) => { const i = bomFlat.find((b) => b.id === c.bomItemId); if (i) codigos.push(i.produtoFilhoCodigo || `ID ${c.bomItemId}`); });
           return new Promise<boolean>((resolve) => { saveResolveRef.current = resolve; setZeroQtdeDialog({ addedIds: az.map((a) => a.tempId), changedIds: cz.map((c) => c.bomItemId), codigos }); });
         }
+
+        // Verificação estrutura vazia
+        const filhosBanco = bomFlat.filter((b) => b.produtoPaiId === paiId);
+        const addsConfirmados = ops.adds.filter((a) => a.produtoFilhoId > 0);
+        const filhosRestantes = filhosBanco.length - ops.deletes.length + addsConfirmados.length;
+        if (filhosRestantes <= 0) {
+          return new Promise<boolean>((resolve) => { saveResolveRef.current = resolve; setEmptyStructureDialog(true); });
+        }
+
         return await doSave();
       },
       addItem: handleAddItem,
     }));
 
-    // ── Tree com _treePath ────────────────────────────────────────────────────
+    // ── Tree ──────────────────────────────────────────────────────────────────
 
     const treeData = useMemo((): BomTreeItemNum[] => {
       if (!paiId) return [];
@@ -488,22 +420,12 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       const getEffPos = (id: number, p: number) => { const c = editState.pendingChanges.get(id); return c ? c.posicaoNova : p; };
 
       function getFilhos(parentProductId: number, _parentBomItemId: number, parentPath: string, nivel: number, visitedIds: Set<number> = new Set()): BomTreeItemNum[] {
-        // Guard: se este produtoId já está no caminho atual, é ciclo
         if (visitedIds.has(parentProductId)) return [];
-        const pathVisited = new Set(visitedIds);
-        pathVisited.add(parentProductId);
+        const pathVisited = new Set(visitedIds); pathVisited.add(parentProductId);
 
         const banco = bomFlat.filter((r) => r.produtoPaiId === parentProductId).map((r): BomTreeItemNum => {
           const path = `${parentPath}/${r.id}`;
-          return {
-            id: r.id, codigo: r.produtoFilhoCodigo || '', descricao: r.produtoFilhoDescricao || '',
-            unidade: r.produtoFilhoUnidade || 'UN', tipo: r.produtoFilhoTipo || '',
-            quantidade: r.quantidade, posicao: r.posicao, nivel,
-            temDocumento: r.produtoFilhoTemDocumento || false,
-            hasChildren: idsPai.has(r.produtoFilhoId),
-            children: [], _rowNum: 0, _bomItemId: r.id, _treePath: path,
-            _produtoId: r.produtoFilhoId,
-          };
+          return { id: r.id, codigo: r.produtoFilhoCodigo || '', descricao: r.produtoFilhoDescricao || '', unidade: r.produtoFilhoUnidade || 'UN', tipo: r.produtoFilhoTipo || '', quantidade: r.quantidade, posicao: r.posicao, nivel, temDocumento: r.produtoFilhoTemDocumento || false, hasChildren: idsPai.has(r.produtoFilhoId), children: [], _rowNum: 0, _bomItemId: r.id, _treePath: path, _produtoId: r.produtoFilhoId };
         });
         banco.forEach((n) => { if (n.hasChildren) n.children = getFilhos(bomFlat.find((b) => b.id === n.id)!.produtoFilhoId, n.id, n._treePath, nivel + 1, pathVisited); });
 
@@ -512,15 +434,8 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
           .filter((a) => { if (newRowRef.current && a.tempId === newRowRef.current.tempId) return parentPath === newRowRef.current.parentTreePath; return true; })
           .map((a): BomTreeItemNum => {
             const path = `${parentPath}/${a.tempId}`;
-            // Verifica se há filhos (banco ou outros pendingAdds)
             const hasKids = a.produtoFilhoId > 0 && idsPai.has(a.produtoFilhoId);
-            const node: BomTreeItemNum = {
-              id: a.tempId, codigo: a.codigo || '(novo)', descricao: a.descricao,
-              unidade: a.unidade, tipo: '', quantidade: a.quantidade,
-              posicao: a.posicao, nivel, temDocumento: a.temDocumento,
-              hasChildren: hasKids, children: [], _rowNum: 0, _bomItemId: a.tempId, _treePath: path,
-              _produtoId: a.produtoFilhoId,
-            };
+            const node: BomTreeItemNum = { id: a.tempId, codigo: a.codigo || '(novo)', descricao: a.descricao, unidade: a.unidade, tipo: '', quantidade: a.quantidade, posicao: a.posicao, nivel, temDocumento: a.temDocumento, hasChildren: hasKids, children: [], _rowNum: 0, _bomItemId: a.tempId, _treePath: path, _produtoId: a.produtoFilhoId };
             if (hasKids) node.children = getFilhos(a.produtoFilhoId, a.tempId, path, nivel + 1, pathVisited);
             return node;
           });
@@ -530,14 +445,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
         return todos;
       }
 
-      const root: BomTreeItemNum = {
-        id: -1, codigo: codigoPai, descricao: produtoPai?.descricao || '',
-        unidade: produtoPai?.unidade || 'UN', tipo: produtoPai?.tipo || '',
-        quantidade: 0, posicao: 0, nivel: 1,
-        temDocumento: produtoPai?.temDocumento || false,
-        hasChildren: true, children: getFilhos(paiId, -1, '-1', 2),
-        _rowNum: 0, _bomItemId: -1, _treePath: '-1', _produtoId: paiId,
-      };
+      const root: BomTreeItemNum = { id: -1, codigo: codigoPai, descricao: produtoPai?.descricao || '', unidade: produtoPai?.unidade || 'UN', tipo: produtoPai?.tipo || '', quantidade: 0, posicao: 0, nivel: 1, temDocumento: produtoPai?.temDocumento || false, hasChildren: true, children: getFilhos(paiId, -1, '-1', 2), _rowNum: 0, _bomItemId: -1, _treePath: '-1', _produtoId: paiId };
       let seq = 0;
       (function rn(ns: BomTreeItemNum[]) { for (const n of ns) { seq++; n._rowNum = seq; if (n.children.length > 0) rn(n.children); } })([root]);
       return [root];
@@ -545,30 +453,23 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
 
     const allNodes = useMemo(() => { const n: BomTreeItemNum[] = []; (function w(is: BomTreeItemNum[]) { for (const i of is) { n.push(i); if (i.children.length > 0) w(i.children); } })(treeData); return n; }, [treeData]);
 
-    // ── Expand por _treePath (independente por instância) ─────────────────────
-
     const expandedSet = useMemo(() => new Set(expandedKeys), [expandedKeys]);
     const isNodeExpanded = useCallback((n: BomTreeItemNum) => expandedSet.has(n._treePath), [expandedSet]);
     const handleToggle = useCallback((n: BomTreeItemNum) => { setExpandedKeys((p) => p.includes(n._treePath) ? p.filter((k) => k !== n._treePath) : [...p, n._treePath]); }, [setExpandedKeys]);
 
-    // ── Expand raiz por treePath na montagem (fix: usar '-1' não codigoPai) ───
-    useEffect(() => {
-      if (codigoPai && !expandedKeys.includes('-1')) {
-        setExpandedKeys((p) => [...p, '-1']);
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    useEffect(() => { if (codigoPai && !expandedKeys.includes('-1')) setExpandedKeys((p) => [...p, '-1']); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleQtdeConfirm = useCallback((item: BomTreeItemNum, raw: string) => { const v = parseFloat(raw.replace(',', '.')); if (isNaN(v) || v < 0) return; if (item.id <= -100) editState.changeAddedQuantidade(item.id, v); else { const o = bomFlat.find((b) => b.id === item.id); if (o) editState.changeQuantidade(item.id, o.quantidade, v, o.posicao); } }, [bomFlat, editState]);
     const handlePosConfirm = useCallback((item: BomTreeItemNum, raw: string) => { const v = parseInt(raw, 10); if (isNaN(v) || v < 0) return; if (item.id <= -100) editState.changeAddedPosicao(item.id, v); else { const o = bomFlat.find((b) => b.id === item.id); if (o) editState.changePosicao(item.id, o.posicao, v, o.quantidade); } }, [bomFlat, editState]);
     const getEffQtde = useCallback((i: BomTreeItemNum): number => { if (i.id <= -100) return i.quantidade; const c = editState.pendingChanges.get(i.id); return c ? c.quantidadeNova : i.quantidade; }, [editState.pendingChanges]);
     const getEffPos = useCallback((i: BomTreeItemNum): number => { if (i.id <= -100) return i.posicao; const c = editState.pendingChanges.get(i.id); return c ? c.posicaoNova : i.posicao; }, [editState.pendingChanges]);
+
     const rowClassName = useCallback((i: BomTreeItemNum) => {
       if (!isEditing) return '';
-      // Flash vermelho pra itens com erro do backend
       if (errorItemIds.has(i.id)) return 'bg-red-200 dark:bg-red-900/50 animate-pulse';
       return getStatusRowClasses(editState.getRowStatus(i));
     }, [isEditing, editState, errorItemIds]);
+
     const handleSelect = useCallback((i: BomTreeItemNum | null) => { setSelectedItem(i); }, []);
     const pendingCount = useMemo(() => editState.pendingAdds.filter((a) => a.produtoFilhoId > 0).length + editState.pendingChanges.size + editState.pendingDeletes.size, [editState.pendingAdds, editState.pendingChanges, editState.pendingDeletes]);
 
@@ -579,18 +480,11 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       { key: 'nivel', header: 'NÍVEL', width: 60, minWidth: 50, contentAlign: 'center', sortable: false, render: (i) => <span className="font-bold text-slate-800 dark:text-slate-200">{i.nivel}</span> },
       {
         key: 'posicao', header: 'POS.', width: 70, minWidth: 55, contentAlign: 'center', sortable: false,
-        render: (item) => {
-          if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const ep = getEffPos(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`pos-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatPos(ep)} editValue={String(ep)} onConfirm={(r) => handlePosConfirm(item, r)} enabled align="center" displayClassName="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums" />;
-          return <div className="w-full h-6 px-1 flex items-center justify-center rounded"><span className="truncate text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">{formatPos(ep)}</span></div>;
-        }
+        render: (item) => { if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const ep = getEffPos(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`pos-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatPos(ep)} editValue={String(ep)} onConfirm={(r) => handlePosConfirm(item, r)} enabled align="center" displayClassName="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums" />; return <div className="w-full h-6 px-1 flex items-center justify-center rounded"><span className="truncate text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">{formatPos(ep)}</span></div>; }
       },
       {
         key: 'quantidade', header: 'QTDE', width: 110, minWidth: 80, contentAlign: 'right', sortable: false, filterType: 'number',
-        render: (item) => {
-          if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const eq = getEffQtde(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`qtde-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatQtde(eq)} editValue={String(eq)} onConfirm={(r) => handleQtdeConfirm(item, r)} enabled align="right" displayClassName="font-bold text-emerald-700 dark:text-emerald-400" />;
-          return <div className="w-full h-6 px-1 flex items-center justify-end rounded"><span className="truncate font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(eq)}</span></div>;
-        }
-
+        render: (item) => { if (item.nivel === 1) return <span className="text-slate-600">-</span>; const st = editState.getRowStatus(item); const eq = getEffQtde(item); if (isEditing && st !== 'deleted') return <EditableCell cellId={`qtde-${item.id}`} activeCellId={activeCellId} onActivate={setActiveCellId} displayValue={formatQtde(eq)} editValue={String(eq)} onConfirm={(r) => handleQtdeConfirm(item, r)} enabled align="right" displayClassName="font-bold text-emerald-700 dark:text-emerald-400" />; return <div className="w-full h-6 px-1 flex items-center justify-end rounded"><span className="truncate font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(eq)}</span></div>; }
       },
       {
         key: 'codigo', header: 'CÓDIGO', width: 300, minWidth: 180, sortable: false,
@@ -651,12 +545,39 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
             </span>
           ) : undefined}
         />
+
+        {/* Dialog QTDE 0 */}
         <AlertDialog open={!!zeroQtdeDialog}><AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Itens com quantidade zero</AlertDialogTitle><AlertDialogDescription>Os seguintes itens estão com quantidade 0,000:</AlertDialogDescription></AlertDialogHeader>
           <div className="rounded-lg border bg-muted/50 p-3 space-y-1">{zeroQtdeDialog?.codigos.map((c, i) => <p key={i} className="font-mono text-sm font-semibold">{c}</p>)}</div>
           <AlertDialogDescription>Deseja remover esses itens e continuar salvando, ou voltar para corrigir as quantidades?</AlertDialogDescription>
           <AlertDialogFooter><AlertDialogCancel onClick={handleZeroCancel}>Voltar e corrigir</AlertDialogCancel><AlertDialogAction onClick={handleZeroRemoveAndSave} className="bg-red-600 text-white hover:bg-red-700">Remover e salvar</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent></AlertDialog>
+
+        {/* Dialog estrutura vazia */}
+        <AlertDialog open={emptyStructureDialog}>
+          <AlertDialogContent>
+
+            <AlertDialogHeader>
+              <AlertDialogTitle>Estrutura ficará vazia</AlertDialogTitle>
+              <AlertDialogDescription>
+                Todos os itens de <span className="font-mono font-semibold">{codigoPai}</span> serão removidos.
+                Você poderá adicionar novos itens em seguida. Se sair sem adicionar, a estrutura deixará de existir.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogDescription className="text-destructive font-medium">
+              ⚠️ Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleEmptyStructureCancel}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleEmptyStructureConfirm}>Continuar</AlertDialogAction>
+            </AlertDialogFooter>
+
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
     );
   }
