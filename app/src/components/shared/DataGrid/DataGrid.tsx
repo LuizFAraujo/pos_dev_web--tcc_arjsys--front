@@ -10,6 +10,7 @@
  * - Duplo clique na linha → onActivate
  * - Zebra, hover, header fixo (sticky)
  * - Última coluna preenche espaço restante
+ * - Virtualização de linhas via @tanstack/react-virtual (suporta 70k+ registros)
  */
 
 import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -26,6 +27,7 @@ import {
   type FilterFn,
   type Updater,
 } from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
 import { ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -101,6 +103,7 @@ function DataGridInner<T extends Record<string, any>>({
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColumnFilters([]),
@@ -198,6 +201,20 @@ function DataGridInner<T extends Record<string, any>>({
   const rows = table.getRowModel().rows;
   const lastColKey = gc[gc.length - 1]?.key;
 
+  // ── Virtualização ───────────────────────────────────────────────────────────
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 10,
+  });
+
+  const virtualRows = virtualizer.getVirtualItems();
+  const totalHeight = virtualizer.getTotalSize();
+
+  // ── Refs pra callbacks estáveis ─────────────────────────────────────────────
+
   const rowCountRef = useRef(0);
   rowCountRef.current = rows.length;
   const rowsRef = useRef(rows);
@@ -219,6 +236,11 @@ function DataGridInner<T extends Record<string, any>>({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIdx, rows.length]);
 
+  // Auto-scroll pra linha selecionada (teclado)
+  const scrollToIdx = useCallback((idx: number) => {
+    virtualizer.scrollToIndex(idx, { align: 'auto' });
+  }, [virtualizer]);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -229,6 +251,7 @@ function DataGridInner<T extends Record<string, any>>({
           const next = prev == null ? 0 : Math.min(prev + 1, rowCountRef.current - 1);
           const row = rowsRef.current[next];
           onSelectRef.current?.(row ? row.original : null);
+          scrollToIdx(next);
           return next;
         });
       } else if (e.key === 'ArrowUp') {
@@ -237,6 +260,7 @@ function DataGridInner<T extends Record<string, any>>({
           const next = prev == null ? 0 : Math.max(prev - 1, 0);
           const row = rowsRef.current[next];
           onSelectRef.current?.(row ? row.original : null);
+          scrollToIdx(next);
           return next;
         });
       } else if (e.key === 'Enter') {
@@ -251,7 +275,7 @@ function DataGridInner<T extends Record<string, any>>({
     };
     el.addEventListener('keydown', onKey);
     return () => el.removeEventListener('keydown', onKey);
-  }, [setSelectedIdx, selectedIdx]);
+  }, [setSelectedIdx, selectedIdx, scrollToIdx]);
 
   // --- LOADING ---
   if (loading) return (
@@ -275,7 +299,7 @@ function DataGridInner<T extends Record<string, any>>({
   // --- RENDER ---
   return (
     <div ref={containerRef} tabIndex={0} className={`flex flex-col h-full overflow-hidden outline-none ${className}`}>
-      <div className="flex-1 overflow-auto">
+      <div ref={scrollRef} className="flex-1 overflow-auto">
         <table className="border-separate border-spacing-0" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
             {gc.map((col, idx) => {
@@ -347,9 +371,18 @@ function DataGridInner<T extends Record<string, any>>({
             ))}
           </thead>
 
-          {/* BODY */}
+          {/* BODY — Virtualizado */}
           <tbody>
-            {rows.map((row, i) => {
+            {/* Spacer top — empurra as linhas visíveis pra posição correta */}
+            {virtualRows.length > 0 && (
+              <tr aria-hidden="true">
+                <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length} />
+              </tr>
+            )}
+
+            {virtualRows.map((vRow) => {
+              const row = rows[vRow.index];
+              const i = vRow.index;
               const isSelected = selectedIdx === i;
               return (
                 <tr key={row.id}
@@ -377,6 +410,13 @@ function DataGridInner<T extends Record<string, any>>({
                 </tr>
               );
             })}
+
+            {/* Spacer bottom — completa a altura total pra scrollbar ficar correta */}
+            {virtualRows.length > 0 && (
+              <tr aria-hidden="true">
+                <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length} />
+              </tr>
+            )}
 
             {rows.length === 0 && data.length > 0 && (
               <tr><td colSpan={gc.length} className="px-3 py-6 text-center text-muted-foreground">

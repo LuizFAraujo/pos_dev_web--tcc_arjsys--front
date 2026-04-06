@@ -23,5 +23,7 @@ export default defineConfig({
   },
   server: {
     open: true,
+	allowedHosts: ["revo01wks104"],
+	host: true,
   },
 });
