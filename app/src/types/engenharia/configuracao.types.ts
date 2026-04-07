@@ -49,6 +49,7 @@ export interface PathDocumentosUpdate {
 
 /** Response do POST /api/engenharia/Produtos/varredura-documentos */
 export interface VarreduraResultado {
+  totalGeral: number;
   totalVerificados: number;
   comPasta: number;
   comDocumento: number;

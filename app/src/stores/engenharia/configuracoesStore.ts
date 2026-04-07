@@ -13,6 +13,18 @@ import type {
   VarreduraResultado,
 } from '@/types/engenharia/configuracao.types';
 
+// ─── Progresso da varredura ───────────────────────────────────────────────────
+
+export interface VarreduraProgresso {
+  totalGeral: number;
+  processados: number;
+  comPasta: number;
+  comDocumento: number;
+  pastaVazia: number;
+  semPasta: number;
+  atualizados: number;
+}
+
 interface ConfiguracoesState {
   // ── Configurações globais ─────────────────────────────────────────────────
   configuracoes: ConfiguracaoEngenharia[];
@@ -35,7 +47,21 @@ interface ConfiguracoesState {
 
   // ── Varredura ─────────────────────────────────────────────────────────────
   isVarrendo: boolean;
+  varreduraProgresso: VarreduraProgresso | null;
+
+  /** Varredura legada — sem lotes (usada pelo botão da ProdutosPage) */
   executarVarredura: (prefixo?: string) => Promise<VarreduraResultado | null>;
+
+  /** Varredura em lotes com progresso — usada pela ConfiguracoesPage */
+  executarVarreduraEmLotes: (
+    prefixo: string | undefined,
+    batchSize: number,
+    onProgresso: (progresso: VarreduraProgresso) => void,
+    cancelRef: { current: boolean },
+  ) => Promise<VarreduraProgresso | null>;
+
+  pararVarredura: () => void;
+  _cancelRef: { current: boolean };
 
   clearError: () => void;
 }
@@ -51,6 +77,8 @@ export const useConfiguracoesStore = create<ConfiguracoesState>((set, get) => ({
   isSavingPath: false,
 
   isVarrendo: false,
+  varreduraProgresso: null,
+  _cancelRef: { current: false },
 
   // ── Configurações globais ─────────────────────────────────────────────────
 
@@ -156,7 +184,7 @@ export const useConfiguracoesStore = create<ConfiguracoesState>((set, get) => ({
     }
   },
 
-  // ── Varredura ─────────────────────────────────────────────────────────────
+  // ── Varredura legada (sem lotes) ──────────────────────────────────────────
 
   executarVarredura: async (prefixo) => {
     set({ isVarrendo: true, error: null });
@@ -172,6 +200,78 @@ export const useConfiguracoesStore = create<ConfiguracoesState>((set, get) => ({
       set({ error: message, isVarrendo: false });
       throw err;
     }
+  },
+
+  // ── Varredura em lotes ────────────────────────────────────────────────────
+
+  executarVarreduraEmLotes: async (prefixo, batchSize, onProgresso, cancelRef) => {
+    set({ isVarrendo: true, error: null, varreduraProgresso: null });
+    cancelRef.current = false;
+
+    const acumulado: VarreduraProgresso = {
+      totalGeral: 0,
+      processados: 0,
+      comPasta: 0,
+      comDocumento: 0,
+      pastaVazia: 0,
+      semPasta: 0,
+      atualizados: 0,
+    };
+
+    let offset = 0;
+
+    try {
+      while (true) {
+        // Verifica cancelamento ANTES de chamar
+        if (cancelRef.current) break;
+
+        const params = new URLSearchParams();
+        if (prefixo) params.set('prefixo', prefixo);
+        params.set('offset', String(offset));
+        params.set('limit', String(batchSize));
+
+        const result = await apiPost<VarreduraResultado>(
+          `/api/engenharia/Produtos/varredura-documentos?${params.toString()}`
+        );
+
+        // Verifica cancelamento DEPOIS de receber (antes de acumular)
+        if (cancelRef.current) break;
+
+        // Primeiro lote: captura totalGeral
+        if (offset === 0) {
+          acumulado.totalGeral = result.totalGeral;
+        }
+
+        // Acumula
+        acumulado.processados += result.totalVerificados;
+        acumulado.comPasta += result.comPasta;
+        acumulado.comDocumento += result.comDocumento;
+        acumulado.pastaVazia += result.pastaVazia;
+        acumulado.semPasta += result.semPasta;
+        acumulado.atualizados += result.atualizados;
+
+        // Notifica progresso
+        const snapshot = { ...acumulado };
+        set({ varreduraProgresso: snapshot });
+        onProgresso(snapshot);
+
+        // Último lote: verificados < batchSize
+        if (result.totalVerificados < batchSize) break;
+
+        offset += batchSize;
+      }
+
+      set({ isVarrendo: false });
+      return cancelRef.current ? null : acumulado;
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Erro ao executar varredura';
+      set({ error: message, isVarrendo: false });
+      throw err;
+    }
+  },
+
+  pararVarredura: () => {
+    get()._cancelRef.current = true;
   },
 
   clearError: () => set({ error: null }),

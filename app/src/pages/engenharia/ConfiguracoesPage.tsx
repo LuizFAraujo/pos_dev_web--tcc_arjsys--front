@@ -5,15 +5,21 @@
  *   Documentos — Path raiz, checkbox por subpasta, paths alternativos por prefixo (CRUD), varredura
  *   Código Inteligente — Flag de controle (futuro)
  *
+ * Varredura em lotes:
+ *   Frontend controla o loop (BATCH_SIZE = 500).
+ *   Barra de progresso com processados/total, % e botão cancelar.
+ *   Resultado final acumulado dos lotes.
+ *
  * Estado isolado por aba via useTabState.
  * Toasts via Sonner.
  * Após varredura, recarrega produtosStore.
  */
 
-import { useEffect, useMemo, useCallback } from 'react';
-import { Save, Undo2, FolderSearch, Loader2, Plus, Trash2, Info } from 'lucide-react';
+import { useEffect, useMemo, useCallback, useRef } from 'react';
+import { Save, Undo2, FolderSearch, Loader2, Plus, Trash2, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfiguracoesStore } from '@/stores/engenharia/configuracoesStore';
+import type { VarreduraProgresso } from '@/stores/engenharia/configuracoesStore';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { useGruposStore } from '@/stores/engenharia/gruposStore';
 import { useTabState } from '@/hooks/useTabState';
@@ -35,7 +41,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { VarreduraResultado } from '@/types/engenharia/configuracao.types';
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+const BATCH_SIZE = 500;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +73,8 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
   const deletePath = useConfiguracoesStore((s) => s.deletePath);
 
   const isVarrendo = useConfiguracoesStore((s) => s.isVarrendo);
-  const executarVarredura = useConfiguracoesStore((s) => s.executarVarredura);
+  const varreduraProgresso = useConfiguracoesStore((s) => s.varreduraProgresso);
+  const executarVarreduraEmLotes = useConfiguracoesStore((s) => s.executarVarreduraEmLotes);
 
   const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
 
@@ -76,7 +86,8 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
   const [pathRaiz, setPathRaiz] = useTabState(tab.id + '-pathRaiz', '');
   const [ctrlPrefixoRaiz, setCtrlPrefixoRaiz] = useTabState(tab.id + '-ctrlPrefixo', false);
   const [prefixoVarredura, setPrefixoVarredura] = useTabState(tab.id + '-prefixoVarredura', '');
-  const [varreduraResult, setVarreduraResult] = useTabState<VarreduraResultado | null>(tab.id + '-varResult', null);
+  const [varreduraResult, setVarreduraResult] = useTabState<VarreduraProgresso | null>(tab.id + '-varResult', null);
+  const [varreduraCancelada, setVarreduraCancelada] = useTabState(tab.id + '-varCancelada', false);
 
   // Novo path alternativo
   const [novoPrefixoId, setNovoPrefixoId] = useTabState<string>(tab.id + '-novoPrefixo', '');
@@ -85,6 +96,9 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
   // Delete dialog
   const [deleteId, setDeleteId] = useTabState<number | null>(tab.id + '-delId', null);
   const [deleteOpen, setDeleteOpen] = useTabState(tab.id + '-delOpen', false);
+
+  // Ref de cancelamento
+  const cancelRef = useRef({ current: false });
 
   // ── Carregar dados ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -223,24 +237,43 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
     setDeleteId(null);
   }, [deleteId, deletePath, setDeleteOpen, setDeleteId]);
 
-  // ── Varredura ───────────────────────────────────────────────────────────────
+  // ── Varredura em lotes ──────────────────────────────────────────────────────
   const handleVarredura = useCallback(async () => {
+    setVarreduraResult(null);
+    setVarreduraCancelada(false);
+    cancelRef.current = { current: false };
+
     try {
-      const resultado = await executarVarredura(prefixoVarredura.trim() || undefined);
-      setVarreduraResult(resultado);
+      const resultado = await executarVarreduraEmLotes(
+        prefixoVarredura.trim() || undefined,
+        BATCH_SIZE,
+        (progresso) => {
+          // Callback de progresso — atualizado a cada lote
+          setVarreduraResult(progresso);
+        },
+        cancelRef.current,
+      );
+
       if (resultado) {
         toast.success(
-          `Varredura concluída: ${resultado.totalVerificados} verificados, ` +
+          `Varredura concluída: ${resultado.processados} verificados, ` +
           `${resultado.comDocumento} com documento, ${resultado.atualizados} atualizados.`
         );
+        setVarreduraResult(resultado);
       } else {
-        toast.success('Varredura concluída.');
+        setVarreduraCancelada(true);
+        toast.info('Varredura cancelada pelo usuário.');
       }
       await fetchProdutos();
     } catch {
-      // erro já tratado
+      // erro já tratado na store
     }
-  }, [prefixoVarredura, executarVarredura, setVarreduraResult, fetchProdutos]);
+  }, [prefixoVarredura, executarVarreduraEmLotes, setVarreduraResult, setVarreduraCancelada, fetchProdutos]);
+
+  // ── Cancelar varredura ──────────────────────────────────────────────────────
+  const handleCancelar = useCallback(() => {
+    cancelRef.current.current = true;
+  }, []);
 
   // ── Header ──────────────────────────────────────────────────────────────────
   const headerRight = globalDirty ? (
@@ -249,6 +282,12 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
       Salvar
     </Button>
   ) : undefined;
+
+  // ── Progresso calculado ─────────────────────────────────────────────────────
+  const progresso = varreduraProgresso;
+  const pct = progresso && progresso.totalGeral > 0
+    ? Math.round((progresso.processados / progresso.totalGeral) * 100)
+    : 0;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -455,28 +494,68 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
                           value={prefixoVarredura}
                           onChange={(e) => setPrefixoVarredura(e.target.value)}
                           placeholder="Ex: 30"
+                          disabled={isVarrendo}
                           className="h-9 text-sm font-mono bg-white dark:bg-slate-950"
                         />
                       </div>
-                      <Button onClick={handleVarredura} disabled={isVarrendo}>
-                        {isVarrendo
-                          ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          : <FolderSearch className="mr-2 h-4 w-4" />
-                        }
-                        {isVarrendo ? 'Varrendo...' : 'Executar Varredura'}
-                      </Button>
+
+                      {!isVarrendo ? (
+                        <Button onClick={handleVarredura}>
+                          <FolderSearch className="mr-2 h-4 w-4" />
+                          Executar Varredura
+                        </Button>
+                      ) : (
+                        <Button variant="destructive" onClick={handleCancelar}>
+                          <X className="mr-2 h-4 w-4" />
+                          Cancelar
+                        </Button>
+                      )}
                     </div>
 
-                    {/* Resultado */}
-                    {varreduraResult && (
-                      <div className="flex gap-4 rounded-lg bg-muted/50 p-3 mt-2">
-                        <ResultItem label="Verificados" value={varreduraResult.totalVerificados} color="text-blue-600" />
-                        <ResultItem label="Com Pasta" value={varreduraResult.comPasta} color="text-green-600" />
-                        <ResultItem label="Com Doc." value={varreduraResult.comDocumento} color="text-green-700" />
-                        <ResultItem label="Pasta Vazia" value={varreduraResult.pastaVazia} color="text-amber-600" />
-                        <ResultItem label="Sem Pasta" value={varreduraResult.semPasta} color="text-red-500" />
-                        <ResultItem label="Atualizados" value={varreduraResult.atualizados} color="text-blue-500" />
+                    {/* Barra de progresso */}
+                    {isVarrendo && progresso && progresso.totalGeral > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            {progresso.processados.toLocaleString('pt-BR')} / {progresso.totalGeral.toLocaleString('pt-BR')} verificados
+                          </span>
+                          <span className="font-mono font-medium">{pct}%</span>
+                        </div>
+                        <div className="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="flex gap-4 text-[11px] text-muted-foreground">
+                          <span>{progresso.comPasta.toLocaleString('pt-BR')} com pasta</span>
+                          <span>{progresso.comDocumento.toLocaleString('pt-BR')} com doc.</span>
+                          <span>{progresso.atualizados.toLocaleString('pt-BR')} atualizados</span>
+                        </div>
                       </div>
+                    )}
+
+                    {/* Resultado final */}
+                    {!isVarrendo && varreduraResult && (
+                      <>
+                        {varreduraCancelada && (
+                          <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 mt-1">
+                            <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <p className="text-xs text-amber-700 dark:text-amber-300">
+                              Varredura cancelada — resultados parciais abaixo ({varreduraResult.processados.toLocaleString('pt-BR')} de {varreduraResult.totalGeral.toLocaleString('pt-BR')} verificados).
+                              Os produtos já processados foram atualizados no banco.
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex gap-4 rounded-lg bg-muted/50 p-3 mt-2">
+                          <ResultItem label="Verificados" value={varreduraResult.processados} color="text-blue-600" />
+                          <ResultItem label="Com Pasta" value={varreduraResult.comPasta} color="text-green-600" />
+                          <ResultItem label="Com Doc." value={varreduraResult.comDocumento} color="text-green-700" />
+                          <ResultItem label="Pasta Vazia" value={varreduraResult.pastaVazia} color="text-amber-600" />
+                          <ResultItem label="Sem Pasta" value={varreduraResult.semPasta} color="text-red-500" />
+                          <ResultItem label="Atualizados" value={varreduraResult.atualizados} color="text-blue-500" />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -549,7 +628,7 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
 function ResultItem({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5 flex-1">
-      <span className={`text-lg font-bold font-mono ${color}`}>{value}</span>
+      <span className={`text-lg font-bold font-mono ${color}`}>{value.toLocaleString('pt-BR')}</span>
       <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
     </div>
   );
