@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useMemo, useCallback, useRef } from 'react';
-import { Save, Undo2, FolderSearch, Loader2, Plus, Trash2, Info, X } from 'lucide-react';
+import { Save, FolderSearch, Loader2, Plus, Trash2, Info, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfiguracoesStore } from '@/stores/engenharia/configuracoesStore';
 import type { VarreduraProgresso } from '@/stores/engenharia/configuracoesStore';
@@ -368,11 +368,11 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
                     <table className="w-full">
                       <thead className="bg-muted/50">
                         <tr>
-                          <th className="p-2.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400 w-[70px]">Ativo</th>
-                          <th className="p-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400 w-[80px]">Prefixo</th>
+                          <th className="p-2.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400 w-17.5">Ativo</th>
+                          <th className="p-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400 w-20">Prefixo</th>
                           <th className="p-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Endereço</th>
-                          <th className="p-2.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400 w-[100px]">Por Subpasta</th>
-                          <th className="p-2.5 w-[50px]" />
+                          <th className="p-2.5 text-center text-xs font-medium text-slate-500 dark:text-slate-400 w-25">Por Subpasta</th>
+                          <th className="p-2.5 w-12.5" />
                         </tr>
                       </thead>
                       <tbody>
@@ -432,7 +432,7 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
                           <td colSpan={5} className="p-2.5 bg-muted/30 border-t">
                             <div className="flex items-center gap-2">
                               <Select value={novoPrefixoId} onValueChange={setNovoPrefixoId}>
-                                <SelectTrigger className="w-[140px] h-8 text-xs font-mono bg-white dark:bg-slate-950">
+                                <SelectTrigger className="w-35 h-8 text-xs font-mono bg-white dark:bg-slate-950">
                                   <SelectValue placeholder="Prefixo..." />
                                 </SelectTrigger>
                                 <SelectContent>

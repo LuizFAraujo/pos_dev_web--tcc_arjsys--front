@@ -3,10 +3,12 @@
  *
  * Mesmo header (cores, fontes, resize, sort, filtros), footer, zebra/hover.
  * Linhas hierárquicas com indent e expand/collapse.
+ * Virtualização de linhas via @tanstack/react-virtual (suporta grandes volumes).
  */
 
 import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Ref, ReactNode } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -95,6 +97,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const [colFilters, setColFilters] = useTabState<Record<string, CompoundFilter>>(tabId + '-tfilters', {});
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-tsel', null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColFilters({}),
@@ -148,18 +151,58 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const onSelRef = useRef(onSelect); onSelRef.current = onSelect;
   const onActRef = useRef(onActivate); onActRef.current = onActivate;
 
+  // ── Virtualização ───────────────────────────────────────────────────────────
+
+  const virtualizer = useVirtualizer({
+    count: sorted.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 10,
+  });
+
+  const virtualRows = virtualizer.getVirtualItems();
+  const totalHeight = virtualizer.getTotalSize();
+
+  // ── Seleção e scroll ────────────────────────────────────────────────────────
+
   const selectRow = useCallback((idx: number | null) => { setSelectedIdx(idx); onSelRef.current?.(idx !== null ? rowsRef.current[idx] ?? null : null); }, [setSelectedIdx]);
   useEffect(() => { onSelRef.current?.(selectedIdx !== null ? rowsRef.current[selectedIdx] ?? null : null); }, [selectedIdx, sorted.length]);
+
+  const scrollToIdx = useCallback((idx: number) => {
+    virtualizer.scrollToIndex(idx, { align: 'auto' });
+  }, [virtualizer]);
 
   useEffect(() => {
     const el = containerRef.current; if (!el) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIdx((p: number | null) => { const n = p == null ? 0 : Math.min(p + 1, rowsRef.current.length - 1); onSelRef.current?.(rowsRef.current[n] ?? null); return n; }); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIdx((p: number | null) => { const n = p == null ? 0 : Math.max(p - 1, 0); onSelRef.current?.(rowsRef.current[n] ?? null); return n; }); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (selectedIdx != null) { const item = rowsRef.current[selectedIdx]; if (item) setTimeout(() => onActRef.current?.(item), 0); } }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIdx((p: number | null) => {
+          const n = p == null ? 0 : Math.min(p + 1, rowsRef.current.length - 1);
+          onSelRef.current?.(rowsRef.current[n] ?? null);
+          scrollToIdx(n);
+          return n;
+        });
+      }
+      else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIdx((p: number | null) => {
+          const n = p == null ? 0 : Math.max(p - 1, 0);
+          onSelRef.current?.(rowsRef.current[n] ?? null);
+          scrollToIdx(n);
+          return n;
+        });
+      }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedIdx != null) {
+          const item = rowsRef.current[selectedIdx];
+          if (item) setTimeout(() => onActRef.current?.(item), 0);
+        }
+      }
     };
     el.addEventListener('keydown', onKey); return () => el.removeEventListener('keydown', onKey);
-  }, [setSelectedIdx, selectedIdx]);
+  }, [setSelectedIdx, selectedIdx, scrollToIdx]);
 
   const toggleSort = useCallback((k: string) => { setSorting((prev) => { const ex = prev.find((s) => s.id === k); if (!ex) return [{ id: k, desc: false }]; if (!ex.desc) return [{ id: k, desc: true }]; return []; }); }, [setSorting]);
 
@@ -168,7 +211,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
 
   return (
     <div ref={containerRef} tabIndex={0} className={`flex flex-col h-full overflow-hidden outline-none ${className}`}>
-      <div className="flex-1 overflow-auto">
+      <div ref={scrollRef} className="flex-1 overflow-auto">
         <table className="border-separate border-spacing-0" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>{gc.map((col, idx) => { const isLast = idx === gc.length - 1; if (isLast) return <col key={col.key} style={{ minWidth: col.minWidth || col.width || 80 }} />; const w = colW[col.key] || col.width || 150; return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH }} />; })}</colgroup>
           <thead className="sticky top-0 z-10 text-slate-100">
@@ -189,7 +232,16 @@ function DataGridTreeInner<T extends Record<string, any>>({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((row, i) => {
+            {/* Spacer top */}
+            {virtualRows.length > 0 && (
+              <tr aria-hidden="true">
+                <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length} />
+              </tr>
+            )}
+
+            {virtualRows.map((vRow) => {
+              const row = sorted[vRow.index];
+              const i = vRow.index;
               const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpanded(row); const isSel = selectedIdx === i; return (
                 <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={() => onActRef.current?.(row)}
                   className={(() => {
@@ -208,6 +260,14 @@ function DataGridTreeInner<T extends Record<string, any>>({
                   })}
                 </tr>);
             })}
+
+            {/* Spacer bottom */}
+            {virtualRows.length > 0 && (
+              <tr aria-hidden="true">
+                <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length} />
+              </tr>
+            )}
+
             {sorted.length === 0 && data.length > 0 && (<tr><td colSpan={gc.length} className="px-3 py-6 text-center text-muted-foreground">Nenhum resultado com os filtros aplicados<button className="ml-2 text-primary hover:underline" onClick={() => setColFilters({})}>Limpar filtros</button></td></tr>)}
           </tbody>
         </table>
