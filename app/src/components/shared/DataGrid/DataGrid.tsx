@@ -104,12 +104,14 @@ function DataGridInner<T extends Record<string, any>>({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualizerRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColumnFilters([]),
     clearSort: () => setSorting([]),
     clearAll: () => { setColumnFilters([]); setSorting([]); setSelectedIdx(null); },
     focus: () => containerRef.current?.focus(),
+    scrollToIndex: (index: number) => virtualizerRef.current?.scrollToIndex(index, { align: 'auto' }),
   }), [setColumnFilters, setSorting, setSelectedIdx]);
 
   const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
@@ -209,6 +211,7 @@ function DataGridInner<T extends Record<string, any>>({
     estimateSize: () => rowHeight,
     overscan: 10,
   });
+  virtualizerRef.current = virtualizer;
 
   const virtualRows = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();

@@ -66,10 +66,11 @@ export interface DataGridProps<T> {
 
 /** Métodos expostos pelo DataGrid via ref */
 export interface DataGridHandle {
-  clearFilters: () => void;   // limpa filtros de coluna
-  clearSort: () => void;      // limpa ordenação
-  clearAll: () => void;       // limpa tudo (filtros + sort + seleção)
-  focus: () => void;          // devolve o foco pro container do grid (usar com useRestoreFocus)
+  clearFilters: () => void;          // limpa filtros de coluna
+  clearSort: () => void;             // limpa ordenação
+  clearAll: () => void;              // limpa tudo (filtros + sort + seleção)
+  focus: () => void;                 // devolve o foco pro container do grid
+  scrollToIndex: (index: number) => void;  // scrolla até a linha do índice informado
 }
 
 // ============================================

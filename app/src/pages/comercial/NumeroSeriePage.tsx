@@ -122,7 +122,8 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
         />
       }
     >
-      {list.isListMode ? (
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef} tabId={tab.id} storageId="numeroserie"
           columns={columns} data={list.filtrados}
@@ -131,7 +132,8 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           emptyDescription="Números de série são gerados a partir de pedidos"
           onSelect={(item) => list.setSelectedItem(item as NumeroSerie | null)}
         />
-      ) : (
+      </div>
+      <div style={{ display: !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
           onSelect={(s) => list.setSelectedCardId(s?.id ?? null)}
@@ -140,7 +142,9 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           emptyDescription="Números de série são gerados a partir de pedidos"
           renderCard={(s) => <NumeroSerieCard serie={s} />}
         />
-      )}
+      </div>
     </PageShell>
   );
 }
+
+

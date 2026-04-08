@@ -380,38 +380,38 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       }
     >
 
-      {!inForm && (
-        list.isListMode ? (
-          <DataGrid
-            ref={list.gridRef} tabId={tab.id} storageId="produtos"
-            columns={columns} data={list.filtrados}
-            loading={isLoading} loadingText="Carregando produtos..."
-            emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
-            onSelect={(item) => list.setSelectedItem(item as Produto | null)}
-            onActivate={(item) => page.openView(item as Produto)}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
-        ) : (
-          <CardGrid
-            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
-            cardHeight={90}
-            onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
-            onActivate={(item) => page.openView(item as Produto)}
-            loading={isLoading} loadingText="Carregando produtos..."
-            emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
-            renderCard={(p) => <ProdutoCard produto={p} />}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
-        )
-      )}
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
+        <DataGrid
+          ref={list.gridRef} tabId={tab.id} storageId="produtos"
+          columns={columns} data={list.filtrados}
+          loading={isLoading} loadingText="Carregando produtos..."
+          emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
+          onSelect={(item) => list.setSelectedItem(item as Produto | null)}
+          onActivate={(item) => page.openView(item as Produto)}
+          emptyAction={
+            <Button onClick={() => page.openNew()}>
+              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+            </Button>
+          }
+        />
+      </div>
+      <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
+        <CardGrid
+          ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+          cardHeight={90}
+          onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
+          onActivate={(item) => page.openView(item as Produto)}
+          loading={isLoading} loadingText="Carregando produtos..."
+          emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
+          renderCard={(p) => <ProdutoCard produto={p} />}
+          emptyAction={
+            <Button onClick={() => page.openNew()}>
+              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+            </Button>
+          }
+        />
+      </div>
 
       {inForm && (
         <ProdutoForm
@@ -432,3 +432,4 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     </PageShell>
   );
 }
+

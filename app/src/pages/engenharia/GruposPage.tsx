@@ -166,8 +166,8 @@ export function GruposPage({ tab }: GruposPageProps) {
       }
     >
 
-      {!inForm && (
-        list.isListMode ? (
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="grupos"
             columns={columns} data={list.filtrados}
@@ -181,7 +181,8 @@ export function GruposPage({ tab }: GruposPageProps) {
               </Button>
             }
           />
-        ) : (
+      </div>
+      <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(g) => list.setSelectedCardId(g?.id ?? null)}
@@ -195,8 +196,7 @@ export function GruposPage({ tab }: GruposPageProps) {
               </Button>
             }
           />
-        )
-      )}
+      </div>
 
       {inForm && (
         <GrupoForm
@@ -217,3 +217,5 @@ export function GruposPage({ tab }: GruposPageProps) {
     </PageShell>
   );
 }
+
+

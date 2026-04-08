@@ -46,6 +46,8 @@ export interface CardGridHandle {
   clearSelection: () => void;
   /** Devolve o foco pro container (usar com useRestoreFocus) */
   focus: () => void;
+  /** Scrolla até o item no índice informado */
+  scrollToIndex: (index: number) => void;
 }
 
 export interface CardGridProps<T extends { id: number | string }> {
@@ -205,6 +207,10 @@ function CardGridInner<T extends { id: number | string }>(
   useImperativeHandle(ref, () => ({
     clearSelection: () => onSelect(null),
     focus: () => containerRef.current?.focus(),
+    scrollToIndex: (index: number) => {
+      const rowIdx = Math.floor(index / measuredCols);
+      virtualizer.scrollToIndex(rowIdx, { align: 'auto' });
+    },
   }));
 
   // ── Teclado ─────────────────────────────────────────────────────────────────

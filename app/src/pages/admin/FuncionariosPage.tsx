@@ -148,8 +148,8 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
       }
     >
 
-      {!inForm && (
-        list.isListMode ? (
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="funcionarios"
             columns={columns} data={list.filtrados}
@@ -163,7 +163,8 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
               </Button>
             }
           />
-        ) : (
+      </div>
+      <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(f) => list.setSelectedCardId(f?.id ?? null)}
@@ -177,8 +178,7 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
               </Button>
             }
           />
-        )
-      )}
+      </div>
 
       {inForm && (
         <FuncionarioForm
@@ -199,3 +199,5 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
     </PageShell>
   );
 }
+
+

@@ -154,8 +154,8 @@ export function ClientesPage({ tab }: ClientesPageProps) {
       }
     >
 
-      {!inForm && (
-        list.isListMode ? (
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="clientes"
             columns={columns} data={list.filtrados}
@@ -169,7 +169,8 @@ export function ClientesPage({ tab }: ClientesPageProps) {
               </Button>
             }
           />
-        ) : (
+      </div>
+      <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(c) => list.setSelectedCardId(c?.id ?? null)}
@@ -183,8 +184,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
               </Button>
             }
           />
-        )
-      )}
+      </div>
 
       {inForm && (
         <ClienteForm
@@ -205,3 +205,5 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     </PageShell>
   );
 }
+
+

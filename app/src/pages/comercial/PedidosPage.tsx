@@ -259,8 +259,8 @@ export function PedidosPage({ tab }: PedidosPageProps) {
       }
     >
 
-      {!inForm && (
-        list.isListMode ? (
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="pedidos-venda"
             columns={columns} data={list.filtrados}
@@ -274,7 +274,8 @@ export function PedidosPage({ tab }: PedidosPageProps) {
               </Button>
             }
           />
-        ) : (
+      </div>
+      <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
             onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
@@ -288,8 +289,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
               </Button>
             }
           />
-        )
-      )}
+      </div>
 
       {inForm && (
         <PedidoForm
@@ -310,3 +310,5 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     </PageShell>
   );
 }
+
+
