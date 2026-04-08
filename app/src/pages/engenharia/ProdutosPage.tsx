@@ -68,7 +68,7 @@ const SIM_NAO_OPTIONS = [
 
 function ProdutoCard({ produto }: { produto: Produto }) {
   return (
-    <div className="p-4">
+    <div className="p-3">
       <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
         {produto.codigo}
       </p>
@@ -163,11 +163,10 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
             type="button"
             onClick={handleAbrirPasta}
             disabled={!temPasta}
-            className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${
-              temPasta
-                ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer'
-                : 'text-muted-foreground/40 cursor-default'
-            }`}
+            className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${temPasta
+              ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer'
+              : 'text-muted-foreground/40 cursor-default'
+              }`}
           >
             <FolderOpen className="h-3.5 w-3.5" />
           </button>
@@ -186,13 +185,12 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
               type="button"
               onClick={handleDocClick}
               disabled={!temDoc}
-              className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${
-                temDoc
-                  ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
-                  : temPasta
-                    ? 'text-muted-foreground/50 cursor-default'
-                    : 'text-muted-foreground/40 cursor-default'
-              }`}
+              className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${temDoc
+                ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                : temPasta
+                  ? 'text-muted-foreground/50 cursor-default'
+                  : 'text-muted-foreground/40 cursor-default'
+                }`}
             >
               {temDoc
                 ? <FileText className="h-3.5 w-3.5" />
@@ -213,13 +211,12 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
                   type="button"
                   onClick={handleDocClick}
                   disabled={!temDoc}
-                  className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${
-                    temDoc
-                      ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
-                      : temPasta
-                        ? 'text-muted-foreground/50 cursor-default'
-                        : 'text-muted-foreground/40 cursor-default'
-                  }`}
+                  className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${temDoc
+                    ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                    : temPasta
+                      ? 'text-muted-foreground/50 cursor-default'
+                      : 'text-muted-foreground/40 cursor-default'
+                    }`}
                 >
                   {temDoc
                     ? <FileText className="h-3.5 w-3.5" />
@@ -249,7 +246,7 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
           </PopoverContent>
         </Popover>
       )}
-      
+
     </div>
   );
 }
@@ -401,6 +398,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
         ) : (
           <CardGrid
             ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+            cardHeight={90}
             onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
             onActivate={(item) => page.openView(item as Produto)}
             loading={isLoading} loadingText="Carregando produtos..."
