@@ -4,8 +4,11 @@
 // Base para todas as chamadas ao backend.
 // Usa fetch nativo com tipagem forte.
 // Se um dia migrar para Axios, só muda aqui.
+//
+// Endereço da API configurado em runtime via public/config.api.js
+// Pode ser alterado após o build sem precisar rebuildar.
 
-const API_BASE_URL = 'http://localhost:7000';
+const API_BASE_URL = (window as any).__ARJSYS_CONFIG__?.API_BASE_URL || '';
 
 // ============================================
 // TIPOS DE ERRO
