@@ -24,6 +24,44 @@ interface AbrirDocumentoResult {
   aberto: boolean;
 }
 
+// ─── Helper local ─────────────────────────────────────────────────────────────
+
+/** Retorna a URL do ArjSys Helper se configurado, ou string vazia */
+function getHelperUrl(): string {
+  return (window as any).__ARJSYS_CONFIG__?.HELPER_URL || '';
+}
+
+/**
+ * Chama o ArjSys Helper para abrir pasta ou documento no PC do usuário.
+ * Se o helper não estiver configurado, não faz nada (backend já abriu no servidor).
+ * Se o helper estiver configurado mas offline, lança erro.
+ */
+async function chamarHelper(endpoint: string, path: string): Promise<void> {
+  const helperUrl = getHelperUrl();
+  if (!helperUrl) return;
+
+  // Verifica se o helper está ativo antes de chamar
+  try {
+    const status = await fetch(`${helperUrl}/status`);
+    const statusData = await status.json();
+    if (!statusData.ok) return; // Helper respondeu mas com problema → ignora
+  } catch {
+    return; // Helper offline → processo normal (backend já abriu no servidor)
+  }
+
+  // Helper ativo → abre no PC do usuário
+  try {
+    const res = await fetch(`${helperUrl}/${endpoint}?path=${encodeURIComponent(path)}`);
+    const data = await res.json();
+    if (!data.ok) {
+      throw new Error(data.erro || 'Erro no ArjSys Helper');
+    }
+  } catch {
+    // Se falhou aqui, não propaga — backend já abriu no servidor
+    return;
+  }
+}
+
 // ─── Interface da store ───────────────────────────────────────────────────────
 
 interface ProdutosState {
@@ -129,6 +167,7 @@ export const useProdutosStore = create<ProdutosState>((set, get) => ({
 
   abrirPasta: async (id) => {
     const result = await apiPost<AbrirPastaResult>(`/api/engenharia/Produtos/${id}/abrir-pasta`);
+    await chamarHelper('abrir-pasta', result.path);
     return result;
   },
 
@@ -146,6 +185,7 @@ export const useProdutosStore = create<ProdutosState>((set, get) => ({
       ? `/api/engenharia/Produtos/${id}/abrir-documento?extensao=${extensao}`
       : `/api/engenharia/Produtos/${id}/abrir-documento`;
     const result = await apiPost<AbrirDocumentoResult>(url);
+    await chamarHelper('abrir-documento', result.path);
     return result;
   },
 
