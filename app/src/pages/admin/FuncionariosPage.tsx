@@ -14,6 +14,7 @@ import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShe
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
+import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
@@ -127,6 +128,9 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
 
   return (
     <PageShell module="Admin" title="Funcionários" mode={page.mode}
+      footer={page.mode === 'list' ? (
+        <ListFooter filtered={list.filtrados.length} total={funcionarios.length} />
+      ) : undefined}
       headerRight={
         <PageActions
           page={page}
@@ -199,5 +203,7 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
     </PageShell>
   );
 }
+
+
 
 

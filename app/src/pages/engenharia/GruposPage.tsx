@@ -13,6 +13,7 @@ import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShe
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
+import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
@@ -145,6 +146,9 @@ export function GruposPage({ tab }: GruposPageProps) {
 
   return (
     <PageShell module="Engenharia" title="Grupos de Produto" mode={page.mode}
+      footer={page.mode === 'list' ? (
+        <ListFooter filtered={list.filtrados.length} total={grupos.length} />
+      ) : undefined}
       headerRight={
         <PageActions
           page={page}
@@ -217,5 +221,7 @@ export function GruposPage({ tab }: GruposPageProps) {
     </PageShell>
   );
 }
+
+
 
 

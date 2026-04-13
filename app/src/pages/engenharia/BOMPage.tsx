@@ -17,6 +17,7 @@ import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
+import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
@@ -187,6 +188,9 @@ export function BOMPage({ tab }: BOMPageProps) {
 
   return (
     <PageShell module="Engenharia" title="Estrutura de Produtos" mode={page.mode} extraTag={extraTag}
+      footer={page.mode === 'list' ? (
+        <ListFooter filtered={list.filtrados.length} total={bomFlat.length} />
+      ) : undefined}
       headerRight={
         <PageActions
           page={pageOverride} activeItem={list.activeItem}
@@ -228,3 +232,5 @@ export function BOMPage({ tab }: BOMPageProps) {
     </PageShell>
   );
 }
+
+

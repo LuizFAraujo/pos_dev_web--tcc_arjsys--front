@@ -14,6 +14,7 @@ import { PageShell, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
+import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { useListState } from '@/hooks/useListState';
 import { NS_STATUS_LABELS } from '@/types/comercial/numeroserie.types';
@@ -105,6 +106,7 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
 
   return (
     <PageShell module="Comercial" title="Números de Série"
+      footer={<ListFooter filtered={list.filtrados.length} total={series.length} />}
       headerRight={
         <PageActions
           page={{ mode: 'list' } as any}
@@ -146,5 +148,7 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
     </PageShell>
   );
 }
+
+
 
 
