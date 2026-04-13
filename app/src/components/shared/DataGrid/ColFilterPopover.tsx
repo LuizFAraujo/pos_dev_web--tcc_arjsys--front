@@ -11,6 +11,8 @@
  *
  * Ícone fica amarelo preenchido quando filtro ativo.
  * Botão limpar tudo + contagem ficam ao lado do título.
+ *
+ * Lógica de filtro centralizada em filterEngine.ts.
  */
 
 import { Filter, FilterX, Eraser } from 'lucide-react';
@@ -19,34 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { FilterConditionRow, LogicToggle, TEXT_FILTER_OPTIONS } from './FilterConditionRow';
+import { isFilterActive, matchSingleCondition } from './filterEngine';
 import type { GridFilterType, CompoundFilter, FilterCondition } from './types';
 
-// ============================================
-// HELPERS
-// ============================================
-
-/** Verifica se o filtro tem algum valor ativo */
-export function isFilterActive(f?: CompoundFilter): boolean {
-  if (!f) return false;
-  if (f.conditions && f.conditions.some(c => c.value.trim())) return true;
-  // checkedValues existe (mesmo vazio) = filtro ativo. undefined = sem filtro (todos)
-  if (f.checkedValues !== undefined) return true;
-  return !!(f.contem || f.comeca || f.termina || f.naoContem || f.valor || f.min || f.max);
-}
-
-/** Avalia uma condição individual contra um valor de célula */
-export function matchSingleCondition(cellValue: string, cond: FilterCondition): boolean {
-  const v = cond.value.toLowerCase();
-  switch (cond.operator) {
-    case 'contem': return cellValue.includes(v);
-    case 'nao_contem': return !cellValue.includes(v);
-    case 'comeca': return cellValue.startsWith(v);
-    case 'termina': return cellValue.endsWith(v);
-    case 'igual': return cellValue === v;
-    case 'diferente': return cellValue !== v;
-    default: return true;
-  }
-}
+// Re-export para manter compatibilidade com imports existentes
+export { isFilterActive, matchSingleCondition };
 
 // ============================================
 // COL FILTER POPOVER

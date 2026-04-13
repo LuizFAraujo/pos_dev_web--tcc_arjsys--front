@@ -11,6 +11,8 @@
  * - Zebra, hover, header fixo (sticky)
  * - Última coluna preenche espaço restante
  * - Virtualização de linhas via @tanstack/react-virtual (suporta 70k+ registros)
+ *
+ * Lógica de filtro centralizada em filterEngine.ts.
  */
 
 import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -24,64 +26,17 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
-  type FilterFn,
   type Updater,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
 import { ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ColFilterPopover, isFilterActive, matchSingleCondition } from './ColFilterPopover';
+import { ColFilterPopover } from './ColFilterPopover';
+import { compoundFilterFn, isFilterActive } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
 import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
 
-
-// ============================================
-// FILTER ENGINE
-// ============================================
-
-const compoundFilterFn: FilterFn<any> = (row, columnId, fv: CompoundFilter) => {
-  if (!fv || !fv.type) return true;
-  const cv = String(row.getValue(columnId) ?? '').toLowerCase();
-
-  if (fv.type === 'text' && fv.conditions && fv.conditions.length > 0) {
-    const active = fv.conditions.filter(c => c.value.trim());
-    if (active.length === 0) return true;
-    let result = matchSingleCondition(cv, active[0]);
-    for (let i = 1; i < active.length; i++) {
-      const prevLogic = active[i - 1].logic;
-      const match = matchSingleCondition(cv, active[i]);
-      result = prevLogic === 'OU' ? result || match : result && match;
-    }
-    return result;
-  }
-
-  switch (fv.type) {
-    case 'text':
-      if (fv.contem && !cv.includes(fv.contem.toLowerCase())) return false;
-      if (fv.comeca && !cv.startsWith(fv.comeca.toLowerCase())) return false;
-      if (fv.termina && !cv.endsWith(fv.termina.toLowerCase())) return false;
-      if (fv.naoContem && cv.includes(fv.naoContem.toLowerCase())) return false;
-      return true;
-    case 'exact': return !fv.valor || cv === fv.valor.toLowerCase();
-    case 'select': return !fv.valor || cv === fv.valor.toLowerCase();
-    case 'number': {
-      const n = parseFloat(String(row.getValue(columnId)));
-      if (isNaN(n)) return !fv.min && !fv.max;
-      if (fv.min && n < parseFloat(fv.min)) return false;
-      if (fv.max && n > parseFloat(fv.max)) return false;
-      return true;
-    }
-    case 'checklist': {
-      // undefined = sem filtro (todos marcados), mostra tudo
-      if (!fv.checkedValues) return true;
-      // Array vazio = nenhum marcado, esconde tudo
-      if (fv.checkedValues.length === 0) return false;
-      return fv.checkedValues.some(v => v.toLowerCase() === cv);
-    }
-    default: return true;
-  }
-};
 
 // ============================================
 // DATAGRID (componente interno)

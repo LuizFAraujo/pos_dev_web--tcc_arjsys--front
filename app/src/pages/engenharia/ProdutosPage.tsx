@@ -7,7 +7,8 @@
  * Coluna DOC.: dois botões — abrir pasta (esq) e abrir documento (dir)
  *   DocButtons recebe prop extensao: se passada, abre direto; se não, lista extensões
  *
- * Filtros sincronizados: PanelFilters ↔ DataGrid via useTabState(tabId + '-filters')
+ * Filtros sincronizados: PanelFilters ↔ DataGrid ↔ CardGrid via useTabState(tabId + '-filters')
+ * CardGrid recebe dados já filtrados por applyColumnFilters (filterEngine.ts)
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
@@ -16,7 +17,7 @@ import { toast } from 'sonner';
 import type { ColumnFiltersState } from '@tanstack/react-table';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
-import { DataGrid } from '@/components/shared/DataGrid';
+import { DataGrid, applyColumnFilters } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import type { SearchColumn } from '@/components/shared/SearchBar';
@@ -303,6 +304,12 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     defaultSearchCols: ['codigo', 'descricao'],
   });
 
+  // ─── Dados filtrados para CardGrid (SearchBar + columnFilters) ────────────────
+  const cardData = useMemo(
+    () => applyColumnFilters(list.filtrados, columnFilters),
+    [list.filtrados, columnFilters],
+  );
+
   // ─── Delete ───────────────────────────────────────────────────────────────────
 
   const del = useDeleteDialog<Produto>({
@@ -441,7 +448,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
-          ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+          ref={list.cardGridRef} data={cardData} selectedId={list.selectedCardId}
           cardHeight={90}
           onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
           onActivate={(item) => page.openView(item as Produto)}

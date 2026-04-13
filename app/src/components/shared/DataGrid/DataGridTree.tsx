@@ -4,6 +4,8 @@
  * Mesmo header (cores, fontes, resize, sort, filtros), footer, zebra/hover.
  * Linhas hierárquicas com indent e expand/collapse.
  * Virtualização de linhas via @tanstack/react-virtual (suporta grandes volumes).
+ *
+ * Lógica de filtro centralizada em filterEngine.ts.
  */
 
 import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -12,9 +14,10 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ColFilterPopover, isFilterActive, matchSingleCondition } from './ColFilterPopover';
+import { ColFilterPopover } from './ColFilterPopover';
+import { isFilterActive, matchCompoundFilter } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
-import type { GridColumn, DataGridHandle, GridFilterType, CompoundFilter, FilterCondition } from './types';
+import type { GridColumn, DataGridHandle, GridFilterType, CompoundFilter } from './types';
 
 export interface DataGridTreeProps<T> {
   tabId: string;
@@ -45,44 +48,6 @@ export interface DataGridTreeProps<T> {
   /** Conteúdo extra no rodapé (ex: dicas de edição) */
   footerExtra?: ReactNode;
 }
-
-const filterFn = (cv: string, fv: CompoundFilter): boolean => {
-  if (!fv || !fv.type) return true;
-  const lc = cv.toLowerCase();
-  if (fv.type === 'text' && fv.conditions && fv.conditions.length > 0) {
-    const active = fv.conditions.filter((c: FilterCondition) => c.value.trim());
-    if (active.length === 0) return true;
-    let result = matchSingleCondition(lc, active[0]);
-    for (let i = 1; i < active.length; i++) {
-      const match = matchSingleCondition(lc, active[i]);
-      result = active[i - 1].logic === 'OU' ? result || match : result && match;
-    }
-    return result;
-  }
-  switch (fv.type) {
-    case 'text':
-      if (fv.contem && !lc.includes(fv.contem.toLowerCase())) return false;
-      if (fv.comeca && !lc.startsWith(fv.comeca.toLowerCase())) return false;
-      if (fv.termina && !lc.endsWith(fv.termina.toLowerCase())) return false;
-      if (fv.naoContem && lc.includes(fv.naoContem.toLowerCase())) return false;
-      return true;
-    case 'exact': return !fv.valor || lc === fv.valor.toLowerCase();
-    case 'select': return !fv.valor || lc === fv.valor.toLowerCase();
-    case 'number': {
-      const n = parseFloat(cv);
-      if (isNaN(n)) return !fv.min && !fv.max;
-      if (fv.min && n < parseFloat(fv.min)) return false;
-      if (fv.max && n > parseFloat(fv.max)) return false;
-      return true;
-    }
-    case 'checklist': {
-      if (!fv.checkedValues) return true;
-      if (fv.checkedValues.length === 0) return false;
-      return fv.checkedValues.some((v: string) => v.toLowerCase() === lc);
-    }
-    default: return true;
-  }
-};
 
 function DataGridTreeInner<T extends Record<string, any>>({
   tabId, storageId, columns: gc, data,
@@ -138,7 +103,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const filtered = useMemo(() => {
     const entries = Object.entries(colFilters).filter(([, f]) => isFilterActive(f));
     if (entries.length === 0) return flatRows;
-    return flatRows.filter((row) => entries.every(([key, filter]) => { const field = gc.find((c) => c.key === key)?.filterField || key; return filterFn(String((row as any)[field] ?? ''), filter); }));
+    return flatRows.filter((row) => entries.every(([key, filter]) => { const field = gc.find((c) => c.key === key)?.filterField || key; return matchCompoundFilter(String((row as any)[field] ?? ''), filter); }));
   }, [flatRows, colFilters, gc]);
 
   const sorted = useMemo(() => {

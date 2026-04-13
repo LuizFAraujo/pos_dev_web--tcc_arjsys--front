@@ -3,3 +3,5 @@ export type { GridColumn, DataGridHandle, GridFilterType, DataGridProps } from '
 
 export { DataGridTree } from './DataGridTree';
 export type { DataGridTreeProps } from './DataGridTree';
+
+export { applyColumnFilters } from './filterEngine';
