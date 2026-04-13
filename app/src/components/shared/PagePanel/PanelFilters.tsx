@@ -1,19 +1,23 @@
 /**
- * PanelFilters.tsx — Conteúdo de filtros para o PagePanel
+ * PanelFilters.tsx — Conteúdo de filtros para o PagePanel (controlled)
  *
  * Accordion de filtros que replica exatamente os filtros do ColFilterPopover.
  * Reutiliza FilterConditionRow e LogicToggle do DataGrid.
+ *
+ * Componente CONTROLLED — recebe values e onChange da page.
+ * A page conecta ao mesmo useTabState(tabId + '-filters') que o DataGrid usa,
+ * garantindo sincronização bidirecional completa.
  *
  * Cada seção é colapsável. Ícone de funil amarelo quando filtro ativo.
  * Botões: expandir/recolher todos, limpar todos, limpar individual.
  *
  * Template genérico — cada page passa suas colunas filtráveis:
  *
- *   <PanelFilters filters={[
- *     { key: 'codigo', header: 'CÓDIGO', filterType: 'text' },
- *     { key: 'tipo', header: 'TIPO', filterType: 'checklist', filterOptions: TIPO_OPTIONS },
- *     { key: 'peso', header: 'PESO (KG)', filterType: 'number' },
- *   ]} />
+ *   <PanelFilters
+ *     filters={panelFilterColumns}
+ *     values={filterValues}
+ *     onChange={setFilterValues}
+ *   />
  */
 
 import { useState, useMemo } from 'react';
@@ -35,6 +39,10 @@ export interface PanelFilterColumn {
 interface PanelFiltersProps {
   /** Definição das colunas filtráveis */
   filters: PanelFilterColumn[];
+  /** Valores atuais dos filtros (Record<columnKey, CompoundFilter>) — controlled */
+  values: Record<string, CompoundFilter>;
+  /** Callback ao mudar qualquer filtro — controlled */
+  onChange: (values: Record<string, CompoundFilter>) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,25 +67,23 @@ function countActive(f?: CompoundFilter): number {
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
-export function PanelFilters({ filters }: PanelFiltersProps) {
-  // Estado dos filtros (local por agora — depois sincroniza com DataGrid)
-  const [values, setValues] = useState<Record<string, CompoundFilter>>({});
+export function PanelFilters({ filters, values, onChange }: PanelFiltersProps) {
+  // Accordion expand/collapse — local (não precisa sincronizar)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const getValue = (key: string, type: GridFilterType): CompoundFilter =>
     values[key] || { type };
 
   const setValue = (key: string, f: CompoundFilter) =>
-    setValues(prev => ({ ...prev, [key]: f }));
+    onChange({ ...values, [key]: f });
 
-  const clearOne = (key: string) =>
-    setValues(prev => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+  const clearOne = (key: string) => {
+    const next = { ...values };
+    delete next[key];
+    onChange(next);
+  };
 
-  const clearAll = () => setValues({});
+  const clearAll = () => onChange({});
 
   const toggle = (key: string) =>
     setExpanded(prev => ({ ...prev, [key]: !prev[key] }));

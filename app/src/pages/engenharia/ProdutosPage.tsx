@@ -6,11 +6,14 @@
  * Extra: botão Varredura via extraActions do PageActions
  * Coluna DOC.: dois botões — abrir pasta (esq) e abrir documento (dir)
  *   DocButtons recebe prop extensao: se passada, abre direto; se não, lista extensões
+ *
+ * Filtros sincronizados: PanelFilters ↔ DataGrid via useTabState(tabId + '-filters')
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { Plus, ScanSearch, FolderOpen, FileText, FileX2, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import type { ColumnFiltersState } from '@tanstack/react-table';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
@@ -21,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { ProdutoDeleteDialog } from '@/components/engenharia/ProdutoDeleteDialog';
 import { ProdutoForm } from '@/components/engenharia/ProdutoForm';
@@ -28,6 +32,7 @@ import type { ProdutoFormHandle } from '@/components/engenharia/ProdutoForm';
 import type { Produto, ProdutoFormData } from '@/types/engenharia/produto.types';
 import { PagePanel, PanelFilters } from '@/components/shared/PagePanel';
 import type { PanelFilterColumn } from '@/components/shared/PagePanel';
+import type { CompoundFilter } from '@/components/shared/DataGrid/types';
 import { TIPO_PRODUTO_LABELS } from '@/types/engenharia/produto.types';
 
 interface ProdutosPageProps {
@@ -259,6 +264,20 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
   const formRef = useRef<ProdutoFormHandle>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  // ─── Filtros sincronizados (mesma key que o DataGrid usa internamente) ─────
+  const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tab.id + '-filters', []);
+
+  const panelFilterValues = useMemo(() => {
+    const rec: Record<string, CompoundFilter> = {};
+    columnFilters.forEach(f => { rec[f.id] = f.value as CompoundFilter; });
+    return rec;
+  }, [columnFilters]);
+
+  const handlePanelFilterChange = useCallback((values: Record<string, CompoundFilter>) => {
+    const next: ColumnFiltersState = Object.entries(values).map(([id, value]) => ({ id, value }));
+    setColumnFilters(next);
+  }, [setColumnFilters]);
+
   const page = usePageMode<Produto>(tab.id, (p) => String(p.id), tab.type);
 
   // ─── Store ────────────────────────────────────────────────────────────────────
@@ -323,7 +342,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent><p>Painel</p></TooltipContent>
+        <TooltipContent><p>Filtros</p></TooltipContent>
       </Tooltip>
     </>
   ), [varreduraDocumentos]);
@@ -454,10 +473,9 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       />
 
       <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Filtros">
-        <PanelFilters filters={panelFilterColumns} />
+        <PanelFilters filters={panelFilterColumns} values={panelFilterValues} onChange={handlePanelFilterChange} />
       </PagePanel>
 
     </PageShell>
   );
 }
-
