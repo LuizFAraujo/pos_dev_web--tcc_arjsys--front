@@ -84,11 +84,9 @@ function ProdutoCard({ produto }: { produto: Produto }) {
         {produto.codigo}
       </p>
       <p className="text-xs text-muted-foreground mt-1 truncate">{produto.descricao}</p>
-      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
         <span>{TIPO_PRODUTO_LABELS[produto.tipo]}</span>
-        {produto.temDocumento && (
-          <FileText className="h-3.5 w-3.5 text-blue-500" />
-        )}
+        <DocButtons produto={produto} extensao="pdf" />
       </div>
     </div>
   );
