@@ -30,10 +30,9 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
-import { ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ColFilterPopover } from './ColFilterPopover';
-import { compoundFilterFn, isFilterActive } from './filterEngine';
+import { compoundFilterFn } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
 import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
 
@@ -154,7 +153,6 @@ function DataGridInner<T extends Record<string, any>>({
     filterFns: { compound: compoundFilterFn },
   });
 
-  const hasFilters = columnFilters.some((f) => isFilterActive(f.value as CompoundFilter));
   const rows = table.getRowModel().rows;
   const lastColKey = gc[gc.length - 1]?.key;
 
@@ -386,15 +384,7 @@ function DataGridInner<T extends Record<string, any>>({
         </table>
       </div>
 
-      {/* FOOTER */}
-      <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground flex items-center justify-between">
-        <span>{rows.length} {rows.length === 1 ? 'registro' : 'registros'}{rows.length !== data.length ? ` de ${data.length}` : ''}</span>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setColumnFilters([])}>
-            <X className="mr-1 h-3 w-3" /> Limpar filtros
-          </Button>
-        )}
-      </div>
+
     </div>
   );
 }

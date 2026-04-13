@@ -89,6 +89,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   └── usePageMode.tsx            ✅
         │   │   ├── AppTooltip.tsx                 ✅
         │   │   ├── CadGrid.tsx                    ✅
+        │   │   ├── ListFooter.tsx.tsx             ✅
         │   │   ├── EmptyState.tsx                 📍 FALTA
         │   │   ├── ErrorState.tsx                 📍 FALTA
         │   │   ├── LoadingState.tsx               📍 FALTA

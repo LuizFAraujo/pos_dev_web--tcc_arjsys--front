@@ -330,7 +330,7 @@ export function PageActions<T>({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8"
-              disabled={!isListMode}
+              disabled={inForm}
               onClick={() => { gridRef?.current?.clearAll(); onSearchChange?.(''); }}>
               <FilterX className="h-4 w-4" />
             </Button>

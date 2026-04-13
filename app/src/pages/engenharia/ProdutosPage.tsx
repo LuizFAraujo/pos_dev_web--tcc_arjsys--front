@@ -9,6 +9,7 @@
  *
  * Filtros sincronizados: PanelFilters ↔ DataGrid ↔ CardGrid via useTabState(tabId + '-filters')
  * CardGrid recebe dados já filtrados por applyColumnFilters (filterEngine.ts)
+ * ListFooter unificado via prop footer do PageShell (modo list)
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
@@ -20,6 +21,7 @@ import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShe
 import { DataGrid, applyColumnFilters } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
+import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -27,6 +29,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/App
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { isFilterActive } from '@/components/shared/DataGrid/filterEngine';
 import { ProdutoDeleteDialog } from '@/components/engenharia/ProdutoDeleteDialog';
 import { ProdutoForm } from '@/components/engenharia/ProdutoForm';
 import type { ProdutoFormHandle } from '@/components/engenharia/ProdutoForm';
@@ -121,7 +124,6 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
     e.stopPropagation();
     if (!temDoc) return;
 
-    // Se passou extensão, abre direto
     if (extensao) {
       try {
         await abrirDocumento(produto.id, extensao);
@@ -131,7 +133,6 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
       return;
     }
 
-    // Sem extensão → busca lista e decide
     try {
       const result = await extensoesDocumento(produto.id);
       const exts = result.extensoes || [];
@@ -164,7 +165,6 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
 
   return (
     <div className="flex items-center justify-center gap-0.5">
-      {/* Botão pasta */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -184,8 +184,6 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
         </TooltipContent>
       </Tooltip>
 
-      {/* Botão documento */}
-      {/* Botão documento */}
       {extensao ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -278,6 +276,11 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     const next: ColumnFiltersState = Object.entries(values).map(([id, value]) => ({ id, value }));
     setColumnFilters(next);
   }, [setColumnFilters]);
+
+  const hasColumnFilters = useMemo(
+    () => columnFilters.some(f => isFilterActive(f.value as CompoundFilter)),
+    [columnFilters],
+  );
 
   const page = usePageMode<Produto>(tab.id, (p) => String(p.id), tab.type);
 
@@ -428,6 +431,14 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           noSelectionText="Selecione um produto"
         />
       }
+      footer={page.mode === 'list' ? (
+        <ListFooter
+          filtered={cardData.length}
+          total={list.filtrados.length}
+          hasFilters={hasColumnFilters}
+          onClearFilters={() => setColumnFilters([])}
+        />
+      ) : undefined}
     >
 
       {/* Grid e Cards sempre montados — alterna visibilidade */}

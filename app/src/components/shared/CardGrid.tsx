@@ -12,7 +12,8 @@
  * - Callback onSelect para a página reagir ao item selecionado
  * - forwardRef com CardGridHandle para controle externo (clearSelection)
  * - Virtualização via @tanstack/react-virtual (suporta 70k+ itens)
- * - Rodapé com contador de registros
+ *
+ * Footer removido — agora cada page usa ListFooter via prop footer do PageShell.
  *
  * Espaçamentos controlados pelas constantes GAP_X, GAP_Y, PAD_X, PAD_Y no topo.
  */
@@ -113,12 +114,6 @@ export interface CardGridProps<T extends { id: number | string }> {
    * @default 100
    */
   cardHeight?: number;
-
-  /**
-   * Total de registros antes de filtrar (pra exibir "X de Y" no rodapé).
-   * Se não informado, mostra apenas data.length.
-   */
-  totalCount?: number;
 }
 
 // ─── Componente interno (com generics) ────────────────────────────────────────
@@ -140,7 +135,6 @@ function CardGridInner<T extends { id: number | string }>(
     selectedClass = 'bg-sky-200 dark:bg-sky-900',
     className,
     cardHeight = 100,
-    totalCount,
   }: CardGridProps<T>,
   ref: React.ForwardedRef<CardGridHandle>,
 ) {
@@ -294,8 +288,6 @@ function CardGridInner<T extends { id: number | string }>(
 
   // ─── Grid virtualizado ────────────────────────────────────────────────────
 
-  const total = totalCount ?? data.length;
-
   return (
     <div className={['flex flex-col h-full overflow-hidden', className].filter(Boolean).join(' ')}>
       <div
@@ -366,11 +358,6 @@ function CardGridInner<T extends { id: number | string }>(
             );
           })}
         </div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground flex items-center">
-        <span>{data.length} {data.length === 1 ? 'registro' : 'registros'}{data.length !== total ? ` de ${total}` : ''}</span>
       </div>
     </div>
   );
