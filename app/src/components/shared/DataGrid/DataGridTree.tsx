@@ -98,12 +98,14 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-tsel', null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualizerRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColFilters({}),
     clearSort: () => setSorting([]),
     clearAll: () => { setColFilters({}); setSorting([]); setSelectedIdx(null); },
     focus: () => containerRef.current?.focus(),
+    scrollToIndex: (index: number) => virtualizerRef.current?.scrollToIndex(index, { align: 'auto' }),
   }), [setColFilters, setSorting, setSelectedIdx]);
 
   const lsKey = `grid-widths-${storageId || tabId}-tree`;
@@ -243,7 +245,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
               const row = sorted[vRow.index];
               const i = vRow.index;
               const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpanded(row); const isSel = selectedIdx === i; return (
-                <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={() => onActRef.current?.(row)}
+                <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={(e) => { if (e.ctrlKey) onActRef.current?.(row); }}
                   className={(() => {
                     const rc = rowClassName?.(row) || '';
                     const bgClasses = rc.split(' ').filter(c => c.startsWith('bg-')).join(' ');

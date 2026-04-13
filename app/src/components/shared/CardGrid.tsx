@@ -345,7 +345,7 @@ function CardGridInner<T extends { id: number | string }>(
                       tabIndex={-1}
                       aria-selected={isSelected}
                       onClick={() => onSelect(isSelected ? null : item)}
-                      onDoubleClick={() => onActivateRef.current?.(item)}
+                      onDoubleClick={(e) => { if (e.ctrlKey) onActivateRef.current?.(item); }}
                       className={[
                         'rounded-lg border cursor-pointer outline-none overflow-hidden',
                         'transition-colors duration-100',

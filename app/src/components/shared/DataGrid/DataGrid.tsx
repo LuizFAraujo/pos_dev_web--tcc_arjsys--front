@@ -236,7 +236,7 @@ function DataGridInner<T extends Record<string, any>>({
   useEffect(() => {
     const row = selectedIdx !== null ? rowsRef.current[selectedIdx] : null;
     onSelectRef.current?.(row ? row.original : null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIdx, rows.length]);
 
   // Auto-scroll pra linha selecionada (teclado)
@@ -391,7 +391,7 @@ function DataGridInner<T extends Record<string, any>>({
                 <tr key={row.id}
                   style={{ height: rowHeight }}
                   onClick={() => selectRow(i)}
-                  onDoubleClick={() => onActivateRef.current?.(row.original)}
+                  onDoubleClick={(e) => { if (e.ctrlKey) onActivateRef.current?.(row.original); }}
                   className={`border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default
                     ${isSelected
                       ? 'bg-sky-200 dark:bg-sky-900'

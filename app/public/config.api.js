@@ -55,7 +55,7 @@
 // ============================================================================
 
 window.__ARJSYS_CONFIG__ = {
-  //API_BASE_URL: "http://localhost:7000"
-  API_BASE_URL: "",
+  API_BASE_URL: "http://localhost:7000",
+  //API_BASE_URL: "",
   HELPER_URL: "http://localhost:9111"
 };
