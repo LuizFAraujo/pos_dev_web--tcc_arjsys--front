@@ -32,6 +32,7 @@ pos_dev_web--tcc_front--arjsys/
     ├── vite.config.ts
     │
     ├── public/                     # Assets estáticos
+    │   └── config.api.js   
     │
     └── src/
         │
@@ -87,6 +88,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── ErrorState.tsx                 📍 FALTA
         │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
+        │   │   ├── PagePanel.tsx                  ✅
         │   │   ├── PageRightSidebar.tsx           ✅
         │   │   ├── PageWrapper.tsx                ✅
         │   │   └── SearchBar.tsx                  ✅

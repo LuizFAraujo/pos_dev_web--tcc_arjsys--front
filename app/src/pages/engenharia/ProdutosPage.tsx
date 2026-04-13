@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { Plus, ScanSearch, FolderOpen, FileText, FileX2 } from 'lucide-react';
+import { Plus, ScanSearch, FolderOpen, FileText, FileX2, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
@@ -26,6 +26,7 @@ import { ProdutoDeleteDialog } from '@/components/engenharia/ProdutoDeleteDialog
 import { ProdutoForm } from '@/components/engenharia/ProdutoForm';
 import type { ProdutoFormHandle } from '@/components/engenharia/ProdutoForm';
 import type { Produto, ProdutoFormData } from '@/types/engenharia/produto.types';
+import { PagePanel } from '@/components/shared/PagePanel';
 import { TIPO_PRODUTO_LABELS } from '@/types/engenharia/produto.types';
 
 interface ProdutosPageProps {
@@ -255,6 +256,7 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
 
 export function ProdutosPage({ tab }: ProdutosPageProps) {
   const formRef = useRef<ProdutoFormHandle>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const page = usePageMode<Produto>(tab.id, (p) => String(p.id), tab.type);
 
@@ -303,15 +305,26 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
   // ─── Extra actions (Varredura) ────────────────────────────────────────────────
 
   const extraActions = useMemo(() => (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8"
-          onClick={() => varreduraDocumentos()}>
-          <ScanSearch className="h-4 w-4" />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent><p>Varredura de documentos</p></TooltipContent>
-    </Tooltip>
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8"
+            onClick={() => varreduraDocumentos()}>
+            <ScanSearch className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>Varredura de documentos</p></TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8"
+            onClick={() => setPanelOpen(true)}>
+            <SlidersHorizontal className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>Painel</p></TooltipContent>
+      </Tooltip>
+    </>
   ), [varreduraDocumentos]);
 
   // ─── Colunas ──────────────────────────────────────────────────────────────────
@@ -428,6 +441,11 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
         open={del.open} onOpenChange={del.setOpen}
         produto={del.item} onConfirm={del.confirmDelete}
       />
+
+      <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Painel de Teste">
+        <p className="text-sm text-muted-foreground">Conteúdo genérico de teste.</p>
+        <p className="text-sm text-muted-foreground mt-2">Aqui entrarão os filtros no futuro.</p>
+      </PagePanel>
 
     </PageShell>
   );

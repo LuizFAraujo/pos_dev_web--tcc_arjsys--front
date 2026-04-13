@@ -89,7 +89,7 @@ export function PageShell({ module, title, tag, extraTag, mode, headerRight, foo
       </div>
 
       {/* CONTEÚDO */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {children}
       </div>
 
