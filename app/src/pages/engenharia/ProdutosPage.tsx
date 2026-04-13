@@ -26,7 +26,8 @@ import { ProdutoDeleteDialog } from '@/components/engenharia/ProdutoDeleteDialog
 import { ProdutoForm } from '@/components/engenharia/ProdutoForm';
 import type { ProdutoFormHandle } from '@/components/engenharia/ProdutoForm';
 import type { Produto, ProdutoFormData } from '@/types/engenharia/produto.types';
-import { PagePanel } from '@/components/shared/PagePanel';
+import { PagePanel, PanelFilters } from '@/components/shared/PagePanel';
+import type { PanelFilterColumn } from '@/components/shared/PagePanel';
 import { TIPO_PRODUTO_LABELS } from '@/types/engenharia/produto.types';
 
 interface ProdutosPageProps {
@@ -367,6 +368,16 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
+  const panelFilterColumns: PanelFilterColumn[] = useMemo(() => [
+    { key: 'codigo', header: 'CÓDIGO', filterType: 'text' },
+    { key: 'descricao', header: 'DESCRIÇÃO', filterType: 'text' },
+    { key: 'tipo', header: 'TIPO', filterType: 'checklist', filterOptions: TIPO_OPTIONS },
+    { key: 'unidade', header: 'UN', filterType: 'checklist', filterOptions: UNIDADE_OPTIONS },
+    { key: 'peso', header: 'PESO (KG)', filterType: 'number' },
+    { key: 'temDocumento', header: 'DOC.', filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS },
+    { key: 'ativo', header: 'ATIVO', filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS },
+  ], []);
+
   const inForm = page.mode !== 'list';
 
   return (
@@ -442,9 +453,8 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
         produto={del.item} onConfirm={del.confirmDelete}
       />
 
-      <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Painel de Teste">
-        <p className="text-sm text-muted-foreground">Conteúdo genérico de teste.</p>
-        <p className="text-sm text-muted-foreground mt-2">Aqui entrarão os filtros no futuro.</p>
+      <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Filtros">
+        <PanelFilters filters={panelFilterColumns} />
       </PagePanel>
 
     </PageShell>

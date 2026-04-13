@@ -1,12 +1,11 @@
 /**
  * PagePanel.tsx — Painel lateral direito limitado à área de conteúdo da página
  *
- * Usa o Sheet do shadcn (Radix Dialog) pra ter a mesma animação suave
- * do RightSidebar global. A diferença é que o portal renderiza dentro
- * de um container relativo (PageShell content area) em vez de full-screen.
+ * Diferente do RightSidebar global (que cobre a tela toda),
+ * este painel fica restrito à altura do conteúdo da page (dentro do PageShell).
  *
  * Funcionalidades:
- * - Mesma animação do RightSidebar global (Sheet/Radix)
+ * - Animação slide suave (abrir 500ms, fechar 300ms)
  * - Backdrop escuro com click-outside para fechar
  * - Tecla ESC fecha
  * - Altura limitada à área de conteúdo (não cobre header/footer do PageShell)
@@ -14,7 +13,7 @@
  *
  * Uso:
  *   <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Filtros">
- *     <p>Conteúdo do painel...</p>
+ *     <PanelFilters filters={columns} />
  *   </PagePanel>
  *
  * Renderizar DENTRO do PageShell (como irmão do DataGrid/CardGrid).
@@ -39,13 +38,16 @@ interface PagePanelProps {
   /** Largura do painel (default: 'w-80' = 320px) */
   width?: string;
 
+  /** Ações extras no header (ao lado do título, antes do ✕) */
+  headerActions?: ReactNode;
+
   /** Conteúdo do painel */
   children: ReactNode;
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
-export function PagePanel({ open, onClose, title, width = 'w-80', children }: PagePanelProps) {
+export function PagePanel({ open, onClose, title, width = 'w-80', headerActions, children }: PagePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // ESC fecha o painel
@@ -64,28 +66,27 @@ export function PagePanel({ open, onClose, title, width = 'w-80', children }: Pa
     <>
       {/* Backdrop — absolute pra ficar dentro do container pai */}
       <div
-        className={`absolute inset-0 z-40 bg-black/50 transition-opacity ease-in-out ${
-          open
-            ? 'opacity-100 duration-500'
-            : 'opacity-0 duration-300 pointer-events-none'
-        }`}
+        className={`absolute inset-0 z-40 bg-black/50 transition-opacity ease-in-out ${open
+          ? 'opacity-100 duration-500'
+          : 'opacity-0 duration-300 pointer-events-none'
+          }`}
         onClick={onClose}
       />
 
       {/* Painel */}
       <div
         ref={panelRef}
-        className={`absolute top-0 right-0 bottom-0 ${width} max-w-full bg-white dark:bg-slate-900 shadow-lg z-50 flex flex-col border-l border-slate-200 dark:border-slate-800 transition-transform ease-in-out ${
-          open
-            ? 'translate-x-0 duration-500'
-            : 'translate-x-full duration-300'
-        }`}
+        className={`absolute top-0 right-0 bottom-0 ${width} max-w-full bg-white dark:bg-slate-900 shadow-lg z-50 flex flex-col border-l border-slate-200 dark:border-slate-800 transition-transform ease-in-out ${open
+          ? 'translate-x-0 duration-500'
+          : 'translate-x-full duration-300'
+          }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 shrink-0">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex-1">
             {title}
           </h3>
+          {headerActions}
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -95,9 +96,10 @@ export function PagePanel({ open, onClose, title, width = 'w-80', children }: Pa
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-4 pt-2 pb-4">
           {children}
         </div>
+
       </div>
     </>
   );

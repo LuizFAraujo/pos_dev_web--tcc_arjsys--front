@@ -77,6 +77,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   ├── DataGridTree.tsx           ✅
         │   │   │   ├── FilterConditionRow.tsx     ✅
         │   │   │   └── types.ts                   ✅
+        │   │   ├── PagePanel/
+        │   │   │   ├── index.ts                   ✅
+        │   │   │   ├── PagePanel.tsx              ✅
+        │   │   │   └── PanelFilters.ts            ✅
         │   │   ├── PageShell/
         │   │   │   ├── index.ts                   ✅
         │   │   │   ├── PageShell.tsx              ✅
@@ -88,7 +92,6 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── ErrorState.tsx                 📍 FALTA
         │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
-        │   │   ├── PagePanel.tsx                  ✅
         │   │   ├── PageRightSidebar.tsx           ✅
         │   │   ├── PageWrapper.tsx                ✅
         │   │   └── SearchBar.tsx                  ✅
