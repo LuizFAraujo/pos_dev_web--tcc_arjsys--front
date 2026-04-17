@@ -2,14 +2,16 @@
  * PedidoForm.tsx — Form inline de cadastro/edição/visualização de pedido de venda
  *
  * Abas:
- *   Pedido — Cliente (autocomplete), Observação (textarea), Código (readonly), Status (badge readonly)
+ *   Pedido — Tipo de pedido (new), Cliente (autocomplete), Observação, Código/Status/Valor (readonly)
  *   Itens  — Tabela de itens. view=readonly, edit/new=editável com add/remove
  *
  * Itens são salvos via API individual (addItem/updateItem/removeItem) após salvar o cabeçalho.
  * No mode new: cria o pedido primeiro (sem itens), depois o usuário adiciona itens em edit.
  * No mode edit: itens são manipulados diretamente via API (cada ação salva imediatamente).
  *
- * O submit() via ref salva apenas o cabeçalho (clienteId + observacao).
+ * Edição de itens permitida em status Aguardando ou EmAndamento.
+ *
+ * O submit() via ref salva apenas o cabeçalho (clienteId + observacoes + status).
  * Itens são gerenciados em tempo real na aba Itens.
  */
 
@@ -50,10 +52,10 @@ const TABS = ['pedido', 'itens'];
 
 const FIELD_TAB: Record<string, string> = {
   clienteId: 'pedido',
-  observacao: 'pedido',
+  observacoes: 'pedido',
 };
 
-const EMPTY_FORM = { clienteId: 0, observacao: '' };
+const EMPTY_FORM = { clienteId: 0, observacoes: '', statusInicial: 'EmAndamento' as 'Aguardando' | 'EmAndamento' };
 
 // ─── Item vazio para adicionar ────────────────────────────────────────────────
 
@@ -82,6 +84,11 @@ const EMPTY_ITEM: ItemLocal = {
 function formatCurrency(val?: number) {
   if (val == null) return '-';
   return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+/** Status que permitem edição de itens */
+function canEditItens(status?: string): boolean {
+  return status === 'Aguardando' || status === 'EmAndamento';
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -141,7 +148,8 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
       if (pedido) {
         setData({
           clienteId: pedido.clienteId ?? 0,
-          observacao: (pedido as any).observacao ?? (pedido as any).observacoes ?? '',
+          observacoes: pedido.observacoes ?? '',
+          statusInicial: 'EmAndamento',
         });
         setClienteSearch(pedido.clienteNome ?? '');
       } else {
@@ -154,13 +162,13 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
     const itens: ItemPedido[] = useMemo(() => {
       if (isNew) return [];
       if (pedidoDetalhe?.id === pedido?.id) {
-        return (pedidoDetalhe as any)?.itens ?? [];
+        return pedidoDetalhe?.itens ?? [];
       }
-      return (pedido as any)?.itens ?? [];
+      return pedido?.itens ?? [];
     }, [isNew, pedidoDetalhe, pedido]);
 
     const totalGeral = useMemo(
-      () => itens.reduce((sum, i) => sum + (i.total ?? i.quantidade * i.precoUnitario), 0),
+      () => itens.reduce((sum, i) => sum + (i.subtotal ?? i.quantidade * i.precoUnitario), 0),
       [itens],
     );
 
@@ -188,8 +196,14 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
 
         const payload: PedidoVendaFormData = {
           clienteId: data.clienteId,
-          observacao: data.observacao?.trim() || undefined,
+          observacoes: data.observacoes?.trim() || undefined,
         };
+
+        // No mode new, envia o status inicial escolhido
+        if (isNew) {
+          payload.status = data.statusInicial;
+        }
+
         await onSave(payload);
         return true;
       },
@@ -304,6 +318,9 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
       }
     }, [pedido?.id, removeItem]);
 
+    // ── Condição de edição de itens ───────────────────────────────────────────
+    const canEdit = mode === 'edit' && canEditItens(pedido?.status);
+
     // ── Render ────────────────────────────────────────────────────────────────
     return (
       <div className="h-full flex flex-col overflow-hidden">
@@ -323,6 +340,37 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
             <div ref={formFieldsRef} onKeyDown={handleFieldsKeyDown}
               className="grid grid-cols-3 gap-x-6 gap-y-5">
 
+              {/* Tipo de pedido (só no new) */}
+              {isNew && (
+                <div className="flex flex-col gap-1.5 col-span-3">
+                  <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Tipo do Pedido</Label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="statusInicial"
+                        value="EmAndamento"
+                        checked={data.statusInicial === 'EmAndamento'}
+                        onChange={() => set('statusInicial', 'EmAndamento')}
+                        className="accent-blue-600"
+                      />
+                      <span className="text-sm">Venda realizada</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="statusInicial"
+                        value="Aguardando"
+                        checked={data.statusInicial === 'Aguardando'}
+                        onChange={() => set('statusInicial', 'Aguardando')}
+                        className="accent-yellow-600"
+                      />
+                      <span className="text-sm">Venda futura (pré-pedido)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Código (readonly, só em edit/view) */}
               {!isNew && (
                 <div className="flex flex-col gap-1.5">
@@ -340,8 +388,8 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Status</Label>
                   <div className="h-9 flex items-center">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[pedido?.status ?? 'Orcamento'] || ''}`}>
-                      {STATUS_LABELS[pedido?.status ?? 'Orcamento'] || pedido?.status}
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[pedido?.status ?? 'Aguardando'] || ''}`}>
+                      {STATUS_LABELS[pedido?.status ?? 'Aguardando'] || pedido?.status}
                     </span>
                   </div>
                 </div>
@@ -353,14 +401,14 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                   <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Valor Total</Label>
                   <div className="h-9 flex items-center">
                     <span className="font-mono font-semibold text-green-700 dark:text-green-400">
-                      {formatCurrency(totalGeral || (pedido as any)?.valorTotal || (pedido as any)?.total)}
+                      {formatCurrency(totalGeral || pedido?.total)}
                     </span>
                   </div>
                 </div>
               )}
 
               {/* Cliente (autocomplete) */}
-              <div className={`flex flex-col gap-1.5 ${isNew ? 'col-span-3' : 'col-span-3'}`}>
+              <div className="flex flex-col gap-1.5 col-span-3">
                 <Label htmlFor="clienteId" className={`text-xs font-medium ${errors.clienteId ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
                   Cliente *
                 </Label>
@@ -389,7 +437,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                       }`}
                     />
 
-                    {/* Dropdown de clientes */}
                     {showClienteDropdown && data.clienteId === 0 && (
                       <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border bg-popover shadow-md">
                         {clientesFiltrados.length > 0 ? clientesFiltrados.map((c) => (
@@ -409,7 +456,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                       </div>
                     )}
 
-                    {/* Cliente selecionado */}
                     {data.clienteId > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Cliente selecionado: <span className="font-medium">{clienteSearch}</span>
@@ -431,13 +477,13 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
 
               {/* Observação */}
               <div className="flex flex-col gap-1.5 col-span-3">
-                <Label htmlFor="observacao" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                <Label htmlFor="observacoes" className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Observação
                 </Label>
                 <Textarea
-                  id="observacao"
-                  value={data.observacao}
-                  onChange={(e) => set('observacao', e.target.value)}
+                  id="observacoes"
+                  value={data.observacoes}
+                  onChange={(e) => set('observacoes', e.target.value)}
                   readOnly={readOnly}
                   rows={3}
                   placeholder="Observações sobre o pedido..."
@@ -460,8 +506,8 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 </div>
               )}
 
-              {/* Formulário de adição de item (edit mode, status Orcamento) */}
-              {mode === 'edit' && pedido?.status === 'Orcamento' && (
+              {/* Formulário de adição de item (edit mode, status Aguardando ou EmAndamento) */}
+              {canEdit && (
                 <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Adicionar item</p>
                   <div className="grid grid-cols-12 gap-3 items-end">
@@ -560,9 +606,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                         <th className="p-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Qtde</th>
                         <th className="p-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Preço Unit.</th>
                         <th className="p-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Total</th>
-                        {mode === 'edit' && pedido?.status === 'Orcamento' && (
-                          <th className="p-2.5 w-10" />
-                        )}
+                        {canEdit && <th className="p-2.5 w-10" />}
                       </tr>
                     </thead>
                     <tbody>
@@ -573,9 +617,9 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                           <td className="p-2.5 text-xs text-right font-mono">{item.quantidade}</td>
                           <td className="p-2.5 text-xs text-right font-mono">{formatCurrency(item.precoUnitario)}</td>
                           <td className="p-2.5 text-xs text-right font-mono font-medium">
-                            {formatCurrency(item.total ?? item.quantidade * item.precoUnitario)}
+                            {formatCurrency(item.subtotal ?? item.quantidade * item.precoUnitario)}
                           </td>
-                          {mode === 'edit' && pedido?.status === 'Orcamento' && (
+                          {canEdit && (
                             <td className="p-2.5 text-center">
                               <Button
                                 variant="ghost" size="icon"
@@ -591,14 +635,13 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                     </tbody>
                     <tfoot className="border-t bg-muted/30">
                       <tr>
-                        <td colSpan={mode === 'edit' && pedido?.status === 'Orcamento' ? 4 : 4}
-                          className="p-2.5 text-xs font-medium text-right">
+                        <td colSpan={4} className="p-2.5 text-xs font-medium text-right">
                           Total Geral:
                         </td>
                         <td className="p-2.5 text-xs text-right font-mono font-semibold text-green-700 dark:text-green-400">
                           {formatCurrency(totalGeral)}
                         </td>
-                        {mode === 'edit' && pedido?.status === 'Orcamento' && <td />}
+                        {canEdit && <td />}
                       </tr>
                     </tfoot>
                   </table>

@@ -3,12 +3,12 @@
  *
  * Template: PageShell + PageActions + usePageMode (header, botões, modos)
  * Hooks: useListState (search, filtro, seleção), useDeleteDialog (exclusão)
- * Página: colunas, form, card, callbacks de CRUD
  *
- * Diferenças em relação às páginas CRUD simples:
- *   - Edit/delete só permitido quando status === 'Orcamento'
+ * Regras de negócio:
+ *   - Edit/delete só permitido quando status === 'Aguardando'
+ *   - Editar itens permitido em Aguardando ou EmAndamento
  *   - Botões de transição de status no view mode via extraActions
- *   - Itens do pedido gerenciados dentro do PedidoForm (não no grid)
+ *   - Itens do pedido gerenciados dentro do PedidoForm
  *   - Filtro checklist no status
  */
 
@@ -43,10 +43,11 @@ const SEARCH_COLUMNS: SearchColumn[] = [
 ];
 
 const STATUS_OPTIONS = [
-  { label: 'Orçamento', value: 'Orcamento' },
-  { label: 'Aprovado', value: 'Aprovado' },
-  { label: 'Em Produção', value: 'EmProducao' },
+  { label: 'Aguardando', value: 'Aguardando' },
+  { label: 'Em Andamento', value: 'EmAndamento' },
+  { label: 'Pausado', value: 'Pausado' },
   { label: 'Concluído', value: 'Concluido' },
+  { label: 'A Entregar', value: 'AguardandoEntrega' },
   { label: 'Entregue', value: 'Entregue' },
   { label: 'Cancelado', value: 'Cancelado' },
 ];
@@ -80,7 +81,7 @@ function PedidoCard({ pedido }: { pedido: PedidoVenda }) {
       <div className="flex items-center justify-between mt-2">
         <span className="text-xs text-muted-foreground">{pedido.totalItens ?? 0} itens</span>
         <span className="text-xs font-mono font-medium text-green-700 dark:text-green-400">
-          {formatCurrency((pedido as any).valorTotal ?? (pedido as any).total)}
+          {formatCurrency(pedido.total)}
         </span>
       </div>
     </div>
@@ -134,7 +135,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
       await updatePedido(page.editingItem.id, data);
     } else {
       const novo = await createPedido(data);
-      // Após criar, abre em edit pra poder adicionar itens
       if (novo) {
         await fetchPedidos();
         page.openEdit(novo);
@@ -154,7 +154,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
       try {
         await alterarStatus(pedido.id, novoStatus);
         await fetchPedidos();
-        // Atualiza o item no view com o novo status
         const atualizado = { ...pedido, status: novoStatus };
         page.openView(atualizado);
         toast.success(`Status alterado para ${STATUS_LABELS[novoStatus]}.`);
@@ -180,12 +179,11 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     );
   }, [page.mode, page.editingItem, alterarStatus, fetchPedidos, page]);
 
-  // ─── Regras de negócio: edit/delete só em Orcamento ─────────────────────────
+  // ─── Regras de negócio: edit/delete só em Aguardando ────────────────────────
 
-  /** Callback de delete que valida status antes de abrir dialog */
   const handleRequestDelete = useCallback((p: PedidoVenda) => {
-    if (p.status !== 'Orcamento') {
-      toast.error('Só é possível excluir pedidos com status Orçamento.');
+    if (p.status !== 'Aguardando') {
+      toast.error('Só é possível excluir pedidos com status Aguardando.');
       return;
     }
     del.requestDelete(p);
@@ -196,14 +194,15 @@ export function PedidosPage({ tab }: PedidosPageProps) {
   const columns: GridColumn<PedidoVenda>[] = useMemo(() => [
     {
       key: 'codigo', header: 'Código', width: 170, minWidth: 120,
-      filterType: 'exact',
+      filterType: 'exact', contentAlign: 'center',
       render: (p) => <span className="font-mono font-medium">{p.codigo || '-'}</span>,
     },
     {
       key: 'clienteNome', header: 'Cliente', width: 250, minWidth: 150,
     },
     {
-      key: 'status', header: 'Status', width: 140, minWidth: 100,
+      key: 'status', header: 'Status', width: 160, minWidth: 120,
+      contentAlign: 'center',
       filterType: 'checklist', filterOptions: STATUS_OPTIONS,
       render: (p) => (
         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || ''}`}>
@@ -213,17 +212,13 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     },
     {
       key: 'totalItens', header: 'Itens', width: 80, minWidth: 60,
-      contentAlign: 'right',
+      contentAlign: 'center',
       render: (p) => <span className="font-mono">{p.totalItens ?? 0}</span>,
     },
     {
-      key: 'valorTotal', header: 'Valor Total', width: 140, minWidth: 100,
+      key: 'total', header: 'Valor Total (R$)', width: 140, minWidth: 100,
       contentAlign: 'right',
-      render: (p) => (
-        <span className="font-mono">
-          {formatCurrency((p as any).valorTotal ?? (p as any).total)}
-        </span>
-      ),
+      render: (p) => <span className="font-mono">{(p.total ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>,
     },
     {
       key: 'criadoEm', header: 'Data', width: 110, minWidth: 80,
@@ -238,9 +233,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
 
   return (
     <PageShell module="Comercial" title="Pedidos de Venda" mode={page.mode}
-      footer={page.mode === 'list' ? (
-        <ListFooter filtered={list.filtrados.length} total={pedidos.length} />
-      ) : undefined}
       headerRight={
         <PageActions
           page={page}
@@ -261,38 +253,40 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           noSelectionText="Selecione um pedido"
         />
       }
+      footer={page.mode === 'list' ? (
+        <ListFooter filtered={list.filtrados.length} total={pedidos.length} />
+      ) : undefined}
     >
 
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
-          <DataGrid
-            ref={list.gridRef} tabId={tab.id} storageId="pedidos-venda"
-            columns={columns} data={list.filtrados}
-            loading={isLoading} loadingText="Carregando pedidos..."
-            emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
-            onSelect={(item) => list.setSelectedItem(item as PedidoVenda | null)}
-            onActivate={(item) => page.openView(item as PedidoVenda)}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <DataGrid
+          ref={list.gridRef} tabId={tab.id} storageId="pedidos-venda"
+          columns={columns} data={list.filtrados}
+          loading={isLoading} loadingText="Carregando pedidos..."
+          emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
+          onSelect={(item) => list.setSelectedItem(item as PedidoVenda | null)}
+          onActivate={(item) => page.openView(item as PedidoVenda)}
+          emptyAction={
+            <Button onClick={() => page.openNew()}>
+              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+            </Button>
+          }
+        />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
-          <CardGrid
-            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
-            onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
-            onActivate={(item) => page.openView(item as PedidoVenda)}
-            loading={isLoading} loadingText="Carregando pedidos..."
-            emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
-            renderCard={(p) => <PedidoCard pedido={p} />}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <CardGrid
+          ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+          onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
+          onActivate={(item) => page.openView(item as PedidoVenda)}
+          loading={isLoading} loadingText="Carregando pedidos..."
+          emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
+          renderCard={(p) => <PedidoCard pedido={p} />}
+          emptyAction={
+            <Button onClick={() => page.openNew()}>
+              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+            </Button>
+          }
+        />
       </div>
 
       {inForm && (
@@ -314,7 +308,3 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     </PageShell>
   );
 }
-
-
-
-

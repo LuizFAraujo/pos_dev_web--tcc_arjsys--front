@@ -1,14 +1,34 @@
 // ========================================
 // STORE — PEDIDOS DE VENDA (Comercial)
 // ========================================
+// Endpoints:
+//   GET    /api/comercial/PedidoVenda           → lista pedidos
+//   GET    /api/comercial/PedidoVenda/{id}      → detalhe com itens
+//   POST   /api/comercial/PedidoVenda           → criar (status opcional: Aguardando/EmAndamento)
+//   PUT    /api/comercial/PedidoVenda/{id}      → editar (Aguardando ou EmAndamento)
+//   DELETE /api/comercial/PedidoVenda/{id}      → deletar (apenas Aguardando)
+//   PATCH  /api/comercial/PedidoVenda/{id}/status → alterar status (com observação opcional)
+//   GET    /api/comercial/PedidoVenda/{id}/historico → log de eventos
+//
+//   POST   /api/comercial/PedidoVenda/{id}/itens        → adicionar item
+//   PUT    /api/comercial/PedidoVenda/{id}/itens/{id}   → editar item
+//   DELETE /api/comercial/PedidoVenda/{id}/itens/{id}   → remover item
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete, ApiError } from '@/lib/api';
-import type { PedidoVenda, PedidoVendaFormData, ItemPedido, ItemPedidoFormData, StatusPedido } from '@/types/comercial/pedido.types';
+import type {
+  PedidoVenda,
+  PedidoVendaFormData,
+  ItemPedidoFormData,
+  StatusPedido,
+  StatusPedidoUpdate,
+  PedidoHistorico,
+} from '@/types/comercial/pedido.types';
 
 interface PedidosState {
   pedidos: PedidoVenda[];
   pedidoDetalhe: PedidoVenda | null;
+  historico: PedidoHistorico[];
   isLoading: boolean;
   error: string | null;
 
@@ -17,7 +37,8 @@ interface PedidosState {
   createPedido: (data: PedidoVendaFormData) => Promise<PedidoVenda | null>;
   updatePedido: (id: number, data: PedidoVendaFormData) => Promise<void>;
   deletePedido: (id: number) => Promise<void>;
-  alterarStatus: (id: number, novoStatus: StatusPedido) => Promise<void>;
+  alterarStatus: (id: number, novoStatus: StatusPedido, observacao?: string) => Promise<void>;
+  fetchHistorico: (id: number) => Promise<void>;
 
   // Itens
   addItem: (pedidoId: number, data: ItemPedidoFormData) => Promise<void>;
@@ -30,6 +51,7 @@ interface PedidosState {
 export const usePedidosStore = create<PedidosState>((set, get) => ({
   pedidos: [],
   pedidoDetalhe: null,
+  historico: [],
   isLoading: false,
   error: null,
 
@@ -119,10 +141,13 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     }
   },
 
-  alterarStatus: async (id, novoStatus) => {
+  alterarStatus: async (id, novoStatus, observacao) => {
     set({ error: null });
     try {
-      await apiPatch(`/api/comercial/PedidoVenda/${id}/status`, { novoStatus });
+      const payload: StatusPedidoUpdate = { novoStatus };
+      if (observacao) payload.observacao = observacao;
+
+      await apiPatch(`/api/comercial/PedidoVenda/${id}/status`, payload);
       // Atualiza local
       set((state) => ({
         pedidos: state.pedidos.map((p) =>
@@ -141,13 +166,24 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     }
   },
 
+  fetchHistorico: async (id) => {
+    set({ error: null });
+    try {
+      const raw = await apiGet<any>(`/api/comercial/PedidoVenda/${id}/historico`);
+      const historico: PedidoHistorico[] = Array.isArray(raw) ? raw : (raw?.itens ?? []);
+      set({ historico });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Erro ao carregar histórico';
+      set({ error: message });
+    }
+  },
+
   // === ITENS ===
 
   addItem: async (pedidoId, data) => {
     set({ error: null });
     try {
       await apiPost(`/api/comercial/PedidoVenda/${pedidoId}/itens`, data);
-      // Recarrega detalhe pra pegar totais atualizados
       await get().fetchPedido(pedidoId);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao adicionar item';

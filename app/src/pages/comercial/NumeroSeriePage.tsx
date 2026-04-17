@@ -2,9 +2,11 @@
  * NumeroSeriePage.tsx — Página de consulta de números de série
  *
  * Usa template completo (PageShell + PageActions + useListState).
- * NS são gerados a partir de pedidos — sem criação/edição por enquanto.
+ * NS são gerados pela engenharia a partir de pedidos — sem criação/edição aqui.
  * Botões New/View/Edit/Delete escondidos via hideButtons.
- * TODO: Tela de consulta/rastreabilidade (NS → pedido → cliente → produtos)
+ *
+ * Colunas: Nº Série, Pedido, Cliente, Tipo, Projeto, Status, Data
+ * Filtro checklist no status e tipo.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -17,7 +19,7 @@ import { CardGrid } from '@/components/shared/CardGrid';
 import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { useListState } from '@/hooks/useListState';
-import { NS_STATUS_LABELS } from '@/types/comercial/numeroserie.types';
+import { NS_STATUS_LABELS, NS_STATUS_COLORS, TIPO_NS_LABELS, TIPO_NS_COLORS } from '@/types/comercial/numeroserie.types';
 import type { NumeroSerie } from '@/types/comercial/numeroserie.types';
 
 interface NumeroSeriePageProps {
@@ -28,13 +30,20 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'codigo', label: 'Nº Série' },
   { key: 'pedidoVendaCodigo', label: 'Pedido' },
   { key: 'clienteNome', label: 'Cliente' },
+  { key: 'codigoProjeto', label: 'Projeto' },
 ];
 
 const STATUS_OPTIONS = [
-  { label: 'Aberto', value: 'Aberto' },
-  { label: 'Em Fabricação', value: 'EmFabricacao' },
-  { label: 'Concluído', value: 'Concluido' },
+  { label: 'Aguardando', value: 'Aguardando' },
+  { label: 'Em Andamento', value: 'EmAndamento' },
+  { label: 'A Entregar', value: 'AguardandoEntrega' },
   { label: 'Entregue', value: 'Entregue' },
+  { label: 'Cancelado', value: 'Cancelado' },
+];
+
+const TIPO_OPTIONS = [
+  { label: 'Normal', value: 'Normal' },
+  { label: 'Venda Futura', value: 'VendaFutura' },
 ];
 
 const formatDate = (val?: string) => !val ? '-' : new Date(val).toLocaleDateString('pt-BR');
@@ -42,18 +51,28 @@ const formatDate = (val?: string) => !val ? '-' : new Date(val).toLocaleDateStri
 function NumeroSerieCard({ serie }: { serie: NumeroSerie }) {
   return (
     <div className="p-4">
-      <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
-        {serie.codigo || '-'}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
+          {serie.codigo || '-'}
+        </p>
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${TIPO_NS_COLORS[serie.tipo] || ''}`}>
+          {TIPO_NS_LABELS[serie.tipo] || serie.tipo}
+        </span>
+      </div>
       {serie.pedidoVendaCodigo && (
         <p className="text-xs text-muted-foreground font-mono mt-1">{serie.pedidoVendaCodigo}</p>
       )}
       {serie.clienteNome && (
         <p className="text-xs text-muted-foreground mt-1 truncate">{serie.clienteNome}</p>
       )}
-      <p className="text-xs text-muted-foreground mt-1">
-        {NS_STATUS_LABELS[serie.status] || serie.status}
-      </p>
+      <div className="flex items-center justify-between mt-1">
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${NS_STATUS_COLORS[serie.status] || ''}`}>
+          {NS_STATUS_LABELS[serie.status] || serie.status}
+        </span>
+        {serie.codigoProjeto && (
+          <span className="text-[10px] font-mono text-muted-foreground">{serie.codigoProjeto}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -92,9 +111,27 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
     },
     { key: 'clienteNome', header: 'CLIENTE', width: 250, minWidth: 150 },
     {
-      key: 'status', header: 'STATUS', width: 140, minWidth: 110, contentAlign: 'center',
+      key: 'tipo', header: 'TIPO', width: 120, minWidth: 100, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: TIPO_OPTIONS,
+      render: (s) => (
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_NS_COLORS[s.tipo] || ''}`}>
+          {TIPO_NS_LABELS[s.tipo] || s.tipo}
+        </span>
+      ),
+    },
+    {
+      key: 'codigoProjeto', header: 'PROJETO', width: 140, minWidth: 100,
+      contentAlign: 'center',
+      render: (s) => s.codigoProjeto ? <span className="font-mono">{s.codigoProjeto}</span> : '-',
+    },
+    {
+      key: 'status', header: 'STATUS', width: 160, minWidth: 120, contentAlign: 'center',
       filterType: 'checklist', filterOptions: STATUS_OPTIONS,
-      render: (s) => NS_STATUS_LABELS[s.status] || s.status,
+      render: (s) => (
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${NS_STATUS_COLORS[s.status] || ''}`}>
+          {NS_STATUS_LABELS[s.status] || s.status}
+        </span>
+      ),
     },
     {
       key: 'criadoEm', header: 'DATA', width: 110, minWidth: 90, contentAlign: 'center',
@@ -124,14 +161,13 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
         />
       }
     >
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
       <div style={{ display: list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef} tabId={tab.id} storageId="numeroserie"
           columns={columns} data={list.filtrados}
           loading={isLoading} loadingText="Carregando séries..."
           emptyTitle="Nenhum número de série encontrado"
-          emptyDescription="Números de série são gerados a partir de pedidos"
+          emptyDescription="Números de série são gerados pela engenharia a partir de pedidos"
           onSelect={(item) => list.setSelectedItem(item as NumeroSerie | null)}
         />
       </div>
@@ -141,14 +177,10 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           onSelect={(s) => list.setSelectedCardId(s?.id ?? null)}
           loading={isLoading} loadingText="Carregando séries..."
           emptyTitle="Nenhum número de série encontrado"
-          emptyDescription="Números de série são gerados a partir de pedidos"
+          emptyDescription="Números de série são gerados pela engenharia a partir de pedidos"
           renderCard={(s) => <NumeroSerieCard serie={s} />}
         />
       </div>
     </PageShell>
   );
 }
-
-
-
-
