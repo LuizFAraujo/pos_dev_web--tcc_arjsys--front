@@ -1,18 +1,14 @@
 /**
- * PedidosPage.tsx — Página de pedidos de venda com modos list/view/new/edit
+ * PedidosPage.tsx — Página de Pedidos de Venda (v3.1)
  *
- * Template: PageShell + PageActions + usePageMode (header, botões, modos)
- * Hooks: useListState (search, filtro, seleção), useDeleteDialog (exclusão)
- *
- * Regras de negócio:
- *   - Edit/delete só permitido quando status === 'Aguardando'
- *   - Editar itens permitido em Aguardando ou EmAndamento
- *   - Botões de transição de status no view mode via extraActions
- *   - Itens do pedido gerenciados dentro do PedidoForm
- *   - Filtro checklist no status
+ * Mudanças v3.1 em relação a v3:
+ *   - Form agora devolve PedidoFormPayload (discriminado: create | update)
+ *   - Edição bloqueada quando status em STATUS_BLOQUEADO (botão Editar escondido)
+ *   - Coluna Cliente mostra badge [CLI-NNNN] + nome (quando disponível)
+ *   - Footer contextual: help do form fica à esquerda; atalhos à direita
  */
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePedidosStore } from '@/stores/comercial/pedidosStore';
@@ -27,11 +23,21 @@ import { useListState } from '@/hooks/useListState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { PedidoDeleteDialog } from '@/components/comercial/PedidoDeleteDialog';
 import { PedidoForm } from '@/components/comercial/PedidoForm';
-import type { PedidoFormHandle } from '@/components/comercial/PedidoForm';
-import { STATUS_LABELS, STATUS_COLORS, TRANSICOES_STATUS } from '@/types/comercial/pedido.types';
-import type { PedidoVenda, PedidoVendaFormData, StatusPedido } from '@/types/comercial/pedido.types';
+import type {
+  PedidoFormHandle,
+  PedidoFormPayload,
+} from '@/components/comercial/PedidoForm';
+import {
+  STATUS_COLORS,
+  STATUS_LABELS,
+  STATUS_PERMITE_DELETE,
+  TIPO_PV_COLORS,
+  TIPO_PV_LABELS,
+  bloqueiaEdicao,
+} from '@/types/comercial/pedido.types';
+import type { PedidoVenda } from '@/types/comercial/pedido.types';
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface PedidosPageProps {
   tab: { id: string; type: string; title: string };
@@ -39,49 +45,78 @@ interface PedidosPageProps {
 
 const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'codigo', label: 'Código' },
+  { key: 'clienteCodigo', label: 'Cód. Cliente' },
   { key: 'clienteNome', label: 'Cliente' },
 ];
 
+const TIPO_OPTIONS = [
+  { label: 'Normal', value: 'Normal' },
+  { label: 'Pré-venda', value: 'PreVenda' },
+];
+
 const STATUS_OPTIONS = [
-  { label: 'Aguardando', value: 'Aguardando' },
-  { label: 'Em Andamento', value: 'EmAndamento' },
-  { label: 'Pausado', value: 'Pausado' },
+  { label: 'Aguardando NS', value: 'AguardandoNS' },
+  { label: 'Recebido NS', value: 'RecebidoNS' },
+  { label: 'Aguardando Retorno', value: 'AguardandoRetorno' },
+  { label: 'Liberado', value: 'Liberado' },
+  { label: 'Em Andamento', value: 'Andamento' },
   { label: 'Concluído', value: 'Concluido' },
-  { label: 'A Entregar', value: 'AguardandoEntrega' },
+  { label: 'A Entregar', value: 'AEntregar' },
   { label: 'Entregue', value: 'Entregue' },
+  { label: 'Pausado', value: 'Pausado' },
   { label: 'Cancelado', value: 'Cancelado' },
+  { label: 'Reaberto', value: 'Reaberto' },
+  { label: 'Devolvido', value: 'Devolvido' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatCurrency(val?: number) {
-  if (val == null) return '-';
-  return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-function formatDate(val?: string) {
+function formatDate(val?: string | null) {
   if (!val) return '-';
-  return new Date(val).toLocaleDateString('pt-BR');
+  try {
+    return new Date(val).toLocaleDateString('pt-BR');
+  } catch {
+    return '-';
+  }
 }
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
+// ─── Card (modo Cards) ────────────────────────────────────────────────────────
 
 function PedidoCard({ pedido }: { pedido: PedidoVenda }) {
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between">
-        <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">
           {pedido.codigo || '-'}
         </p>
-        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[pedido.status] || ''}`}>
+        <span
+          className={`shrink-0 inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${
+            STATUS_COLORS[pedido.status] || ''
+          }`}
+        >
           {STATUS_LABELS[pedido.status] || pedido.status}
         </span>
       </div>
-      <p className="text-xs text-muted-foreground mt-1 truncate">{pedido.clienteNome || '-'}</p>
+      <div className="flex items-center gap-1.5 mt-1 min-w-0">
+        {pedido.clienteCodigo && (
+          <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 shrink-0">
+            {pedido.clienteCodigo}
+          </span>
+        )}
+        <p className="text-xs text-muted-foreground truncate">
+          {pedido.clienteNome || '-'}
+        </p>
+      </div>
       <div className="flex items-center justify-between mt-2">
-        <span className="text-xs text-muted-foreground">{pedido.totalItens ?? 0} itens</span>
-        <span className="text-xs font-mono font-medium text-green-700 dark:text-green-400">
-          {formatCurrency(pedido.total)}
+        <span
+          className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${
+            TIPO_PV_COLORS[pedido.tipo] || ''
+          }`}
+        >
+          {TIPO_PV_LABELS[pedido.tipo] || pedido.tipo}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {pedido.totalItens ?? 0} {pedido.totalItens === 1 ? 'item' : 'itens'}
         </span>
       </div>
     </div>
@@ -95,8 +130,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
 
   const page = usePageMode<PedidoVenda>(tab.id, (p) => String(p.id), tab.type);
 
-  // ─── Store ──────────────────────────────────────────────────────────────────
-
+  // ── Store ────────────────────────────────────────────────────────────────
   const pedidos = usePedidosStore((s) => s.pedidos);
   const isLoading = usePedidosStore((s) => s.isLoading);
   const error = usePedidosStore((s) => s.error);
@@ -104,13 +138,15 @@ export function PedidosPage({ tab }: PedidosPageProps) {
   const createPedido = usePedidosStore((s) => s.createPedido);
   const updatePedido = usePedidosStore((s) => s.updatePedido);
   const deletePedido = usePedidosStore((s) => s.deletePedido);
-  const alterarStatus = usePedidosStore((s) => s.alterarStatus);
 
-  useEffect(() => { fetchPedidos(); }, [fetchPedidos]);
-  useEffect(() => { if (error) toast.error(error); }, [error]);
+  useEffect(() => {
+    void fetchPedidos();
+  }, [fetchPedidos]);
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
 
-  // ─── Lista (search, filtro, seleção, viewMode) ─────────────────────────────
-
+  // ── Lista ────────────────────────────────────────────────────────────────
   const list = useListState<PedidoVenda>({
     tabId: tab.id,
     data: pedidos,
@@ -118,8 +154,10 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     defaultSearchCols: ['codigo'],
   });
 
-  // ─── Delete ─────────────────────────────────────────────────────────────────
+  // ── Footer contextual (help do form) ────────────────────────────────────
+  const [formHelp, setFormHelp] = useState<string | null>(null);
 
+  // ── Delete ─────────────────────────────────────────────────────────────
   const del = useDeleteDialog<PedidoVenda>({
     onDelete: (p) => deletePedido(p.id),
     onAfterDelete: (p) => {
@@ -128,114 +166,160 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     successMessage: 'Pedido excluído.',
   });
 
-  // ─── Save (cabeçalho) ──────────────────────────────────────────────────────
-
-  const handleSave = useCallback(async (data: PedidoVendaFormData) => {
-    if (page.mode === 'edit' && page.editingItem) {
-      await updatePedido(page.editingItem.id, data);
-    } else {
-      const novo = await createPedido(data);
-      if (novo) {
-        await fetchPedidos();
-        page.openEdit(novo);
+  // ── Save (v3.1: recebe payload discriminado) ───────────────────────────
+  const handleSave = useCallback(
+    async (payload: PedidoFormPayload) => {
+      if (payload.kind === 'update' && page.editingItem) {
+        await updatePedido(page.editingItem.id, payload.data);
+      } else if (payload.kind === 'create') {
+        const novo = await createPedido(payload.data);
+        if (novo) {
+          await fetchPedidos();
+          page.openEdit(novo);
+        }
       }
-    }
-  }, [page.mode, page.editingItem, updatePedido, createPedido, fetchPedidos, page]);
+    },
+    [page, updatePedido, createPedido, fetchPedidos],
+  );
 
-  // ─── Status actions (extraActions no view mode) ─────────────────────────────
-
-  const statusActions = useMemo(() => {
-    if (page.mode !== 'view' || !page.editingItem) return null;
-    const pedido = page.editingItem;
-    const transicoes = TRANSICOES_STATUS[pedido.status] || [];
-    if (transicoes.length === 0) return null;
-
-    const handleChange = async (novoStatus: StatusPedido) => {
-      try {
-        await alterarStatus(pedido.id, novoStatus);
-        await fetchPedidos();
-        const atualizado = { ...pedido, status: novoStatus };
-        page.openView(atualizado);
-        toast.success(`Status alterado para ${STATUS_LABELS[novoStatus]}.`);
-      } catch {
-        toast.error('Erro ao alterar status.');
+  // ── Regras: delete só em status iniciais ────────────────────────────────
+  const handleRequestDelete = useCallback(
+    (p: PedidoVenda) => {
+      if (!STATUS_PERMITE_DELETE.includes(p.status)) {
+        toast.error(
+          `Só é possível excluir pedidos em "${STATUS_LABELS['AguardandoNS']}" ou "${STATUS_LABELS['Liberado']}".`,
+        );
+        return;
       }
-    };
+      del.requestDelete(p);
+    },
+    [del],
+  );
 
-    return (
-      <div className="flex items-center gap-1">
-        {transicoes.map((novoStatus) => (
-          <Button
-            key={novoStatus}
-            variant="outline"
-            size="sm"
-            className={`text-xs h-7 ${novoStatus === 'Cancelado' ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : ''}`}
-            onClick={() => handleChange(novoStatus)}
+  // ── Colunas ────────────────────────────────────────────────────────────
+  const columns: GridColumn<PedidoVenda>[] = useMemo(
+    () => [
+      {
+        key: 'codigo',
+        header: 'Código',
+        width: 170,
+        minWidth: 120,
+        filterType: 'exact',
+        contentAlign: 'center',
+        render: (p) => (
+          <span className="font-mono font-medium">{p.codigo || '-'}</span>
+        ),
+      },
+      {
+        key: 'tipo',
+        header: 'Tipo',
+        width: 110,
+        minWidth: 90,
+        contentAlign: 'center',
+        filterType: 'checklist',
+        filterOptions: TIPO_OPTIONS,
+        render: (p) => (
+          <span
+            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+              TIPO_PV_COLORS[p.tipo] || ''
+            }`}
           >
-            → {STATUS_LABELS[novoStatus]}
-          </Button>
-        ))}
-      </div>
-    );
-  }, [page.mode, page.editingItem, alterarStatus, fetchPedidos, page]);
+            {TIPO_PV_LABELS[p.tipo] || p.tipo}
+          </span>
+        ),
+      },
+      {
+        key: 'clienteNome',
+        header: 'Cliente',
+        width: 280,
+        minWidth: 160,
+        render: (p) => (
+          <div className="flex items-center gap-2 min-w-0">
+            {p.clienteCodigo && (
+              <span className="font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-muted rounded px-1.5 py-0.5 shrink-0">
+                {p.clienteCodigo}
+              </span>
+            )}
+            <span className="truncate">{p.clienteNome || '-'}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        width: 170,
+        minWidth: 120,
+        contentAlign: 'center',
+        filterType: 'checklist',
+        filterOptions: STATUS_OPTIONS,
+        render: (p) => (
+          <span
+            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+              STATUS_COLORS[p.status] || ''
+            }`}
+          >
+            {STATUS_LABELS[p.status] || p.status}
+          </span>
+        ),
+      },
+      {
+        key: 'totalItens',
+        header: 'Itens',
+        width: 80,
+        minWidth: 60,
+        contentAlign: 'center',
+        render: (p) => <span className="font-mono">{p.totalItens ?? 0}</span>,
+      },
+      {
+        key: 'data',
+        header: 'Data',
+        width: 110,
+        minWidth: 90,
+        contentAlign: 'center',
+        render: (p) => formatDate(p.data),
+      },
+      {
+        key: 'dataEntrega',
+        header: 'Entrega',
+        width: 110,
+        minWidth: 90,
+        contentAlign: 'center',
+        render: (p) => formatDate(p.dataEntrega),
+      },
+    ],
+    [],
+  );
 
-  // ─── Regras de negócio: edit/delete só em Aguardando ────────────────────────
+  // Wrap no openEdit pra bloquear abertura em edit de PVs em status terminal
+  const pageWithGuardedEdit = useMemo(() => {
+    const originalOpenEdit = page.openEdit;
+    return {
+      ...page,
+      openEdit: (item: PedidoVenda) => {
+        if (bloqueiaEdicao(item.status)) {
+          toast.error(
+            `Pedidos em "${STATUS_LABELS[item.status]}" não permitem edição.`,
+          );
+          page.openView(item);
+          return;
+        }
+        originalOpenEdit(item);
+      },
+    };
+  }, [page]);
 
-  const handleRequestDelete = useCallback((p: PedidoVenda) => {
-    if (p.status !== 'Aguardando') {
-      toast.error('Só é possível excluir pedidos com status Aguardando.');
-      return;
-    }
-    del.requestDelete(p);
-  }, [del]);
-
-  // ─── Colunas ────────────────────────────────────────────────────────────────
-
-  const columns: GridColumn<PedidoVenda>[] = useMemo(() => [
-    {
-      key: 'codigo', header: 'Código', width: 170, minWidth: 120,
-      filterType: 'exact', contentAlign: 'center',
-      render: (p) => <span className="font-mono font-medium">{p.codigo || '-'}</span>,
-    },
-    {
-      key: 'clienteNome', header: 'Cliente', width: 250, minWidth: 150,
-    },
-    {
-      key: 'status', header: 'Status', width: 160, minWidth: 120,
-      contentAlign: 'center',
-      filterType: 'checklist', filterOptions: STATUS_OPTIONS,
-      render: (p) => (
-        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || ''}`}>
-          {STATUS_LABELS[p.status] || p.status}
-        </span>
-      ),
-    },
-    {
-      key: 'totalItens', header: 'Itens', width: 80, minWidth: 60,
-      contentAlign: 'center',
-      render: (p) => <span className="font-mono">{p.totalItens ?? 0}</span>,
-    },
-    {
-      key: 'total', header: 'Valor Total (R$)', width: 140, minWidth: 100,
-      contentAlign: 'right',
-      render: (p) => <span className="font-mono">{(p.total ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>,
-    },
-    {
-      key: 'criadoEm', header: 'Data', width: 110, minWidth: 80,
-      contentAlign: 'center',
-      render: (p) => formatDate(p.criadoEm),
-    },
-  ], []);
-
-  // ─── Render ─────────────────────────────────────────────────────────────────
-
+  // ── Render ─────────────────────────────────────────────────────────────
   const inForm = page.mode !== 'list';
 
   return (
-    <PageShell module="Comercial" title="Pedidos de Venda" mode={page.mode}
+    <PageShell
+      module="Comercial"
+      title="Pedidos de Venda"
+      mode={page.mode}
+      footerLeft={inForm ? formHelp : undefined}
       headerRight={
         <PageActions
-          page={page}
+          page={pageWithGuardedEdit}
           activeItem={list.activeItem}
           onDelete={handleRequestDelete}
           lockMessage="Este pedido já está sendo editado em outra aba."
@@ -248,22 +332,27 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           viewMode={list.viewMode}
           onViewModeChange={list.handleViewMode}
           formRef={formRef}
-          extraActions={statusActions}
           newTooltip="Novo pedido"
           noSelectionText="Selecione um pedido"
         />
       }
-      footer={page.mode === 'list' ? (
-        <ListFooter filtered={list.filtrados.length} total={pedidos.length} />
-      ) : undefined}
+      footer={
+        page.mode === 'list' ? (
+          <ListFooter filtered={list.filtrados.length} total={pedidos.length} />
+        ) : undefined
+      }
     >
-
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
-          ref={list.gridRef} tabId={tab.id} storageId="pedidos-venda"
-          columns={columns} data={list.filtrados}
-          loading={isLoading} loadingText="Carregando pedidos..."
-          emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
+          ref={list.gridRef}
+          tabId={tab.id}
+          storageId="pedidos-venda"
+          columns={columns}
+          data={list.filtrados}
+          loading={isLoading}
+          loadingText="Carregando pedidos..."
+          emptyTitle="Nenhum pedido encontrado"
+          emptyDescription="Crie o primeiro pedido"
           onSelect={(item) => list.setSelectedItem(item as PedidoVenda | null)}
           onActivate={(item) => page.openView(item as PedidoVenda)}
           emptyAction={
@@ -275,11 +364,15 @@ export function PedidosPage({ tab }: PedidosPageProps) {
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
-          ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
+          ref={list.cardGridRef}
+          data={list.filtrados}
+          selectedId={list.selectedCardId}
           onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
           onActivate={(item) => page.openView(item as PedidoVenda)}
-          loading={isLoading} loadingText="Carregando pedidos..."
-          emptyTitle="Nenhum pedido encontrado" emptyDescription="Crie o primeiro pedido"
+          loading={isLoading}
+          loadingText="Carregando pedidos..."
+          emptyTitle="Nenhum pedido encontrado"
+          emptyDescription="Crie o primeiro pedido"
           renderCard={(p) => <PedidoCard pedido={p} />}
           emptyAction={
             <Button onClick={() => page.openNew()}>
@@ -297,14 +390,16 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           pedido={page.editingItem}
           onDirty={() => page.setDirty(true)}
           onSave={handleSave}
+          onHelpChange={setFormHelp}
         />
       )}
 
       <PedidoDeleteDialog
-        open={del.open} onOpenChange={del.setOpen}
-        pedido={del.item} onConfirm={del.confirmDelete}
+        open={del.open}
+        onOpenChange={del.setOpen}
+        pedido={del.item}
+        onConfirm={del.confirmDelete}
       />
-
     </PageShell>
   );
 }

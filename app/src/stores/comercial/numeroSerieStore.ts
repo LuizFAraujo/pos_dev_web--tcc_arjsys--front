@@ -1,21 +1,24 @@
 // ========================================
-// STORE — NÚMERO DE SÉRIE (Comercial)
+// STORE — NÚMERO DE SÉRIE (Comercial) — v3
 // ========================================
-// Endpoints:
-//   GET   /api/comercial/NumeroSerie             → lista (aceita ?tipo=Normal|VendaFutura)
-//   GET   /api/comercial/NumeroSerie/{id}        → detalhe
-//   GET   /api/comercial/NumeroSerie/pedido/{id} → NS por pedido
-//   POST  /api/comercial/NumeroSerie             → criar (tipo, status, codigoProjeto)
-//   PATCH /api/comercial/NumeroSerie/{id}/status  → alterar status
+// Endpoints (feature/vendas):
+//   GET  /api/comercial/NumeroSerie                → lista (?pagina=N&tamanho=N)
+//   GET  /api/comercial/NumeroSerie/{id}           → detalhe
+//   GET  /api/comercial/NumeroSerie/pedido/{pvId}  → 1:1, 404 se não tiver
+//   POST /api/comercial/NumeroSerie                → criar (só PV PreVenda em AguardandoNS)
+//   PUT  /api/comercial/NumeroSerie/{id}           → atualizar produtoId
+//
+// No v3:
+// - NS não tem mais status próprio; herda do PV vinculado
+// - produtoId (FK BOM) substitui codigoProjeto
+// - Sem DELETE no fluxo v3
 
 import { create } from 'zustand';
-import { apiGet, apiPost, apiPatch, ApiError } from '@/lib/api';
+import { apiGet, apiPost, apiPut, ApiError } from '@/lib/api';
 import type {
   NumeroSerie,
-  NumeroSerieFormData,
-  StatusNumeroSerie,
-  StatusNumeroSerieUpdate,
-  TipoNumeroSerie,
+  NumeroSerieCreateData,
+  NumeroSerieUpdateData,
 } from '@/types/comercial/numeroserie.types';
 
 interface NumeroSerieState {
@@ -23,11 +26,23 @@ interface NumeroSerieState {
   isLoading: boolean;
   error: string | null;
 
-  fetchSeries: (tipo?: TipoNumeroSerie) => Promise<void>;
-  fetchSeriesByPedido: (pedidoId: number) => Promise<NumeroSerie[]>;
-  gerarSerie: (data: NumeroSerieFormData) => Promise<NumeroSerie | null>;
-  alterarStatus: (id: number, novoStatus: StatusNumeroSerie) => Promise<void>;
+  fetchSeries: () => Promise<void>;
+  fetchSerieByPedido: (pedidoId: number) => Promise<NumeroSerie | null>;
+  gerarSerie: (data: NumeroSerieCreateData) => Promise<NumeroSerie | null>;
+  updateSerie: (id: number, data: NumeroSerieUpdateData) => Promise<void>;
   clearError: () => void;
+}
+
+/** Extrai array de respostas paginadas ou não-paginadas */
+function extractArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.itens)) return obj.itens as T[];
+    const arrays = Object.values(obj).filter(Array.isArray);
+    if (arrays.length > 0) return arrays[0] as T[];
+  }
+  return [];
 }
 
 export const useNumeroSerieStore = create<NumeroSerieState>((set, get) => ({
@@ -35,20 +50,11 @@ export const useNumeroSerieStore = create<NumeroSerieState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  fetchSeries: async (tipo) => {
+  fetchSeries: async () => {
     set({ isLoading: true, error: null });
     try {
-      const query = tipo ? `?tipo=${tipo}` : '';
-      const raw = await apiGet<any>(`/api/comercial/NumeroSerie${query}`);
-      let series: NumeroSerie[] = [];
-      if (Array.isArray(raw)) {
-        series = raw;
-      } else if (raw && Array.isArray(raw.itens)) {
-        series = raw.itens;
-      } else if (raw && typeof raw === 'object') {
-        const arrays = Object.values(raw).filter(Array.isArray);
-        if (arrays.length > 0) series = arrays[0] as NumeroSerie[];
-      }
+      const raw = await apiGet<unknown>('/api/comercial/NumeroSerie');
+      const series = extractArray<NumeroSerie>(raw);
       set({ series, isLoading: false });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar números de série';
@@ -56,13 +62,14 @@ export const useNumeroSerieStore = create<NumeroSerieState>((set, get) => ({
     }
   },
 
-  fetchSeriesByPedido: async (pedidoId) => {
+  fetchSerieByPedido: async (pedidoId) => {
     try {
-      const raw = await apiGet<any>(`/api/comercial/NumeroSerie/pedido/${pedidoId}`);
-      const list: NumeroSerie[] = Array.isArray(raw) ? raw : (raw?.itens ?? []);
-      return list;
-    } catch {
-      return [];
+      const ns = await apiGet<NumeroSerie>(`/api/comercial/NumeroSerie/pedido/${pedidoId}`);
+      return ns;
+    } catch (err) {
+      // 404 é esperado quando o PV não tem NS
+      if (err instanceof ApiError && err.status === 404) return null;
+      return null;
     }
   },
 
@@ -73,10 +80,9 @@ export const useNumeroSerieStore = create<NumeroSerieState>((set, get) => ({
       if (nova && nova.id) {
         set((state) => ({ series: [...state.series, nova] }));
         return nova;
-      } else {
-        await get().fetchSeries();
-        return null;
       }
+      await get().fetchSeries();
+      return null;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao gerar número de série';
       set({ error: message });
@@ -84,18 +90,14 @@ export const useNumeroSerieStore = create<NumeroSerieState>((set, get) => ({
     }
   },
 
-  alterarStatus: async (id, novoStatus) => {
+  updateSerie: async (id, data) => {
     set({ error: null });
     try {
-      const payload: StatusNumeroSerieUpdate = { novoStatus };
-      await apiPatch(`/api/comercial/NumeroSerie/${id}/status`, payload);
-      set((state) => ({
-        series: state.series.map((s) =>
-          s.id === id ? { ...s, status: novoStatus, modificadoEm: new Date().toISOString() } : s
-        ),
-      }));
+      await apiPut(`/api/comercial/NumeroSerie/${id}`, data);
+      // 204 — refaz fetch pra pegar produtoCodigo/produtoDescricao atualizados
+      await get().fetchSeries();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Erro ao alterar status';
+      const message = err instanceof ApiError ? err.message : 'Erro ao atualizar número de série';
       set({ error: message });
       throw err;
     }

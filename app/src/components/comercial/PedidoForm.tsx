@@ -1,187 +1,351 @@
 /**
- * PedidoForm.tsx — Form inline de cadastro/edição/visualização de pedido de venda
+ * PedidoForm.tsx — Form inline do Pedido de Venda (v3.1)
  *
- * Abas:
- *   Pedido — Tipo de pedido (new), Cliente (autocomplete), Observação, Código/Status/Valor (readonly)
- *   Itens  — Tabela de itens. view=readonly, edit/new=editável com add/remove
+ * Mudanças v3.1:
+ *   - Itens em MEMÓRIA (não persiste no POST/PUT individual; vai junto no save)
+ *   - Valida itens >= 1 antes de submeter
+ *   - Banner âmbar em edit + status avançado (Andamento/Concluido/AEntregar/Pausado)
+ *   - Justificativa obrigatória no save em status avançado (cai no modal antes do save)
+ *   - Help contextual no footer da PageShell conforme campo focado
+ *   - Cliente: componente PedidoClienteField (autocomplete rico server-side)
+ *   - Tipo: componente PedidoTipoPill (pills compactos)
+ *   - Data de entrega: DateField (shadcn Calendar+Popover)
+ *   - Submit retorna payload consolidado — caller (PedidosPage) chama
+ *     createPedido/updatePedido do store.
  *
- * Itens são salvos via API individual (addItem/updateItem/removeItem) após salvar o cabeçalho.
- * No mode new: cria o pedido primeiro (sem itens), depois o usuário adiciona itens em edit.
- * No mode edit: itens são manipulados diretamente via API (cada ação salva imediatamente).
- *
- * Edição de itens permitida em status Aguardando ou EmAndamento.
- *
- * O submit() via ref salva apenas o cabeçalho (clienteId + observacoes + status).
- * Itens são gerenciados em tempo real na aba Itens.
+ * onSave: o form monta PedidoVendaCreateData ou PedidoVendaUpdateData e
+ * delega pro caller.
  */
 
-import { useEffect, useImperativeHandle, useState, useMemo, useCallback, forwardRef } from 'react';
-import { Plus, Trash2, Search } from 'lucide-react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFormTabNavigation } from '@/hooks/useFormTabNavigation';
-import { useClientesStore } from '@/stores/admin/clientesStore';
-import { useProdutosStore } from '@/stores/engenharia/produtosStore';
-import { usePedidosStore } from '@/stores/comercial/pedidosStore';
-import { STATUS_LABELS, STATUS_COLORS } from '@/types/comercial/pedido.types';
-import type { PedidoVenda, PedidoVendaFormData, ItemPedido, ItemPedidoFormData } from '@/types/comercial/pedido.types';
+import { DateField } from '@/components/shared/DateField';
+import { JustificativaDialog } from '@/components/shared/JustificativaDialog';
+import { PedidoTipoPill, helpTipo } from './PedidoTipoPill';
+import { PedidoClienteField } from './PedidoClienteField';
+import { PedidoItensGrid } from './PedidoItensGrid';
+import type { PedidoItemRow } from './PedidoItensGrid';
+import { itemToRow } from './PedidoItensGrid';
+import { PedidoStatusPanel } from './PedidoStatusPanel';
+import {
+  STATUS_COLORS,
+  STATUS_LABELS,
+  TIPO_PV_COLORS,
+  TIPO_PV_LABELS,
+  bloqueiaEdicao,
+  exigeJustificativa,
+} from '@/types/comercial/pedido.types';
+import type {
+  PedidoVenda,
+  TipoPedidoVenda,
+  PedidoVendaCreateData,
+  PedidoVendaUpdateData,
+  ItemPedidoCreateData,
+  ItemPedidoUpsertData,
+} from '@/types/comercial/pedido.types';
+import type { Cliente } from '@/types/admin/cliente.types';
 import type { PageMode } from '@/components/shared/PageShell';
 
-// ─── Handle exposto via ref ───────────────────────────────────────────────────
+// ═════ Handle exposto ═════
 
 export interface PedidoFormHandle {
   submit: () => Promise<boolean>;
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+/** Payload que o caller recebe: create ou update, discriminado pela presença de id */
+export type PedidoFormPayload =
+  | { kind: 'create'; data: PedidoVendaCreateData }
+  | { kind: 'update'; data: PedidoVendaUpdateData };
+
+// ═════ Props ═════
 
 interface PedidoFormProps {
   mode: Extract<PageMode, 'new' | 'edit' | 'view'>;
   pedido: PedidoVenda | null;
   onDirty: () => void;
-  onSave: (data: PedidoVendaFormData) => Promise<void>;
+  /** Caller recebe payload pronto e chama createPedido/updatePedido */
+  onSave: (payload: PedidoFormPayload) => Promise<void>;
+  /**
+   * Callback opcional: o form chama esse toda vez que o help contextual do
+   * footer mudar (campo focado diferente, tipo mudou, etc).
+   * A page passa isso pro PageShell.footerLeft.
+   */
+  onHelpChange?: (help: string | null) => void;
 }
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// ═════ Constantes ═════
 
 const TABS = ['pedido', 'itens'];
 
 const FIELD_TAB: Record<string, string> = {
   clienteId: 'pedido',
+  tipo: 'pedido',
+  dataEntrega: 'pedido',
   observacoes: 'pedido',
+  itens: 'itens',
 };
 
-const EMPTY_FORM = { clienteId: 0, observacoes: '', statusInicial: 'EmAndamento' as 'Aguardando' | 'EmAndamento' };
-
-// ─── Item vazio para adicionar ────────────────────────────────────────────────
-
-interface ItemLocal {
-  produtoId: number;
-  produtoCodigo: string;
-  produtoDescricao: string;
-  quantidade: string;
-  precoUnitario: string;
-  produtoSearch: string;
-  showDropdown: boolean;
+interface FormHeader {
+  clienteId: number;
+  clienteNome?: string;
+  clienteCodigo?: string;
+  tipo: TipoPedidoVenda;
+  dataEntrega: string;
+  observacoes: string;
 }
 
-const EMPTY_ITEM: ItemLocal = {
-  produtoId: 0,
-  produtoCodigo: '',
-  produtoDescricao: '',
-  quantidade: '',
-  precoUnitario: '',
-  produtoSearch: '',
-  showDropdown: false,
+const EMPTY_HEADER: FormHeader = {
+  clienteId: 0,
+  clienteNome: '',
+  clienteCodigo: '',
+  tipo: 'Normal',
+  dataEntrega: '',
+  observacoes: '',
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ═════ Helpers ═════
 
-function formatCurrency(val?: number) {
-  if (val == null) return '-';
-  return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+function isoToDateInputValue(iso?: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return '';
+  }
 }
 
-/** Status que permitem edição de itens */
-function canEditItens(status?: string): boolean {
-  return status === 'Aguardando' || status === 'EmAndamento';
+function dateInputToIso(val: string): string | undefined {
+  if (!val) return undefined;
+  const d = new Date(val + 'T00:00:00');
+  if (isNaN(d.getTime())) return undefined;
+  return d.toISOString();
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+// ═════ Componente ═════
 
 export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
-  function PedidoForm({ mode, pedido, onDirty, onSave }, ref) {
+  function PedidoForm({ mode, pedido, onDirty, onSave, onHelpChange }, ref) {
     const readOnly = mode === 'view';
     const isNew = mode === 'new';
 
-    // ── Form state (cabeçalho) ────────────────────────────────────────────────
-    const [data, setData] = useState(EMPTY_FORM);
+    // ── State: header + itens em memória ────────────────────────────────────
+    const [header, setHeader] = useState<FormHeader>(EMPTY_HEADER);
+    const [itens, setItens] = useState<PedidoItemRow[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // ── Cliente autocomplete ──────────────────────────────────────────────────
-    const [clienteSearch, setClienteSearch] = useState('');
-    const [showClienteDropdown, setShowClienteDropdown] = useState(false);
+    // Baseline pra comparar "mudou algo" (importante na decisão do dirty)
+    const baselineItensJson = useRef<string>('[]');
 
-    // ── Stores ────────────────────────────────────────────────────────────────
-    const clientes = useClientesStore((s) => s.clientes);
-    const fetchClientes = useClientesStore((s) => s.fetchClientes);
-    const produtos = useProdutosStore((s) => s.produtos);
-    const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
+    // Justificativa pendente (usada em PUT em status avançado)
+    const [justifOpen, setJustifOpen] = useState(false);
+    const [pendingPayload, setPendingPayload] = useState<PedidoVendaUpdateData | null>(
+      null,
+    );
 
-    const pedidoDetalhe = usePedidosStore((s) => s.pedidoDetalhe);
-    const fetchPedido = usePedidosStore((s) => s.fetchPedido);
-    const addItem = usePedidosStore((s) => s.addItem);
-    const updateItem = usePedidosStore((s) => s.updateItem);
-    const removeItem = usePedidosStore((s) => s.removeItem);
+    // ── Tab navigation ───────────────────────────────────────────────────────
+    const { activeTab, setActiveTab, formFieldsRef, handleFieldsKeyDown } =
+      useFormTabNavigation({ tabs: TABS, defaultTab: 'pedido' });
 
-    // ── Novo item (formulário de adição) ──────────────────────────────────────
-    const [newItem, setNewItem] = useState<ItemLocal>({ ...EMPTY_ITEM });
-    const [itemSaving, setItemSaving] = useState(false);
-
-    // ── Tab navigation ────────────────────────────────────────────────────────
-    const { activeTab, setActiveTab, formFieldsRef, handleFieldsKeyDown } = useFormTabNavigation({
-      tabs: TABS,
-      defaultTab: 'pedido',
-    });
-
-    // ── Carregar dados auxiliares ──────────────────────────────────────────────
-    useEffect(() => {
-      if (clientes.length === 0) fetchClientes();
-      if (produtos.length === 0) fetchProdutos();
-    }, [clientes.length, fetchClientes, produtos.length, fetchProdutos]);
-
-    // ── Carregar detalhe do pedido (itens) ao abrir view/edit ─────────────────
-    useEffect(() => {
-      if (pedido?.id && !isNew) {
-        fetchPedido(pedido.id);
-      }
-    }, [pedido?.id, isNew, fetchPedido]);
-
-    // ── Reset form ao trocar de item ou modo ──────────────────────────────────
+    // ── Reset ao trocar item/modo ───────────────────────────────────────────
     useEffect(() => {
       setErrors({});
-      setNewItem({ ...EMPTY_ITEM });
       if (pedido) {
-        setData({
+        setHeader({
           clienteId: pedido.clienteId ?? 0,
+          clienteNome: pedido.clienteNome ?? '',
+          clienteCodigo: pedido.clienteCodigo ?? '',
+          tipo: pedido.tipo ?? 'Normal',
+          dataEntrega: isoToDateInputValue(pedido.dataEntrega),
           observacoes: pedido.observacoes ?? '',
-          statusInicial: 'EmAndamento',
         });
-        setClienteSearch(pedido.clienteNome ?? '');
+        const itensFromBack = (pedido.itens ?? []).map(itemToRow);
+        setItens(itensFromBack);
+        baselineItensJson.current = JSON.stringify(itensFromBack);
       } else {
-        setData({ ...EMPTY_FORM });
-        setClienteSearch('');
+        setHeader({ ...EMPTY_HEADER });
+        setItens([]);
+        baselineItensJson.current = '[]';
       }
     }, [pedido, mode]);
 
-    // ── Itens do pedido (vem do detalhe carregado) ────────────────────────────
-    const itens: ItemPedido[] = useMemo(() => {
-      if (isNew) return [];
-      if (pedidoDetalhe?.id === pedido?.id) {
-        return pedidoDetalhe?.itens ?? [];
-      }
-      return pedido?.itens ?? [];
-    }, [isNew, pedidoDetalhe, pedido]);
+    // ── Derivados ────────────────────────────────────────────────────────────
+    const statusAtual = pedido?.status;
+    const modoAvancado =
+      !isNew && statusAtual !== undefined && exigeJustificativa(statusAtual);
+    const bloqueado =
+      !isNew && statusAtual !== undefined && bloqueiaEdicao(statusAtual);
 
-    const totalGeral = useMemo(
-      () => itens.reduce((sum, i) => sum + (i.subtotal ?? i.quantidade * i.precoUnitario), 0),
-      [itens],
+    // ── Dirty: qualquer mudança em itens também dispara ─────────────────────
+    const markDirty = useCallback(() => onDirty(), [onDirty]);
+
+    // ── Help contextual ──────────────────────────────────────────────────────
+    const [focusedField, setFocusedField] = useState<string | null>(null);
+
+    const helpText = useMemo(() => {
+      if (readOnly) return null;
+      if (focusedField === 'tipo' || (isNew && !focusedField)) return helpTipo(header.tipo);
+      if (focusedField === 'clienteId')
+        return 'Busca por código (CLI-), nome, CPF/CNPJ ou cidade.';
+      if (focusedField === 'dataEntrega')
+        return 'Data combinada de entrega. Pode ficar em branco.';
+      if (focusedField === 'observacoes')
+        return 'Observações livres sobre o pedido (visível em relatórios).';
+      if (activeTab === 'itens')
+        return `${itens.length} ${itens.length === 1 ? 'item' : 'itens'}. Pedido sem itens não pode ser salvo.`;
+      return null;
+    }, [readOnly, focusedField, isNew, header.tipo, activeTab, itens.length]);
+
+    useEffect(() => {
+      onHelpChange?.(helpText);
+    }, [helpText, onHelpChange]);
+
+    // ── Setters dos campos ───────────────────────────────────────────────────
+    const setHeaderField = useCallback(
+      <K extends keyof FormHeader>(field: K, value: FormHeader[K]) => {
+        setHeader((prev) => ({ ...prev, [field]: value }));
+        if (errors[field as string]) {
+          setErrors((prev) => {
+            const next = { ...prev };
+            delete next[field as string];
+            return next;
+          });
+        }
+        markDirty();
+      },
+      [errors, markDirty],
     );
 
-    // ── Submit cabeçalho via ref ──────────────────────────────────────────────
+    const handleClienteChange = useCallback(
+      (id: number, c?: Cliente) => {
+        setHeader((prev) => ({
+          ...prev,
+          clienteId: id,
+          clienteNome: c?.nome ?? (id === 0 ? '' : prev.clienteNome),
+          clienteCodigo: c?.codigo ?? (id === 0 ? '' : prev.clienteCodigo),
+        }));
+        if (errors.clienteId) {
+          setErrors((prev) => {
+            const next = { ...prev };
+            delete next.clienteId;
+            return next;
+          });
+        }
+        markDirty();
+      },
+      [errors.clienteId, markDirty],
+    );
+
+    const handleItensChange = useCallback(
+      (rows: PedidoItemRow[]) => {
+        setItens(rows);
+        if (errors.itens) {
+          setErrors((prev) => {
+            const next = { ...prev };
+            delete next.itens;
+            return next;
+          });
+        }
+        // Dirty só se mudou em relação ao baseline
+        const json = JSON.stringify(rows);
+        if (json !== baselineItensJson.current) markDirty();
+      },
+      [errors.itens, markDirty],
+    );
+
+    // ── Validação ────────────────────────────────────────────────────────────
+    const validate = useCallback((): Record<string, string> => {
+      const e: Record<string, string> = {};
+      if (!header.clienteId) e.clienteId = 'Selecione um cliente';
+      if (!header.tipo) e.tipo = 'Selecione o tipo do pedido';
+      if (itens.length === 0) e.itens = 'Pedido deve ter ao menos 1 item';
+      // Valida itens individuais (quantidade > 0, descrição)
+      for (const it of itens) {
+        if (!it.descricao || !it.descricao.trim()) {
+          e.itens = 'Todos os itens devem ter descrição';
+          break;
+        }
+        if (!(Number(it.quantidade) > 0)) {
+          e.itens = 'Todos os itens devem ter quantidade maior que zero';
+          break;
+        }
+      }
+      return e;
+    }, [header, itens]);
+
+    // ── Montagem dos payloads ────────────────────────────────────────────────
+    const buildCreatePayload = useCallback((): PedidoVendaCreateData => {
+      const itensOut: ItemPedidoCreateData[] = itens.map((r) => ({
+        quantidade: Number(r.quantidade),
+        descricao: r.descricao.trim(),
+        observacao: r.observacao?.trim() || undefined,
+      }));
+      return {
+        clienteId: header.clienteId,
+        tipo: header.tipo,
+        dataEntrega: dateInputToIso(header.dataEntrega),
+        observacoes: header.observacoes?.trim() || undefined,
+        itens: itensOut,
+      };
+    }, [header, itens]);
+
+    const buildUpdatePayload = useCallback(
+      (justificativa?: string): PedidoVendaUpdateData => {
+        const itensOut: ItemPedidoUpsertData[] = itens.map((r) => {
+          const idNumeric = typeof r.id === 'number' ? r.id : undefined;
+          return {
+            id: idNumeric,
+            quantidade: Number(r.quantidade),
+            descricao: r.descricao.trim(),
+            observacao: r.observacao?.trim() || undefined,
+          };
+        });
+        return {
+          clienteId: header.clienteId,
+          tipo: header.tipo,
+          dataEntrega: dateInputToIso(header.dataEntrega),
+          observacoes: header.observacoes?.trim() || undefined,
+          itens: itensOut,
+          justificativa: justificativa?.trim() || undefined,
+        };
+      },
+      [header, itens],
+    );
+
+    // ── Submit via ref ───────────────────────────────────────────────────────
     useImperativeHandle(ref, () => ({
       submit: async () => {
-        const e: Record<string, string> = {};
-        if (!data.clienteId) e.clienteId = 'Selecione um cliente';
+        if (bloqueado) {
+          toast.error(
+            `Pedidos em "${STATUS_LABELS[statusAtual!]}" não podem ser editados.`,
+          );
+          return false;
+        }
+
+        const e = validate();
         setErrors(e);
 
         if (Object.keys(e).length > 0) {
           const firstErrorField = Object.keys(e)[0];
-          const targetTab = FIELD_TAB[firstErrorField];
+          const targetTab = FIELD_TAB[firstErrorField] ?? 'pedido';
           if (targetTab) {
             setActiveTab(targetTab);
             requestAnimationFrame(() => {
@@ -194,470 +358,296 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
           return false;
         }
 
-        const payload: PedidoVendaFormData = {
-          clienteId: data.clienteId,
-          observacoes: data.observacoes?.trim() || undefined,
-        };
-
-        // No mode new, envia o status inicial escolhido
+        // new: sempre POST direto
         if (isNew) {
-          payload.status = data.statusInicial;
+          const payload = buildCreatePayload();
+          await onSave({ kind: 'create', data: payload });
+          return true;
         }
 
-        await onSave(payload);
+        // edit: se status avançado, pede justificativa antes
+        const updatePayload = buildUpdatePayload();
+        if (modoAvancado) {
+          setPendingPayload(updatePayload);
+          setJustifOpen(true);
+          return false; // não salva ainda — o confirmJustif salva depois
+        }
+
+        await onSave({ kind: 'update', data: updatePayload });
         return true;
       },
     }));
 
-    // ── Setter com limpa erro + onDirty ───────────────────────────────────────
-    const set = useCallback((field: string, value: any) => {
-      setData((prev) => ({ ...prev, [field]: value }));
-      if (errors[field]) {
-        setErrors((prev) => {
-          const next = { ...prev };
-          delete next[field];
-          return next;
-        });
-      }
-      onDirty();
-    }, [errors, onDirty]);
-
-    // ── Cliente autocomplete logic ────────────────────────────────────────────
-    const clientesFiltrados = useMemo(() => {
-      if (!clienteSearch) return (clientes || []).slice(0, 10);
-      const term = clienteSearch.toLowerCase();
-      return (clientes || [])
-        .filter((c) =>
-          (c.nome || '').toLowerCase().includes(term) ||
-          (c.cpfCnpj || '').toLowerCase().includes(term)
-        )
-        .slice(0, 10);
-    }, [clientes, clienteSearch]);
-
-    const handleClienteSelect = useCallback((c: { id: number; nome: string }) => {
-      set('clienteId', c.id);
-      setClienteSearch(c.nome);
-      setShowClienteDropdown(false);
-    }, [set]);
-
-    const handleClienteClear = useCallback(() => {
-      set('clienteId', 0);
-      setClienteSearch('');
-      setShowClienteDropdown(false);
-    }, [set]);
-
-    // ── Produto autocomplete para novo item ───────────────────────────────────
-    const produtosFiltrados = useMemo(() => {
-      if (!newItem.produtoSearch) return (produtos || []).filter((p) => p.ativo).slice(0, 10);
-      const term = newItem.produtoSearch.toLowerCase();
-      return (produtos || [])
-        .filter((p) => p.ativo && (
-          p.codigo.toLowerCase().includes(term) ||
-          p.descricao.toLowerCase().includes(term)
-        ))
-        .slice(0, 10);
-    }, [produtos, newItem.produtoSearch]);
-
-    const handleProdutoSelect = useCallback((p: { id: number; codigo: string; descricao: string }) => {
-      setNewItem((prev) => ({
-        ...prev,
-        produtoId: p.id,
-        produtoCodigo: p.codigo,
-        produtoDescricao: p.descricao,
-        produtoSearch: `${p.codigo} - ${p.descricao}`,
-        showDropdown: false,
-      }));
-    }, []);
-
-    // ── Adicionar item ────────────────────────────────────────────────────────
-    const handleAddItem = useCallback(async () => {
-      if (!pedido?.id) {
-        toast.error('Salve o pedido primeiro antes de adicionar itens.');
-        return;
-      }
-      if (!newItem.produtoId) {
-        toast.error('Selecione um produto.');
-        return;
-      }
-      const qtd = parseFloat(newItem.quantidade.replace(',', '.'));
-      const preco = parseFloat(newItem.precoUnitario.replace(',', '.'));
-      if (!qtd || qtd <= 0) {
-        toast.error('Quantidade deve ser maior que zero.');
-        return;
-      }
-      if (!preco || preco < 0) {
-        toast.error('Preço unitário inválido.');
-        return;
-      }
-
-      setItemSaving(true);
-      try {
-        const itemData: ItemPedidoFormData = {
-          produtoId: newItem.produtoId,
-          quantidade: qtd,
-          precoUnitario: preco,
+    // ── Ao confirmar justificativa, salva efetivamente ────────────────────
+    const confirmJustif = useCallback(
+      async (justif: string) => {
+        if (!pendingPayload) return;
+        const finalPayload: PedidoVendaUpdateData = {
+          ...pendingPayload,
+          justificativa: justif,
         };
-        await addItem(pedido.id, itemData);
-        setNewItem({ ...EMPTY_ITEM });
-        toast.success('Item adicionado.');
-      } catch {
-        toast.error('Erro ao adicionar item.');
-      } finally {
-        setItemSaving(false);
-      }
-    }, [pedido?.id, newItem, addItem]);
+        await onSave({ kind: 'update', data: finalPayload });
+      },
+      [pendingPayload, onSave],
+    );
 
-    // ── Remover item ──────────────────────────────────────────────────────────
-    const handleRemoveItem = useCallback(async (itemId: number) => {
-      if (!pedido?.id) return;
-      try {
-        await removeItem(pedido.id, itemId);
-        toast.success('Item removido.');
-      } catch {
-        toast.error('Erro ao remover item.');
-      }
-    }, [pedido?.id, removeItem]);
+    // ═════════════════════════════════════════════════════════════════════════
+    // RENDER
+    // ═════════════════════════════════════════════════════════════════════════
 
-    // ── Condição de edição de itens ───────────────────────────────────────────
-    const canEdit = mode === 'edit' && canEditItens(pedido?.status);
-
-    // ── Render ────────────────────────────────────────────────────────────────
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full gap-0">
-
-          <div className="shrink-0 px-6 pt-4 pb-0">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex flex-col h-full gap-0"
+        >
+          <div className="shrink-0 px-6 pt-4 pb-0 flex items-center gap-3">
             <TabsList>
               <TabsTrigger value="pedido">Pedido</TabsTrigger>
               <TabsTrigger value="itens">
-                Itens{!isNew && itens.length > 0 ? ` (${itens.length})` : ''}
+                Itens{' '}
+                {itens.length > 0 && (
+                  <span
+                    className={
+                      errors.itens
+                        ? 'ml-1 text-red-500'
+                        : 'ml-1 text-muted-foreground'
+                    }
+                  >
+                    ({itens.length})
+                  </span>
+                )}
+                {errors.itens && itens.length === 0 && (
+                  <span className="ml-1 text-red-500">!</span>
+                )}
               </TabsTrigger>
             </TabsList>
           </div>
 
-          {/* ── Aba Pedido ──────────────────────────────────────────────────── */}
-          <TabsContent value="pedido" className="flex-1 overflow-auto mt-0 px-6 py-5">
-            <div ref={formFieldsRef} onKeyDown={handleFieldsKeyDown}
-              className="grid grid-cols-3 gap-x-6 gap-y-5">
-
-              {/* Tipo de pedido (só no new) */}
-              {isNew && (
-                <div className="flex flex-col gap-1.5 col-span-3">
-                  <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Tipo do Pedido</Label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="statusInicial"
-                        value="EmAndamento"
-                        checked={data.statusInicial === 'EmAndamento'}
-                        onChange={() => set('statusInicial', 'EmAndamento')}
-                        className="accent-blue-600"
-                      />
-                      <span className="text-sm">Venda realizada</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="statusInicial"
-                        value="Aguardando"
-                        checked={data.statusInicial === 'Aguardando'}
-                        onChange={() => set('statusInicial', 'Aguardando')}
-                        className="accent-yellow-600"
-                      />
-                      <span className="text-sm">Venda futura (pré-pedido)</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* Código (readonly, só em edit/view) */}
-              {!isNew && (
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Código</Label>
-                  <Input
-                    value={pedido?.codigo || '-'}
-                    readOnly
-                    className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </div>
-              )}
-
-              {/* Status (readonly badge, só em edit/view) */}
-              {!isNew && (
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Status</Label>
-                  <div className="h-9 flex items-center">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[pedido?.status ?? 'Aguardando'] || ''}`}>
-                      {STATUS_LABELS[pedido?.status ?? 'Aguardando'] || pedido?.status}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Valor total (readonly, só em edit/view) */}
-              {!isNew && (
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">Valor Total</Label>
-                  <div className="h-9 flex items-center">
-                    <span className="font-mono font-semibold text-green-700 dark:text-green-400">
-                      {formatCurrency(totalGeral || pedido?.total)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Cliente (autocomplete) */}
-              <div className="flex flex-col gap-1.5 col-span-3">
-                <Label htmlFor="clienteId" className={`text-xs font-medium ${errors.clienteId ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                  Cliente *
-                </Label>
-                {readOnly ? (
-                  <Input
-                    value={clienteSearch || pedido?.clienteNome || '-'}
-                    readOnly
-                    className="h-9 text-sm bg-white dark:bg-slate-950 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                ) : (
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="clienteId"
-                      placeholder="Buscar cliente por nome ou CPF/CNPJ..."
-                      value={clienteSearch}
-                      onChange={(e) => {
-                        setClienteSearch(e.target.value);
-                        setShowClienteDropdown(true);
-                        if (!e.target.value) set('clienteId', 0);
-                      }}
-                      onFocus={() => { if (!data.clienteId) setShowClienteDropdown(true); }}
-                      onBlur={() => setTimeout(() => setShowClienteDropdown(false), 200)}
-                      className={`h-9 text-sm bg-white dark:bg-slate-950 pl-9 ${
-                        errors.clienteId ? 'border-red-400 dark:border-red-500 focus-visible:ring-red-400/30' : ''
-                      }`}
-                    />
-
-                    {showClienteDropdown && data.clienteId === 0 && (
-                      <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border bg-popover shadow-md">
-                        {clientesFiltrados.length > 0 ? clientesFiltrados.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => handleClienteSelect(c)}
-                          >
-                            <span className="font-medium">{c.nome}</span>
-                            {c.cpfCnpj && <span className="ml-2 text-muted-foreground">({c.cpfCnpj})</span>}
-                          </button>
-                        )) : (
-                          <p className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</p>
-                        )}
-                      </div>
-                    )}
-
-                    {data.clienteId > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Cliente selecionado: <span className="font-medium">{clienteSearch}</span>
-                        <button type="button" className="ml-2 text-destructive hover:underline"
-                          onClick={handleClienteClear}>
-                          Limpar
-                        </button>
-                      </p>
-                    )}
-                  </div>
-                )}
-                {errors.clienteId && (
-                  <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
-                    <span className="inline-block h-1 w-1 rounded-full bg-red-400 shrink-0" />
-                    {errors.clienteId}
+          {/* ══ Aba Pedido ══ */}
+          <TabsContent
+            value="pedido"
+            className="flex-1 overflow-auto mt-0 px-6 py-4"
+          >
+            {/* Banner status avançado */}
+            {modoAvancado && !readOnly && (
+              <div className="mb-4 rounded-md border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                    Pedido em produção
                   </p>
-                )}
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                    Alterações nos itens serão registradas no histórico e{' '}
+                    <strong>Engenharia</strong>, <strong>Produção</strong> e{' '}
+                    <strong>Almoxarifado</strong> serão notificados. Justificativa obrigatória.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div
+              ref={formFieldsRef}
+              onKeyDown={handleFieldsKeyDown}
+              className="grid grid-cols-12 gap-x-4 gap-y-4"
+            >
+              {/* Linha 1: Tipo (new) / Código + Tipo + Status (edit/view) */}
+              {isNew ? (
+                <div
+                  className="col-span-12 flex flex-col gap-1.5"
+                  onFocus={() => setFocusedField('tipo')}
+                  onBlur={() => setFocusedField(null)}
+                >
+                  <Label
+                    htmlFor="tipo"
+                    className={`text-xs font-medium ${
+                      errors.tipo
+                        ? 'text-red-500 dark:text-red-400'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    Tipo do Pedido *
+                  </Label>
+                  <PedidoTipoPill
+                    id="tipo"
+                    value={header.tipo}
+                    onChange={(t) => setHeaderField('tipo', t)}
+                    disabled={readOnly}
+                    error={errors.tipo}
+                  />
+                  {errors.tipo && (
+                    <p className="text-xs text-red-500 dark:text-red-400">{errors.tipo}</p>
+                  )}
+                </div>
+              ) : (
+                pedido && (
+                  <>
+                    <div className="col-span-3 flex flex-col gap-1.5">
+                      <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Código
+                      </Label>
+                      <Input
+                        value={pedido.codigo || '-'}
+                        readOnly
+                        className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+
+                    <div className="col-span-3 flex flex-col gap-1.5">
+                      <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Tipo
+                      </Label>
+                      <div className="h-9 flex items-center">
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                            TIPO_PV_COLORS[pedido.tipo] || ''
+                          }`}
+                        >
+                          {TIPO_PV_LABELS[pedido.tipo] || pedido.tipo}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="col-span-3 flex flex-col gap-1.5">
+                      <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        Status
+                      </Label>
+                      <div className="h-9 flex items-center">
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                            STATUS_COLORS[pedido.status] || ''
+                          }`}
+                        >
+                          {STATUS_LABELS[pedido.status] || pedido.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      className="col-span-3 flex flex-col gap-1.5"
+                      onFocus={() => setFocusedField('dataEntrega')}
+                      onBlur={() => setFocusedField(null)}
+                    >
+                      <DateField
+                        id="dataEntrega"
+                        label="Data de Entrega"
+                        value={header.dataEntrega}
+                        onChange={(v) => setHeaderField('dataEntrega', v)}
+                        readOnly={readOnly}
+                        showToday={false}
+                      />
+                    </div>
+                  </>
+                )
+              )}
+
+              {/* Data de Entrega isolada no modo new */}
+              {isNew && (
+                <div
+                  className="col-span-4 flex flex-col gap-1.5"
+                  onFocus={() => setFocusedField('dataEntrega')}
+                  onBlur={() => setFocusedField(null)}
+                >
+                  <DateField
+                    id="dataEntrega"
+                    label="Data de Entrega"
+                    value={header.dataEntrega}
+                    onChange={(v) => setHeaderField('dataEntrega', v)}
+                    readOnly={readOnly}
+                    showToday={false}
+                  />
+                </div>
+              )}
+
+              {/* Cliente (linha cheia) */}
+              <div
+                className={`${isNew ? 'col-span-8' : 'col-span-12'} flex flex-col gap-1.5`}
+                onFocus={() => setFocusedField('clienteId')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <PedidoClienteField
+                  id="clienteId"
+                  label="Cliente"
+                  required
+                  value={header.clienteId}
+                  displayName={header.clienteNome}
+                  displayCodigo={header.clienteCodigo}
+                  onChange={handleClienteChange}
+                  readOnly={readOnly}
+                  error={errors.clienteId}
+                />
               </div>
 
-              {/* Observação */}
-              <div className="flex flex-col gap-1.5 col-span-3">
-                <Label htmlFor="observacoes" className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  Observação
+              {/* Observações */}
+              <div
+                className="col-span-12 flex flex-col gap-1.5"
+                onFocus={() => setFocusedField('observacoes')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <Label
+                  htmlFor="observacoes"
+                  className="text-xs font-medium text-slate-500 dark:text-slate-400"
+                >
+                  Observações
                 </Label>
                 <Textarea
                   id="observacoes"
-                  value={data.observacoes}
-                  onChange={(e) => set('observacoes', e.target.value)}
+                  value={header.observacoes}
+                  onChange={(e) => setHeaderField('observacoes', e.target.value)}
                   readOnly={readOnly}
                   rows={3}
                   placeholder="Observações sobre o pedido..."
-                  className={`text-sm bg-white dark:bg-slate-950 ${
-                    readOnly ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0' : ''
+                  className={`text-sm bg-white dark:bg-slate-950 resize-none ${
+                    readOnly
+                      ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0'
+                      : ''
                   }`}
                 />
               </div>
-            </div>
-          </TabsContent>
 
-          {/* ── Aba Itens ───────────────────────────────────────────────────── */}
-          <TabsContent value="itens" className="flex-1 overflow-auto mt-0 px-6 py-5">
-            <div className="space-y-4">
-
-              {/* Mensagem para new mode */}
-              {isNew && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-                  Salve o pedido primeiro para poder adicionar itens.
+              {/* Status panel (só se PV já existe) */}
+              {!isNew && pedido && (
+                <div className="col-span-12 mt-2">
+                  <PedidoStatusPanel pedido={pedido} editable={mode === 'edit' && !bloqueado} />
                 </div>
-              )}
-
-              {/* Formulário de adição de item (edit mode, status Aguardando ou EmAndamento) */}
-              {canEdit && (
-                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Adicionar item</p>
-                  <div className="grid grid-cols-12 gap-3 items-end">
-
-                    {/* Produto (autocomplete) — 5 cols */}
-                    <div className="col-span-5 relative">
-                      <Label className="text-xs text-slate-500 dark:text-slate-400">Produto</Label>
-                      <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        <Input
-                          placeholder="Buscar produto..."
-                          value={newItem.produtoSearch}
-                          onChange={(e) => {
-                            setNewItem((prev) => ({
-                              ...prev,
-                              produtoSearch: e.target.value,
-                              showDropdown: true,
-                              produtoId: 0,
-                              produtoCodigo: '',
-                              produtoDescricao: '',
-                            }));
-                          }}
-                          onFocus={() => { if (!newItem.produtoId) setNewItem((prev) => ({ ...prev, showDropdown: true })); }}
-                          onBlur={() => setTimeout(() => setNewItem((prev) => ({ ...prev, showDropdown: false })), 200)}
-                          className="h-8 text-xs bg-white dark:bg-slate-950 pl-8"
-                        />
-                        {newItem.showDropdown && newItem.produtoId === 0 && (
-                          <div className="absolute z-50 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border bg-popover shadow-md">
-                            {produtosFiltrados.length > 0 ? produtosFiltrados.map((p) => (
-                              <button
-                                key={p.id}
-                                type="button"
-                                className="w-full px-3 py-1.5 text-left text-xs hover:bg-muted/50 transition-colors"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => handleProdutoSelect(p)}
-                              >
-                                <span className="font-mono">{p.codigo}</span>
-                                <span className="ml-2">{p.descricao}</span>
-                              </button>
-                            )) : (
-                              <p className="px-3 py-1.5 text-xs text-muted-foreground">Nenhum produto encontrado</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Quantidade — 2 cols */}
-                    <div className="col-span-2">
-                      <Label className="text-xs text-slate-500 dark:text-slate-400">Qtde</Label>
-                      <Input
-                        type="text"
-                        placeholder="0"
-                        value={newItem.quantidade}
-                        onChange={(e) => setNewItem((prev) => ({ ...prev, quantidade: e.target.value }))}
-                        className="h-8 text-xs bg-white dark:bg-slate-950 text-right font-mono"
-                      />
-                    </div>
-
-                    {/* Preço unitário — 3 cols */}
-                    <div className="col-span-3">
-                      <Label className="text-xs text-slate-500 dark:text-slate-400">Preço Unit. (R$)</Label>
-                      <Input
-                        type="text"
-                        placeholder="0,00"
-                        value={newItem.precoUnitario}
-                        onChange={(e) => setNewItem((prev) => ({ ...prev, precoUnitario: e.target.value }))}
-                        className="h-8 text-xs bg-white dark:bg-slate-950 text-right font-mono"
-                      />
-                    </div>
-
-                    {/* Botão adicionar — 2 cols */}
-                    <div className="col-span-2">
-                      <Button
-                        size="sm"
-                        className="h-8 w-full text-xs"
-                        disabled={itemSaving || !newItem.produtoId}
-                        onClick={handleAddItem}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        {itemSaving ? 'Adicionando...' : 'Adicionar'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tabela de itens */}
-              {itens.length > 0 ? (
-                <div className="rounded-lg border">
-                  <table className="w-full">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="p-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Código</th>
-                        <th className="p-2.5 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Descrição</th>
-                        <th className="p-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Qtde</th>
-                        <th className="p-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Preço Unit.</th>
-                        <th className="p-2.5 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Total</th>
-                        {canEdit && <th className="p-2.5 w-10" />}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itens.map((item) => (
-                        <tr key={item.id} className="border-t hover:bg-muted/30 transition-colors">
-                          <td className="p-2.5 text-xs font-mono">{item.produtoCodigo || '-'}</td>
-                          <td className="p-2.5 text-xs">{item.produtoDescricao || '-'}</td>
-                          <td className="p-2.5 text-xs text-right font-mono">{item.quantidade}</td>
-                          <td className="p-2.5 text-xs text-right font-mono">{formatCurrency(item.precoUnitario)}</td>
-                          <td className="p-2.5 text-xs text-right font-mono font-medium">
-                            {formatCurrency(item.subtotal ?? item.quantidade * item.precoUnitario)}
-                          </td>
-                          {canEdit && (
-                            <td className="p-2.5 text-center">
-                              <Button
-                                variant="ghost" size="icon"
-                                className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                onClick={() => handleRemoveItem(item.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="border-t bg-muted/30">
-                      <tr>
-                        <td colSpan={4} className="p-2.5 text-xs font-medium text-right">
-                          Total Geral:
-                        </td>
-                        <td className="p-2.5 text-xs text-right font-mono font-semibold text-green-700 dark:text-green-400">
-                          {formatCurrency(totalGeral)}
-                        </td>
-                        {canEdit && <td />}
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
-                !isNew && (
-                  <div className="text-center py-8 text-sm text-muted-foreground">
-                    Nenhum item neste pedido.
-                  </div>
-                )
               )}
             </div>
           </TabsContent>
 
+          {/* ══ Aba Itens ══ */}
+          <TabsContent
+            value="itens"
+            className="flex-1 overflow-auto mt-0 px-6 py-4"
+          >
+            {errors.itens && (
+              <p className="text-xs text-red-500 dark:text-red-400 mb-2 flex items-center gap-1">
+                <span className="inline-block h-1 w-1 rounded-full bg-red-400 shrink-0" />
+                {errors.itens}
+              </p>
+            )}
+            <PedidoItensGrid
+              rows={itens}
+              editable={!readOnly && !bloqueado}
+              onChange={handleItensChange}
+            />
+          </TabsContent>
         </Tabs>
+
+        {/* Dialog de justificativa (status avançado) */}
+        <JustificativaDialog
+          open={justifOpen}
+          onOpenChange={(o) => {
+            setJustifOpen(o);
+            if (!o) setPendingPayload(null);
+          }}
+          title="Confirmar alteração em pedido em produção"
+          description="Descreva o motivo da alteração. Este texto ficará registrado no histórico e será enviado nas notificações para Engenharia, Produção e Almoxarifado."
+          confirmLabel="Salvar alteração"
+          variant="info"
+          onConfirm={confirmJustif}
+        />
       </div>
     );
-  }
+  },
 );

@@ -1,6 +1,16 @@
 // ========================================
-// STORE — CLIENTES (Admin) — API Real
+// STORE — CLIENTES (Admin) — v3.1
 // ========================================
+// Endpoints:
+//   GET    /api/admin/Clientes?busca=texto  → LIKE em nome/codigo/cpfCnpj/cidade
+//   GET    /api/admin/Clientes/{id}
+//   POST   /api/admin/Clientes              → retorna 201 + Cliente (com codigo gerado)
+//   PUT    /api/admin/Clientes/{id}
+//   DELETE /api/admin/Clientes/{id}
+//
+// Mudanças v3.1:
+//   - fetchClientes aceita busca server-side opcional
+//   - Preserva API pública antiga (chamadas sem argumento continuam funcionando)
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
@@ -8,35 +18,45 @@ import type { Cliente, ClienteFormData } from '@/types/admin/cliente.types';
 
 interface ClientesState {
   clientes: Cliente[];
+  /** Busca atual aplicada (pra debounce no input) */
+  ultimaBusca: string;
   isLoading: boolean;
   error: string | null;
 
-  fetchClientes: () => Promise<void>;
+  /** Lista clientes. Se `busca` passado, faz LIKE no back; senão traz tudo. */
+  fetchClientes: (busca?: string) => Promise<void>;
   createCliente: (data: ClienteFormData) => Promise<void>;
   updateCliente: (id: number, data: ClienteFormData) => Promise<void>;
   deleteCliente: (id: number) => Promise<void>;
   clearError: () => void;
 }
 
+function extractArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.itens)) return obj.itens as T[];
+    const arrays = Object.values(obj).filter(Array.isArray);
+    if (arrays.length > 0) return arrays[0] as T[];
+  }
+  return [];
+}
+
 export const useClientesStore = create<ClientesState>((set, get) => ({
   clientes: [],
+  ultimaBusca: '',
   isLoading: false,
   error: null,
 
-  fetchClientes: async () => {
+  fetchClientes: async (busca) => {
     set({ isLoading: true, error: null });
     try {
-      const raw = await apiGet<any>('/api/admin/Clientes');
-      let clientes: Cliente[] = [];
-      if (Array.isArray(raw)) {
-        clientes = raw;
-      } else if (raw && Array.isArray(raw.itens)) {
-        clientes = raw.itens;
-      } else if (raw && typeof raw === 'object') {
-        const arrays = Object.values(raw).filter(Array.isArray);
-        if (arrays.length > 0) clientes = arrays[0] as Cliente[];
-      }
-      set({ clientes, isLoading: false });
+      const url = busca && busca.trim()
+        ? `/api/admin/Clientes?busca=${encodeURIComponent(busca.trim())}`
+        : '/api/admin/Clientes';
+      const raw = await apiGet<unknown>(url);
+      const clientes = extractArray<Cliente>(raw);
+      set({ clientes, ultimaBusca: busca ?? '', isLoading: false });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar clientes';
       set({ error: message, isLoading: false });
@@ -50,8 +70,7 @@ export const useClientesStore = create<ClientesState>((set, get) => ({
       if (novo && novo.id) {
         set((state) => ({ clientes: [...state.clientes, novo] }));
       } else {
-        // POST retornou vazio, recarrega lista
-        await get().fetchClientes();
+        await get().fetchClientes(get().ultimaBusca || undefined);
       }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao criar cliente';
@@ -65,17 +84,11 @@ export const useClientesStore = create<ClientesState>((set, get) => ({
     try {
       const resposta = await apiPut<Cliente | null>(`/api/admin/Clientes/${id}`, data);
       if (resposta && resposta.id) {
-        // Backend retornou o objeto atualizado
         set((state) => ({
           clientes: state.clientes.map((c) => (c.id === id ? resposta : c)),
         }));
       } else {
-        // Backend retornou 204 No Content — mescla dados locais
-        set((state) => ({
-          clientes: state.clientes.map((c) =>
-            c.id === id ? { ...c, ...data, updatedAt: new Date().toISOString() } : c
-          ),
-        }));
+        await get().fetchClientes(get().ultimaBusca || undefined);
       }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar cliente';

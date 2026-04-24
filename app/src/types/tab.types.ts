@@ -43,7 +43,7 @@ export interface Tab {
  * - eng-  → Engenharia
  * - adm-  → Admin
  * - com-  → Comercial
- * - pcp-  → PCP (futuro)
+ * - prod- → Produção
  * - cpr-  → Compras (futuro)
  * - alm-  → Almoxarifado (futuro)
  */
@@ -67,15 +67,18 @@ export type TabType =
   | 'com-pedidos-venda'
   | 'com-numero-serie'
 
-  // PCP (futuro)
-  | 'pcp-ordens'
-  | 'pcp-kanban'
+  // Produção (v3)
+  | 'prod-ordens'
 
   // Compras (futuro)
   | 'cpr-requisicoes'
 
   // Almoxarifado (futuro)
-  | 'alm-estoque';
+  | 'alm-estoque'
+
+  // @deprecated — renomeados pra 'prod-*' no v3. Mantidos só pra não quebrar abas persistidas.
+  | 'pcp-ordens'
+  | 'pcp-kanban';
 
 /**
  * TabMetadata - Metadados adicionais da aba

@@ -5,6 +5,8 @@
     "dev": "pnpm --filter ./app dev",
     "dev2": "pnpm --filter arjsys-frontend dev",
     "build": "pnpm --filter app build",
+    "build2": "pnpm --filter app build2",
+    "typecheck": "pnpm --filter app typecheck",
     "preview": "pnpm --filter app preview",
     "lint": "pnpm --filter app lint"
   }

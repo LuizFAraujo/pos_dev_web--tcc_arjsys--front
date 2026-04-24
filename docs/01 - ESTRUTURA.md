@@ -1,5 +1,4 @@
 <!-- markdownlint-disable-file -->
-<!-- 01 - ESTRUTURA PROJETO MVP EM DIANTE -->
 
 # 🌳 ESTRUTURA DO PROJETO - ARJSYS ERP INDUSTRIAL
 
@@ -22,6 +21,7 @@ pos_dev_web--tcc_front--arjsys/
 │
 └── app/                            # Aplicação principal
     ├── components.json             # Configuração shadcn/ui
+    ├── eslint.config.js
     ├── index.html
     ├── package.json
     ├── pnpm-lock.yaml
@@ -35,7 +35,6 @@ pos_dev_web--tcc_front--arjsys/
     │   └── config.api.js   
     │
     └── src/
-        │
         ├── components/
         │   ├── admin/             # Componentes Admin
         │   │   ├── ClienteDeleteDialog.tsx        ✅
@@ -44,8 +43,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── FuncionarioForm.tsx            ✅
         │   │
         │   ├── comercial/         # Componentes Comercial
+        │   │   ├── PedidoDeleteDialog.tsx         ✅
         │   │   ├── PedidoForm.tsx                 ✅
-        │   │   └── PedidoDeleteDialog.tsx         ✅
+        │   │   ├── PedidoItensGrid.tsx            ✅
+        │   │   └── PedidoStatusPanel.tsx          ✅
         │   │
         │   ├── engenharia/         # Componentes Engenharia
         │   │   ├── BomDeleteDialog.tsx            ✅
@@ -55,8 +56,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── GrupoForm.tsx                  ✅
         │   │   ├── NovaEstruturaDialog.tsx        ✅
         │   │   ├── ProdutoDeleteDialog.tsx        ✅
-        │   │   ├── ProdutoForm.tsx                ✅
-        │   │   └── ProdutoSelect.tsx              ✅
+        │   │   └── ProdutoForm.tsx                ✅
         │   │
         │   ├── projetos/           # Componentes Projetos
         │   │   ├── AlterarStatusDialog.tsx        📍 FALTA
@@ -69,14 +69,13 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── TabelaMateriaisExplosao.tsx    📍 FALTA
         │   │
         │   ├── shared/             # Componentes reutilizáveis
-        │   │   ├── index.ts                       ✅
         │   │   ├── DataGrid/
         │   │   │   ├── index.ts                   ✅
         │   │   │   ├── ColFilterPopover.tsx       ✅
         │   │   │   ├── DataGrid.tsx               ✅
         │   │   │   ├── DataGridTree.tsx           ✅
         │   │   │   ├── FilterConditionRow.tsx     ✅
-        │   │   │   ├── filterEngine.ts.tsx        ✅
+        │   │   │   ├── filterEngine.ts            ✅
         │   │   │   └── types.ts                   ✅
         │   │   ├── PagePanel/
         │   │   │   ├── index.ts                   ✅
@@ -84,15 +83,15 @@ pos_dev_web--tcc_front--arjsys/
         │   │   │   └── PanelFilters.ts            ✅
         │   │   ├── PageShell/
         │   │   │   ├── index.ts                   ✅
+        │   │   │   ├── PageActions.tsx            ✅
         │   │   │   ├── PageShell.tsx              ✅
         │   │   │   ├── types.ts                   ✅
-        │   │   │   └── usePageMode.tsx            ✅
+        │   │   │   └── usePageMode.ts             ✅
+        │   │   ├── index.ts                       ✅
         │   │   ├── AppTooltip.tsx                 ✅
-        │   │   ├── CadGrid.tsx                    ✅
+        │   │   ├── CardGrid.tsx                   ✅
+        │   │   ├── JustificativaDialog.tsx        ✅
         │   │   ├── ListFooter.tsx.tsx             ✅
-        │   │   ├── EmptyState.tsx                 📍 FALTA
-        │   │   ├── ErrorState.tsx                 📍 FALTA
-        │   │   ├── LoadingState.tsx               📍 FALTA
         │   │   ├── PageHeader.tsx                 ✅
         │   │   ├── PageRightSidebar.tsx           ✅
         │   │   ├── PageWrapper.tsx                ✅
@@ -111,11 +110,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── badge.tsx                      ✅
         │   │   ├── breadcrumb.tsx                 ✅
         │   │   ├── button.tsx                     ✅
-        │   │   ├── calendar.tsx                   📍 FALTA
+        │   │   ├── calendar.tsx                   ✅
         │   │   ├── card.tsx                       ✅
         │   │   ├── checkbox.tsx                   ✅
         │   │   ├── command.tsx                    ✅
-        │   │   ├── date-picker.tsx                📍 FALTA
         │   │   ├── dialog.tsx                     ✅
         │   │   ├── dropdown-menu.tsx              ✅
         │   │   ├── form.tsx                       ✅
@@ -141,19 +139,6 @@ pos_dev_web--tcc_front--arjsys/
         │       ├── TabsBar.tsx                    ✅
         │       ├── TabUnderConstruction.tsx       ✅
         │       └── WorkspaceContent.tsx           ✅
-        │
-        ├── data/                   # Mock data (REMOVER)
-        │   ├── cadastros/
-        │   │   ├── mockClientes.ts                📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
-        │   │   ├── mockFuncionarios.ts            📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
-        │   │   └── mockProdutos.ts                ✅ REMOVER
-        │   │
-        │   ├── engenharia/
-        │   │   ├── mockBOMRelacional.ts           ✅ REMOVER
-        │   │   └── mockDesenhos.ts                📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
-        │   │
-        │   └── projetos/
-        │       └── mockPedidos.ts                 📍 NÃO SERÁ NECESSARIO, DIRETO PELO BANCO
         │
         ├── hooks/                  # Custom hooks
         │   ├── useBomEditState.ts                 ✅
@@ -213,25 +198,16 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── NumeroSeriePage.tsx            ✅
         │   │   └── PedidosPage.tsx                ✅
         │   │
-        │   ├── cadastros/          # Cadastros (verificar local correto a colocar)
-        │   │   ├── ClientesPage.tsx               📍 FALTA
-        │   │   ├── FuncionariosPage.tsx           📍 FALTA
-        │   │
         │   ├── compras/            # Compras
         │   │   ├── NecessidadesComprasPage.tsx    📍 FALTA
         │   │   ├── SolicitacoesCompraPage.tsx     📍 FALTA
         │   │   └── StatusComprasPage.tsx          📍 FALTA
         │   │
         │   ├── engenharia/         # Engenharia
-        │   │   ├── BibliotecaDesenhosPage.tsx     📍 FALTA
         │   │   ├── BOMPage.tsx                    ✅
         │   │   ├── ConfiguracoesPage.tsx          ✅
         │   │   ├── GruposPage.tsx                 ✅
-        │   │   ├── EstruturaDetalhePage.tsx       📍 FALTA
-        │   │   ├── EstruturasPage.tsx             📍 FALTA
-        │   │   ├── ProdutosPage.tsx               ✅
-        │   │   ├── RevisaoDesenhoPage.tsx         📍 FALTA
-        │   │   └── WhereUsedPage.tsx              📍 FALTA
+        │   │   └── ProdutosPage.tsx               ✅
         │   │
         │   ├── producao/           # Produção
         │   │   ├── ApontamentoPage.tsx            📍 FALTA
@@ -257,17 +233,14 @@ pos_dev_web--tcc_front--arjsys/
         │
         ├── registries/             # Registry Pattern
         │   ├── index.ts                           ✅
-        │   ├── adminRegistry.ts                   ✅ (atualizar nas fases)
-        │   ├── almoxarifadoRegistry.ts            ✅ (atualizar nas fases)
-        │   ├── comercialRegistry.ts               ✅ (atualizar nas fases)
-        │   ├── comprasRegistry.ts                 ✅ (atualizar nas fases)
+        │   ├── adminRegistry.ts                   ✅
+        │   ├── almoxarifadoRegistry.ts            ✅
+        │   ├── comercialRegistry.ts               ✅
+        │   ├── comprasRegistry.ts                 ✅
         │   ├── engenhariaRegistry.ts              ✅
         │   ├── modelsRegistry.ts                  ✅
-        │   ├── producaoRegistry.ts                ✅ (atualizar nas fases)
-        │   ├── projetosRegistry.ts                📍 FALTA
-        │   ├── qualidadeRegistry.ts               📍 FALTA
-        │   ├── relatoriosRegistry.ts              📍 FALTA
-        │   └── vendasRegistry.ts                  ✅ (atualizar nas fases)
+        │   ├── producaoRegistry.ts                ✅
+        │   └── vendasRegistry.ts                  ✅
         │
         ├── routes/                 # TanStack Router
         │   ├── __root.tsx                         ✅
@@ -289,15 +262,12 @@ pos_dev_web--tcc_front--arjsys/
         │       └── uploadService.ts               📍 FALTA
         │
         ├── stores/                 # Zustand stores
-        │   ├── cadastros/          # Stores Cadastros  (verificar local correto a colocar)
-        │   │   ├── clientesStore.ts               📍 FALTA ????
-        │   │   ├── funcionariosStore.ts           📍 FALTA ????
-        │   │
-        │   ├── admin/             # Stores Admin
+        │   ├── admin/              # Stores Admin
         │   │   ├── clientesStore.ts               ✅
-        │   │   └── funcionariosStore.ts           ✅
+        │   │   ├── funcionariosStore.ts           ✅
+        │   │   └── notificacoesStore.ts           ✅
         │   │
-        │   ├── comercial/         # Stores Comercial
+        │   ├── comercial/          # Stores Comercial
         │   │   ├── numeroSerieStore.ts            ✅
         │   │   └── pedidosStore.ts                ✅
         │   │
@@ -305,12 +275,10 @@ pos_dev_web--tcc_front--arjsys/
         │   │   ├── bomStore.ts                    ✅
         │   │   ├── configuracoesStore.ts          ✅
         │   │   ├── gruposStore.ts                 ✅
-        │   │   ├── desenhosStore.ts               📍 FALTA
         │   │   └── produtosStore.ts               ✅
         │   │
-        │   ├── projetos/           # Stores Projetos
-        │   │   ├── kanbanStore.ts                 📍 FALTA
-        │   │   └── pedidosStore.ts                📍 FALTA
+        │   ├── producao/           # Stores Produção
+        │   │   └── ordemProducaoStore.ts          ✅        
         │   │
         │   ├── index.ts                           ✅
         │   ├── authStore.ts                       ✅
@@ -327,13 +295,10 @@ pos_dev_web--tcc_front--arjsys/
         │   └── tailwind.css                       ✅
         │
         ├── types/                  # TypeScript types
-        │   ├── cadastros/          # Types Cadastros  (verificar local correto a colocar)
-        │   │   ├── cliente.types.ts               📍 FALTA ????
-        │   │   ├── funcionario.types.ts           📍 FALTA ????
-        │   │
         │   ├── admin/              # Types Admin
         │   │   ├── cliente.types.ts               ✅
-        │   │   └── funcionario.types.ts           ✅
+        │   │   ├── funcionario.types.ts           ✅
+        │   │   └── notificacao.types.ts           ✅
         │   │
         │   ├── comercial/          # Types Comercial
         │   │   ├── numeroserie.types.ts           ✅
@@ -341,18 +306,15 @@ pos_dev_web--tcc_front--arjsys/
         │   │
         │   ├── engenharia/         # Types Engenharia
         │   │   ├── bom.types.ts                   ✅
+        │   │   ├── bomExplosao.types.ts           ✅
         │   │   ├── configuracao.types.ts          ✅
         │   │   ├── grupo.types.ts                 ✅
-        │   │   ├── componente.types.ts            📍 FALTA
-        │   │   ├── desenho.types.ts               📍 FALTA
         │   │   └── produto.types.ts               ✅
         │   │
-        │   ├── projetos/           # Types Projetos
-        │   │   ├── kanban.types.ts                📍 FALTA
-        │   │   └── pedido.types.ts                📍 FALTA
+        │   ├── producao/           # Types Produção
+        │   │   └── ordemProducao.types.ts         ✅
         │   │
         │   ├── shared/             # Types compartilhados
-        │   │   ├── api.types.ts                   📍 FALTA
         │   │   └── common.types.ts                ✅
         │   │
         │   ├── auth.types.ts                      ✅
@@ -364,12 +326,5 @@ pos_dev_web--tcc_front--arjsys/
         ├── routeTree.gen.ts                       ✅ (gerado)
         └── vite-env.d.ts                          ✅
 ```
-
----
-
-## 📊 RESUMO POR FASE
-
-**MVP (FASES 1-7):** 9 páginas funcionais com mock + integração backend  
-**PÓS-MVP (FASES 8-11):** Expansão funcionalidades + módulos avançados
 
 ---

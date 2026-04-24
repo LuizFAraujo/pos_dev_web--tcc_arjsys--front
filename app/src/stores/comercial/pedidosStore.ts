@@ -1,25 +1,27 @@
 // ========================================
-// STORE — PEDIDOS DE VENDA (Comercial)
+// STORE — PEDIDOS DE VENDA (Comercial) — v3.1
 // ========================================
-// Endpoints:
-//   GET    /api/comercial/PedidoVenda           → lista pedidos
-//   GET    /api/comercial/PedidoVenda/{id}      → detalhe com itens
-//   POST   /api/comercial/PedidoVenda           → criar (status opcional: Aguardando/EmAndamento)
-//   PUT    /api/comercial/PedidoVenda/{id}      → editar (Aguardando ou EmAndamento)
-//   DELETE /api/comercial/PedidoVenda/{id}      → deletar (apenas Aguardando)
-//   PATCH  /api/comercial/PedidoVenda/{id}/status → alterar status (com observação opcional)
-//   GET    /api/comercial/PedidoVenda/{id}/historico → log de eventos
+// Endpoints consolidados (feature/vendas v3.1):
+//   POST   /api/comercial/PedidoVenda                → cria cabeçalho + itens atomicamente
+//   PUT    /api/comercial/PedidoVenda/{id}           → replace full (diff no back) → 200 + body
+//   PATCH  /api/comercial/PedidoVenda/{id}/status    → muda status (justificativa condicional)
+//   DELETE /api/comercial/PedidoVenda/{id}           → AguardandoNS ou Liberado
+//   GET    /api/comercial/PedidoVenda                → lista
+//   GET    /api/comercial/PedidoVenda/{id}           → detalhe
+//   GET    /api/comercial/PedidoVenda/{id}/historico → log
 //
-//   POST   /api/comercial/PedidoVenda/{id}/itens        → adicionar item
-//   PUT    /api/comercial/PedidoVenda/{id}/itens/{id}   → editar item
-//   DELETE /api/comercial/PedidoVenda/{id}/itens/{id}   → remover item
+// Endpoints individuais (ainda existem, fallback):
+//   POST   /api/comercial/PedidoVenda/{id}/itens
+//   PUT    /api/comercial/PedidoVenda/{id}/itens/{itemId}
+//   DELETE /api/comercial/PedidoVenda/{id}/itens/{itemId}?justificativa=...
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete, ApiError } from '@/lib/api';
 import type {
   PedidoVenda,
-  PedidoVendaFormData,
-  ItemPedidoFormData,
+  PedidoVendaCreateData,
+  PedidoVendaUpdateData,
+  ItemPedidoCreateData,
   StatusPedido,
   StatusPedidoUpdate,
   PedidoHistorico,
@@ -34,18 +36,37 @@ interface PedidosState {
 
   fetchPedidos: () => Promise<void>;
   fetchPedido: (id: number) => Promise<void>;
-  createPedido: (data: PedidoVendaFormData) => Promise<PedidoVenda | null>;
-  updatePedido: (id: number, data: PedidoVendaFormData) => Promise<void>;
+
+  /** POST consolidado — cria PV + itens em 1 chamada (itens.length >= 1). */
+  createPedido: (data: PedidoVendaCreateData) => Promise<PedidoVenda | null>;
+
+  /** PUT consolidado — replace full, back faz diff. Retorna PV completo. */
+  updatePedido: (id: number, data: PedidoVendaUpdateData) => Promise<PedidoVenda | null>;
+
   deletePedido: (id: number) => Promise<void>;
-  alterarStatus: (id: number, novoStatus: StatusPedido, observacao?: string) => Promise<void>;
+
+  /** PATCH /status — justificativa obrigatória em pausar/cancelar/reabrir/devolver/retroceder */
+  alterarStatus: (id: number, novoStatus: StatusPedido, justificativa?: string) => Promise<void>;
+
   fetchHistorico: (id: number) => Promise<void>;
 
-  // Itens
-  addItem: (pedidoId: number, data: ItemPedidoFormData) => Promise<void>;
-  updateItem: (pedidoId: number, itemId: number, data: ItemPedidoFormData) => Promise<void>;
-  removeItem: (pedidoId: number, itemId: number) => Promise<void>;
+  // Endpoints individuais (fallback raro, fora do fluxo do form)
+  addItem: (pedidoId: number, data: ItemPedidoCreateData) => Promise<void>;
+  updateItem: (pedidoId: number, itemId: number, data: ItemPedidoCreateData) => Promise<void>;
+  removeItem: (pedidoId: number, itemId: number, justificativa?: string) => Promise<void>;
 
   clearError: () => void;
+}
+
+function extractArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.itens)) return obj.itens as T[];
+    const arrays = Object.values(obj).filter(Array.isArray);
+    if (arrays.length > 0) return arrays[0] as T[];
+  }
+  return [];
 }
 
 export const usePedidosStore = create<PedidosState>((set, get) => ({
@@ -58,16 +79,8 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
   fetchPedidos: async () => {
     set({ isLoading: true, error: null });
     try {
-      const raw = await apiGet<any>('/api/comercial/PedidoVenda');
-      let pedidos: PedidoVenda[] = [];
-      if (Array.isArray(raw)) {
-        pedidos = raw;
-      } else if (raw && Array.isArray(raw.itens)) {
-        pedidos = raw.itens;
-      } else if (raw && typeof raw === 'object') {
-        const arrays = Object.values(raw).filter(Array.isArray);
-        if (arrays.length > 0) pedidos = arrays[0] as PedidoVenda[];
-      }
+      const raw = await apiGet<unknown>('/api/comercial/PedidoVenda');
+      const pedidos = extractArray<PedidoVenda>(raw);
       set({ pedidos, isLoading: false });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar pedidos';
@@ -91,12 +104,14 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     try {
       const novo = await apiPost<PedidoVenda>('/api/comercial/PedidoVenda', data);
       if (novo && novo.id) {
-        set((state) => ({ pedidos: [...state.pedidos, novo] }));
+        set((state) => ({
+          pedidos: [...state.pedidos, novo],
+          pedidoDetalhe: novo,
+        }));
         return novo;
-      } else {
-        await get().fetchPedidos();
-        return null;
       }
+      await get().fetchPedidos();
+      return null;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao criar pedido';
       set({ error: message });
@@ -107,19 +122,22 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
   updatePedido: async (id, data) => {
     set({ error: null });
     try {
-      const resposta = await apiPut<PedidoVenda | null>(`/api/comercial/PedidoVenda/${id}`, data);
-      if (resposta && resposta.id) {
+      // v3.1: PUT retorna 200 + body (PedidoVendaResponseDTO)
+      const atualizado = await apiPut<PedidoVenda | null>(
+        `/api/comercial/PedidoVenda/${id}`,
+        data,
+      );
+      if (atualizado && atualizado.id) {
         set((state) => ({
-          pedidos: state.pedidos.map((p) => (p.id === id ? resposta : p)),
+          pedidos: state.pedidos.map((p) => (p.id === id ? atualizado : p)),
+          pedidoDetalhe: state.pedidoDetalhe?.id === id ? atualizado : state.pedidoDetalhe,
         }));
-      } else {
-        // 204 — merge local
-        set((state) => ({
-          pedidos: state.pedidos.map((p) =>
-            p.id === id ? { ...p, ...data, modificadoEm: new Date().toISOString() } : p
-          ),
-        }));
+        return atualizado;
       }
+      // Fallback defensivo (204)
+      await get().fetchPedidos();
+      if (get().pedidoDetalhe?.id === id) await get().fetchPedido(id);
+      return null;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar pedido';
       set({ error: message });
@@ -133,6 +151,7 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
       await apiDelete(`/api/comercial/PedidoVenda/${id}`);
       set((state) => ({
         pedidos: state.pedidos.filter((p) => p.id !== id),
+        pedidoDetalhe: state.pedidoDetalhe?.id === id ? null : state.pedidoDetalhe,
       }));
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao excluir pedido';
@@ -141,24 +160,17 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     }
   },
 
-  alterarStatus: async (id, novoStatus, observacao) => {
+  alterarStatus: async (id, novoStatus, justificativa) => {
     set({ error: null });
     try {
       const payload: StatusPedidoUpdate = { novoStatus };
-      if (observacao) payload.observacao = observacao;
-
-      await apiPatch(`/api/comercial/PedidoVenda/${id}/status`, payload);
-      // Atualiza local
-      set((state) => ({
-        pedidos: state.pedidos.map((p) =>
-          p.id === id ? { ...p, status: novoStatus, modificadoEm: new Date().toISOString() } : p
-        ),
-      }));
-      // Se tem detalhe aberto, atualiza
-      const detalhe = get().pedidoDetalhe;
-      if (detalhe && detalhe.id === id) {
-        set({ pedidoDetalhe: { ...detalhe, status: novoStatus } });
+      if (justificativa && justificativa.trim()) {
+        payload.justificativa = justificativa.trim();
       }
+      await apiPatch(`/api/comercial/PedidoVenda/${id}/status`, payload);
+
+      await get().fetchPedidos();
+      if (get().pedidoDetalhe?.id === id) await get().fetchPedido(id);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao alterar status';
       set({ error: message });
@@ -169,8 +181,8 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
   fetchHistorico: async (id) => {
     set({ error: null });
     try {
-      const raw = await apiGet<any>(`/api/comercial/PedidoVenda/${id}/historico`);
-      const historico: PedidoHistorico[] = Array.isArray(raw) ? raw : (raw?.itens ?? []);
+      const raw = await apiGet<unknown>(`/api/comercial/PedidoVenda/${id}/historico`);
+      const historico = extractArray<PedidoHistorico>(raw);
       set({ historico });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar histórico';
@@ -178,7 +190,7 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     }
   },
 
-  // === ITENS ===
+  // ─── Individuais (fallback) ─────────────────────────────────────
 
   addItem: async (pedidoId, data) => {
     set({ error: null });
@@ -204,10 +216,13 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     }
   },
 
-  removeItem: async (pedidoId, itemId) => {
+  removeItem: async (pedidoId, itemId, justificativa) => {
     set({ error: null });
     try {
-      await apiDelete(`/api/comercial/PedidoVenda/${pedidoId}/itens/${itemId}`);
+      const query = justificativa
+        ? `?justificativa=${encodeURIComponent(justificativa)}`
+        : '';
+      await apiDelete(`/api/comercial/PedidoVenda/${pedidoId}/itens/${itemId}${query}`);
       await get().fetchPedido(pedidoId);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao remover item';

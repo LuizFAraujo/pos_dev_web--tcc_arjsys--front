@@ -1,5 +1,5 @@
 /**
- * PageShell/types.ts — Tipos compartilhados da pasta PageShell
+ * PageShell/types.ts — Tipos compartilhados
  */
 
 import type { ReactNode } from 'react';
@@ -7,17 +7,24 @@ import type { ReactNode } from 'react';
 export interface PageShellProps {
   module?: string;
   title: string;
-  /** Tag discreta exibida ao lado do título (ex: modo da página) */
   tag?: string;
   extraTag?: string;
-  /** Modo da página — se passado sem tag, gera tag automaticamente */
   mode?: PageMode;
   headerRight?: ReactNode;
+  /**
+   * Footer completo (substitui o footer automático).
+   * Compat com pages antigas — prefira `footerLeft` + `mode`.
+   */
   footer?: ReactNode;
+  /**
+   * Slot livre à esquerda do footer. Em modo new/edit, os atalhos de teclado
+   * ficam à direita e o que vier aqui à esquerda (help contextual, status do
+   * form, dicas por campo focado).
+   */
+  footerLeft?: ReactNode;
   children: ReactNode;
 }
 
-/** Interface genérica que todo form inline deve expor via forwardRef */
 export interface FormHandle {
   submit: () => Promise<boolean>;
 }
@@ -36,9 +43,7 @@ export interface PageModeState<T> {
   requestBack: () => void;
   saveAndBack: (onSave: () => Promise<void>) => Promise<void>;
   saveAndStay: (onSave: () => Promise<void>) => Promise<void>;
-  /** Salva e reseta para novo cadastro (modo new → limpa form, permanece em new) */
   saveAndNew: (onSave: () => Promise<void>) => Promise<void>;
-  /** Chave de reset — incrementa a cada saveAndNew para forçar remount do form */
   resetKey: number;
   confirmOpen: boolean;
   confirmDiscard: () => void;
