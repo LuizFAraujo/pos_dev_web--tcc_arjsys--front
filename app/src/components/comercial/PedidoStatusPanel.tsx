@@ -1,21 +1,11 @@
 /**
- * PedidoStatusPanel.tsx — Painel de status compacto (v3.1)
+ * PedidoStatusPanel.tsx — Painel de status (com indicador pendente real → futuro)
  *
- * Layout (grid flat, compacto):
- *   ┌─────────────────────────────────────────────────────────┐
- *   │ [Badge Status]  Fluxo  ···        [Ações: Avançar...]   │  ← toolbar
- *   ├─────────────────────────────────────────────────────────┤
- *   │ DATA/HORA    EVENTO       DE → PARA       JUSTIFICATIVA  │  ← grid flat
- *   │ 21/04 01:36  Reaberto     Canc → Reab     "reabrindo"   │
- *   │ 21/04 01:36  Cancelado    AguNS → Canc    "teste"       │
- *   │ 21/04 01:33  Criado       —               —             │
- *   └─────────────────────────────────────────────────────────┘
- *
- * Regras v3.1:
- *   - Só exibe ações em modo edit (PedidoForm passa `editable`)
- *   - Em view mode, só status + histórico (sem botões)
- *   - Ações automáticas (Andamento/Concluido) não aparecem (back dispara pelo Produção)
- *   - Retroceder: dropdown com destinos permitidos pelo fluxo
+ * Mudanças:
+ *   - Quando há statusPendente: mostra [Real] → [Pendente] com seta
+ *   - Quando não há: mostra só o badge real
+ *   - Botões de ação operam sobre o statusExibido (real ou pendente)
+ *   - Toda mudança fica em memória até o save
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -61,8 +51,16 @@ import type {
 
 interface PedidoStatusPanelProps {
   pedido: PedidoVenda;
-  /** Se true, renderiza botões de ação. Se false, só status + histórico. */
+  /** Status efetivo para cálculo de ações (pendente se houver, senão real) */
+  statusExibido: StatusPedido;
+  /** True quando há mudança pendente (ainda não salva) */
+  temPendente: boolean;
+  /** Habilita botões de ação */
   editable: boolean;
+  /** Reporta ao form pai uma mudança de status pendente */
+  onStatusChange: (novoStatus: StatusPedido, justificativa?: string) => void;
+  /** Reporta que o usuário quer descartar a mudança pendente */
+  onClearPendente?: () => void;
 }
 
 function formatDateTime(iso?: string | null): string {
@@ -109,41 +107,45 @@ function eventoDotColor(evento: EventoPedido): string {
   }
 }
 
-type AcaoStatus =
-  | { kind: 'avancar'; destino: StatusPedido }
+type AcaoJustif =
   | { kind: 'retroceder'; destino: StatusPedido }
   | { kind: 'pausar' }
-  | { kind: 'retomar' }
   | { kind: 'cancelar' }
   | { kind: 'reabrir' }
   | { kind: 'devolver' };
 
-export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) {
-  const alterarStatus = usePedidosStore((s) => s.alterarStatus);
+export function PedidoStatusPanel({
+  pedido,
+  statusExibido,
+  temPendente,
+  editable,
+  onStatusChange,
+  onClearPendente,
+}: PedidoStatusPanelProps) {
   const fetchHistorico = usePedidosStore((s) => s.fetchHistorico);
   const historico = usePedidosStore((s) => s.historico);
 
-  const [acaoPendente, setAcaoPendente] = useState<AcaoStatus | null>(null);
-  const [isChanging, setIsChanging] = useState(false);
+  const [acaoPendente, setAcaoPendente] = useState<AcaoJustif | null>(null);
 
   useEffect(() => {
     if (pedido.id) void fetchHistorico(pedido.id);
   }, [pedido.id, fetchHistorico]);
 
-  const status = pedido.status;
+  const statusReal = pedido.status;
+  const statusParaAcoes = statusExibido;
   const tipo = pedido.tipo;
 
-  const avancos = AVANCOS_POR_STATUS[status] || [];
+  const avancos = AVANCOS_POR_STATUS[statusParaAcoes] || [];
   const retrocessos = useMemo(
-    () => statusAnterioresPermitidos(status, tipo),
-    [status, tipo],
+    () => statusAnterioresPermitidos(statusParaAcoes, tipo),
+    [statusParaAcoes, tipo],
   );
 
-  const showPausar = podePausar(status);
-  const showRetomar = podeRetomar(status);
-  const showCancelar = podeCancelar(status);
-  const showReabrir = podeReabrir(status);
-  const showDevolver = podeDevolver(status);
+  const showPausar = podePausar(statusParaAcoes);
+  const showRetomar = podeRetomar(statusParaAcoes);
+  const showCancelar = podeCancelar(statusParaAcoes);
+  const showReabrir = podeReabrir(statusParaAcoes);
+  const showDevolver = podeDevolver(statusParaAcoes);
 
   const semAcoes =
     avancos.length === 0 &&
@@ -154,58 +156,71 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
     !showReabrir &&
     !showDevolver;
 
-  const doChange = async (novoStatus: StatusPedido, justificativa?: string) => {
-    setIsChanging(true);
-    try {
-      await alterarStatus(pedido.id, novoStatus, justificativa);
-    } finally {
-      setIsChanging(false);
-    }
-  };
-
-  const handleAvancar = (destino: StatusPedido) => void doChange(destino);
-  const handleRetomar = () => void doChange('Liberado');
-
   return (
     <>
       <div className="rounded-lg border bg-card overflow-hidden">
-        {/* ══ Toolbar: badge + ações (se editable) ══ */}
+        {/* ══ Toolbar ══ */}
         <div className="flex items-center justify-between gap-3 px-3 py-2 border-b bg-muted/20">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            {/* Real */}
             <span
               className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                STATUS_COLORS[status] || ''
+                STATUS_COLORS[statusReal] || ''
               }`}
             >
-              {STATUS_LABELS[status] || status}
+              {STATUS_LABELS[statusReal] || statusReal}
             </span>
-            <span className="text-[11px] text-muted-foreground">
+
+            {/* Seta + Pendente */}
+            {temPendente && statusExibido !== statusReal && (
+              <>
+                <ArrowRight className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span
+                  className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ring-2 ring-amber-300 dark:ring-amber-700 ${
+                    STATUS_COLORS[statusExibido] || ''
+                  }`}
+                  title="Pendente — salve para aplicar"
+                >
+                  {STATUS_LABELS[statusExibido] || statusExibido}
+                </span>
+                {editable && onClearPendente && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-[11px] px-2 text-muted-foreground hover:text-foreground"
+                    onClick={onClearPendente}
+                  >
+                    Descartar
+                  </Button>
+                )}
+              </>
+            )}
+
+            <span className="text-[11px] text-muted-foreground ml-1">
               Fluxo {tipo === 'PreVenda' ? 'Pré-venda' : 'Normal'}
             </span>
+
             {!editable && (
               <span className="text-[11px] text-muted-foreground italic">
-                · modo visualização
+                · visualização
               </span>
             )}
           </div>
 
           {editable && !semAcoes && (
             <div className="flex flex-wrap items-center gap-1 shrink-0">
-              {/* Avançar (verde) */}
               {avancos.map((dest) => (
                 <Button
                   key={`avancar-${dest}`}
                   size="sm"
                   className="h-7 text-xs gap-1 bg-green-600 hover:bg-green-700 text-white"
-                  disabled={isChanging}
-                  onClick={() => handleAvancar(dest)}
+                  onClick={() => onStatusChange(dest)}
                 >
                   <ArrowRight className="h-3 w-3" />
                   Avançar: {STATUS_LABELS[dest]}
                 </Button>
               ))}
 
-              {/* Retroceder (amarelo, dropdown) */}
               {retrocessos.length > 0 && (
                 <DropdownMenu>
                   <Tooltip>
@@ -215,7 +230,6 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-900/20"
-                          disabled={isChanging}
                         >
                           <Undo2 className="h-3 w-3" />
                           Retroceder
@@ -254,8 +268,7 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs gap-1"
-                  disabled={isChanging}
-                  onClick={handleRetomar}
+                  onClick={() => onStatusChange('Liberado')}
                 >
                   <Play className="h-3 w-3" />
                   Retomar
@@ -267,7 +280,6 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs gap-1"
-                  disabled={isChanging}
                   onClick={() => setAcaoPendente({ kind: 'pausar' })}
                 >
                   <Pause className="h-3 w-3" />
@@ -280,7 +292,6 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs gap-1 border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-900/20"
-                  disabled={isChanging}
                   onClick={() => setAcaoPendente({ kind: 'reabrir' })}
                 >
                   <RotateCcw className="h-3 w-3" />
@@ -293,7 +304,6 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs gap-1 border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/20"
-                  disabled={isChanging}
                   onClick={() => setAcaoPendente({ kind: 'devolver' })}
                 >
                   <PackageX className="h-3 w-3" />
@@ -306,7 +316,6 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                   size="sm"
                   variant="outline"
                   className="h-7 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                  disabled={isChanging}
                   onClick={() => setAcaoPendente({ kind: 'cancelar' })}
                 >
                   <XCircle className="h-3 w-3" />
@@ -323,7 +332,7 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
           )}
         </div>
 
-        {/* ══ Grid flat de histórico ══ */}
+        {/* ══ Histórico ══ */}
         <div style={{ maxHeight: 220, overflowY: 'auto' }}>
           {historico.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground italic">
@@ -355,7 +364,6 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
         </div>
       </div>
 
-      {/* ── Dialog de justificativa ── */}
       <JustificativaDialog
         open={acaoPendente !== null}
         onOpenChange={(o) => !o && setAcaoPendente(null)}
@@ -374,27 +382,27 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
         }
         description={
           acaoPendente?.kind === 'pausar'
-            ? 'Descreva o motivo da pausa.'
+            ? 'Descreva o motivo da pausa. A mudança só será aplicada ao salvar.'
             : acaoPendente?.kind === 'cancelar'
-              ? 'Descreva o motivo do cancelamento.'
+              ? 'Descreva o motivo do cancelamento. A mudança só será aplicada ao salvar.'
               : acaoPendente?.kind === 'reabrir'
-                ? 'Descreva o motivo de reabrir o pedido.'
+                ? 'Descreva o motivo de reabrir o pedido. A mudança só será aplicada ao salvar.'
                 : acaoPendente?.kind === 'devolver'
-                  ? 'Descreva o motivo da devolução.'
+                  ? 'Descreva o motivo da devolução. A mudança só será aplicada ao salvar.'
                   : acaoPendente?.kind === 'retroceder'
-                    ? 'Descreva o motivo de retroceder o fluxo.'
+                    ? 'Descreva o motivo de retroceder o fluxo. A mudança só será aplicada ao salvar.'
                     : undefined
         }
         confirmLabel={
           acaoPendente?.kind === 'pausar'
-            ? 'Pausar'
+            ? 'Marcar como Pausado'
             : acaoPendente?.kind === 'cancelar'
-              ? 'Cancelar pedido'
+              ? 'Marcar como Cancelado'
               : acaoPendente?.kind === 'reabrir'
-                ? 'Reabrir'
+                ? 'Marcar como Reaberto'
                 : acaoPendente?.kind === 'devolver'
-                  ? 'Registrar devolução'
-                  : 'Retroceder'
+                  ? 'Marcar como Devolvido'
+                  : 'Marcar retrocesso'
         }
         variant={
           acaoPendente?.kind === 'cancelar' || acaoPendente?.kind === 'devolver'
@@ -403,7 +411,7 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
               ? 'warning'
               : 'neutral'
         }
-        onConfirm={async (justificativa) => {
+        onConfirm={(justificativa) => {
           if (!acaoPendente) return;
           const destino: StatusPedido =
             acaoPendente.kind === 'pausar'
@@ -415,13 +423,11 @@ export function PedidoStatusPanel({ pedido, editable }: PedidoStatusPanelProps) 
                   : acaoPendente.kind === 'devolver'
                     ? 'Devolvido'
                     : acaoPendente.destino;
-          await doChange(destino, justificativa);
+          onStatusChange(destino, justificativa);
         }}
       />
     </>
   );
-
-  // ═════ Helpers internos ═════
 
   function renderEventoRow(ev: PedidoHistorico, idx: number) {
     return (

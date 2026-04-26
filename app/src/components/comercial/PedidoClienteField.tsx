@@ -1,16 +1,13 @@
 /**
  * PedidoClienteField.tsx — Seletor de cliente com autocomplete rico
  *
- * Características:
- *   - Dropdown mostra: [CLI-0042] Nome · cidade · CPF/CNPJ · telefone
- *   - Busca server-side via ?busca= (debounce 300ms)
- *   - Altura do dropdown limitada (evita bater na barra de tarefas)
- *   - Posicionamento automático: abre pra cima se não tiver espaço embaixo
- *   - Uma vez selecionado, mostra "CLI-0042 · Nome" compacto com ✕ pra limpar
- *   - Busca aceita: nome, código, cidade, CPF/CNPJ
+ * FIX v2:
+ *   - autoComplete="off" (desativa autocomplete nativo do navegador)
+ *   - Dropdown só abre ao digitar ou ao clicar na lupa (nunca abre
+ *     automaticamente só por foco)
  *
- * Nota: o campo codigo só vem preenchido após o back v3.1 estar aplicado.
- * Se vier vazio, o componente mostra só o nome (degradação graciosa).
+ * Nota: o redesenho completo (campos Código/Nome ligados + modal de pesquisa)
+ * fica pra Etapa 2. Aqui é só consertar os 2 bugs críticos.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -23,11 +20,8 @@ import type { Cliente } from '@/types/admin/cliente.types';
 interface PedidoClienteFieldProps {
   id?: string;
   label?: string;
-  /** ID do cliente selecionado (0 = nenhum) */
   value: number;
-  /** Nome do cliente selecionado (pra exibir enquanto o store não tem) */
   displayName?: string;
-  /** Código do cliente selecionado (ex: CLI-0042) — quando disponível */
   displayCodigo?: string;
   onChange: (clienteId: number, cliente?: Cliente) => void;
   readOnly?: boolean;
@@ -53,36 +47,32 @@ export function PedidoClienteField({
 
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  /** Direção do dropdown: 'down' (default) ou 'up' se espaço abaixo for pequeno */
   const [dropUp, setDropUp] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Carrega lista inicial uma vez
   useEffect(() => {
     if (clientes.length === 0) void fetchClientes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounce na busca server-side quando o usuário digita com dropdown aberto
+  // Debounce de busca — só dispara se o dropdown estiver aberto
   useEffect(() => {
     if (!open) return;
     const term = search.trim();
     const t = window.setTimeout(() => {
-      // Manda a busca pro back; se vazio, traz tudo
       void fetchClientes(term || undefined);
     }, DEBOUNCE_MS);
     return () => window.clearTimeout(t);
   }, [search, open, fetchClientes]);
 
-  // Detecta espaço disponível quando o dropdown abre
+  // Direção do dropdown
   useLayoutEffect(() => {
     if (!open || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
-    // Se abaixo tem menos de 260px mas acima tem mais, inverte
     setDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
   }, [open]);
 
@@ -103,8 +93,6 @@ export function PedidoClienteField({
 
   const hasSelected = value > 0;
 
-  // Renderização: quando tem cliente selecionado, mostra chip compacto;
-  // quando não tem, mostra input de busca com dropdown
   return (
     <div ref={containerRef} className="flex flex-col gap-1.5 w-full">
       {label && (
@@ -122,7 +110,7 @@ export function PedidoClienteField({
       )}
 
       {hasSelected && !readOnly ? (
-        /* Modo selecionado — chip compacto com botão X */
+        /* Selecionado — chip com botão X */
         <div className="relative">
           <div
             className={`flex items-center gap-2 h-9 px-3 pr-9 rounded-md border bg-white dark:bg-slate-950 ${
@@ -166,13 +154,23 @@ export function PedidoClienteField({
           <Input
             id={id}
             ref={inputRef}
-            placeholder="Buscar por código, nome, CPF/CNPJ ou cidade..."
+            placeholder="Código, nome, CPF/CNPJ ou cidade"
+            /* Desativa autocomplete nativo do browser */
+            autoComplete="off"
+            name="pedido-cliente-search"
+            data-1p-ignore
+            data-lpignore="true"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setOpen(true);
+              /* Abre dropdown só quando o usuário DIGITA */
+              if (e.target.value.length > 0) setOpen(true);
             }}
-            onFocus={() => setOpen(true)}
+            /* REMOVIDO: onFocus que abria automaticamente.
+               Pra abrir sem digitar, o usuário clica explicitamente (mousedown). */
+            onMouseDown={() => {
+              if (!open) setOpen(true);
+            }}
             onBlur={() => window.setTimeout(() => setOpen(false), 150)}
             className={`h-9 text-sm bg-white dark:bg-slate-950 pl-9 ${
               error

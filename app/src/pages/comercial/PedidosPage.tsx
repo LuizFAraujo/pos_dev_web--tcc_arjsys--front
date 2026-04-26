@@ -1,11 +1,10 @@
 /**
- * PedidosPage.tsx — Página de Pedidos de Venda (v3.1)
+ * PedidosPage.tsx — Página de Pedidos de Venda
  *
- * Mudanças v3.1 em relação a v3:
- *   - Form agora devolve PedidoFormPayload (discriminado: create | update)
- *   - Edição bloqueada quando status em STATUS_BLOQUEADO (botão Editar escondido)
- *   - Coluna Cliente mostra badge [CLI-NNNN] + nome (quando disponível)
- *   - Footer contextual: help do form fica à esquerda; atalhos à direita
+ * Mudanças:
+ *   - Sem toast.success extra no handleSave (usePageMode já mostra "Registro atualizado")
+ *   - Usa onDirtyChange (form reporta dirty derivado, não set-once)
+ *   - Mensagem de erro vem só do store (sem genérico do PageActions)
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -37,8 +36,6 @@ import {
 } from '@/types/comercial/pedido.types';
 import type { PedidoVenda } from '@/types/comercial/pedido.types';
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 interface PedidosPageProps {
   tab: { id: string; type: string; title: string };
 }
@@ -69,8 +66,6 @@ const STATUS_OPTIONS = [
   { label: 'Devolvido', value: 'Devolvido' },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatDate(val?: string | null) {
   if (!val) return '-';
   try {
@@ -79,8 +74,6 @@ function formatDate(val?: string | null) {
     return '-';
   }
 }
-
-// ─── Card (modo Cards) ────────────────────────────────────────────────────────
 
 function PedidoCard({ pedido }: { pedido: PedidoVenda }) {
   return (
@@ -123,30 +116,50 @@ function PedidoCard({ pedido }: { pedido: PedidoVenda }) {
   );
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
-
 export function PedidosPage({ tab }: PedidosPageProps) {
   const formRef = useRef<PedidoFormHandle>(null);
 
   const page = usePageMode<PedidoVenda>(tab.id, (p) => String(p.id), tab.type);
 
-  // ── Store ────────────────────────────────────────────────────────────────
   const pedidos = usePedidosStore((s) => s.pedidos);
+  const pedidoDetalhe = usePedidosStore((s) => s.pedidoDetalhe);
   const isLoading = usePedidosStore((s) => s.isLoading);
   const error = usePedidosStore((s) => s.error);
   const fetchPedidos = usePedidosStore((s) => s.fetchPedidos);
+  const fetchPedido = usePedidosStore((s) => s.fetchPedido);
   const createPedido = usePedidosStore((s) => s.createPedido);
   const updatePedido = usePedidosStore((s) => s.updatePedido);
   const deletePedido = usePedidosStore((s) => s.deletePedido);
+  const alterarStatus = usePedidosStore((s) => s.alterarStatus);
+  const clearError = usePedidosStore((s) => s.clearError);
 
   useEffect(() => {
     void fetchPedidos();
   }, [fetchPedidos]);
-  useEffect(() => {
-    if (error) toast.error(error);
-  }, [error]);
 
-  // ── Lista ────────────────────────────────────────────────────────────────
+  // Toast de erro vindo do store — única fonte
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  const pedidoVivo = useMemo<PedidoVenda | null>(() => {
+    if (!page.editingItem) return null;
+    const id = page.editingItem.id;
+    if (pedidoDetalhe && pedidoDetalhe.id === id) return pedidoDetalhe;
+    return pedidos.find((p) => p.id === id) ?? page.editingItem;
+  }, [page.editingItem, pedidoDetalhe, pedidos]);
+
+  useEffect(() => {
+    if (page.mode === 'view' || page.mode === 'edit') {
+      if (page.editingItem?.id) {
+        void fetchPedido(page.editingItem.id);
+      }
+    }
+  }, [page.mode, page.editingItem?.id, fetchPedido]);
+
   const list = useListState<PedidoVenda>({
     tabId: tab.id,
     data: pedidos,
@@ -154,10 +167,8 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     defaultSearchCols: ['codigo'],
   });
 
-  // ── Footer contextual (help do form) ────────────────────────────────────
   const [formHelp, setFormHelp] = useState<string | null>(null);
 
-  // ── Delete ─────────────────────────────────────────────────────────────
   const del = useDeleteDialog<PedidoVenda>({
     onDelete: (p) => deletePedido(p.id),
     onAfterDelete: (p) => {
@@ -166,23 +177,64 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     successMessage: 'Pedido excluído.',
   });
 
-  // ── Save (v3.1: recebe payload discriminado) ───────────────────────────
+  /**
+   * Save orquestrado:
+   *   - create:      POST
+   *   - update:      PUT + opcional PATCH /status
+   *   - status-only: SÓ PATCH /status (sem PUT)
+   *
+   * Sem toasts de sucesso aqui — usePageMode já mostra "Registro atualizado".
+   * Erros vêm via store.error (toast unificado no useEffect acima).
+   */
   const handleSave = useCallback(
     async (payload: PedidoFormPayload) => {
-      if (payload.kind === 'update' && page.editingItem) {
-        await updatePedido(page.editingItem.id, payload.data);
-      } else if (payload.kind === 'create') {
+      if (payload.kind === 'create') {
         const novo = await createPedido(payload.data);
         if (novo) {
           await fetchPedidos();
           page.openEdit(novo);
         }
+        return;
       }
+
+      if (!page.editingItem) return;
+      const id = page.editingItem.id;
+
+      if (payload.kind === 'status-only') {
+        await alterarStatus(
+          id,
+          payload.statusPendente,
+          payload.justificativaPendente,
+        );
+        await fetchPedidos();
+        await fetchPedido(id);
+        return;
+      }
+
+      // update
+      await updatePedido(id, payload.data);
+
+      if (payload.statusPendente) {
+        await alterarStatus(
+          id,
+          payload.statusPendente,
+          payload.justificativaPendente,
+        );
+      }
+
+      await fetchPedidos();
+      await fetchPedido(id);
     },
-    [page, updatePedido, createPedido, fetchPedidos],
+    [
+      page,
+      updatePedido,
+      createPedido,
+      fetchPedidos,
+      fetchPedido,
+      alterarStatus,
+    ],
   );
 
-  // ── Regras: delete só em status iniciais ────────────────────────────────
   const handleRequestDelete = useCallback(
     (p: PedidoVenda) => {
       if (!STATUS_PERMITE_DELETE.includes(p.status)) {
@@ -196,7 +248,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     [del],
   );
 
-  // ── Colunas ────────────────────────────────────────────────────────────
   const columns: GridColumn<PedidoVenda>[] = useMemo(
     () => [
       {
@@ -290,7 +341,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     [],
   );
 
-  // Wrap no openEdit pra bloquear abertura em edit de PVs em status terminal
   const pageWithGuardedEdit = useMemo(() => {
     const originalOpenEdit = page.openEdit;
     return {
@@ -308,7 +358,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     };
   }, [page]);
 
-  // ── Render ─────────────────────────────────────────────────────────────
   const inForm = page.mode !== 'list';
 
   return (
@@ -387,8 +436,8 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           key={page.resetKey}
           ref={formRef}
           mode={page.mode as 'view' | 'new' | 'edit'}
-          pedido={page.editingItem}
-          onDirty={() => page.setDirty(true)}
+          pedido={pedidoVivo}
+          onDirtyChange={page.setDirty}
           onSave={handleSave}
           onHelpChange={setFormHelp}
         />

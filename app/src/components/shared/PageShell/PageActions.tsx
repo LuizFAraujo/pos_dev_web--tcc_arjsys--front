@@ -1,6 +1,10 @@
 /**
  * PageActions.tsx — Botões padrão do header por modo (list/view/new/edit)
  *
+ * FIX: removido o toast.error('Erro ao salvar.') genérico. A mensagem
+ *      específica do back já vem via store (useEffect na page consume `error`).
+ *      Manter ambos causava 2 toasts empilhados visualmente.
+ *
  * Renderiza automaticamente os botões corretos conforme o modo do usePageMode.
  * A página só passa callbacks e configuração específica (colunas do SearchBar, etc).
  *
@@ -36,99 +40,37 @@ import type { ReactNode } from 'react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-/** Botões que podem ser escondidos via hideButtons */
 type HideableButton = 'new' | 'view' | 'edit' | 'delete' | 'cards' | 'search' | 'config';
 
 export interface PageActionsProps<T> {
-  /** Estado do usePageMode */
   page: PageModeState<T>;
-
-  // ── list mode ─────────────────────────────────────────────────────────────
-
-  /** Item selecionado no grid/cards — habilita View/Edit/Delete */
   activeItem?: T | null;
-
-  /** Callback ao clicar Delete */
   onDelete?: (item: T) => void;
-
-  /** Mensagem de toast quando item está bloqueado em outra aba */
   lockMessage?: string;
-
-  // ── SearchBar (opção B — template monta) ──────────────────────────────────
-
-  /** Colunas disponíveis no SearchBar */
   searchColumns?: SearchColumn[];
-
-  /** Termo de busca atual */
   searchTerm?: string;
-
-  /** Callback ao digitar no SearchBar */
   onSearchChange?: (value: string) => void;
-
-  /** Colunas selecionadas no SearchBar (keys) */
   searchSelectedColumns?: string[];
-
-  /** Callback ao mudar colunas selecionadas */
   onSearchColumnsChange?: (cols: string[]) => void;
-
-  /** Placeholder do SearchBar */
   searchPlaceholder?: string;
-
-  /** Largura do SearchBar (classe Tailwind, default: 'w-80') */
   searchWidth?: string;
-
-  /** Substitui o SearchBar padrão por um customizado */
   searchBarOverride?: ReactNode;
-
-  // ── Grid ref (para limpar filtros) ────────────────────────────────────────
-
-  /** Ref do DataGrid — usado pelo botão Limpar Filtros */
   gridRef?: React.RefObject<DataGridHandle | null>;
-
-  // ── View mode toggle ──────────────────────────────────────────────────────
-
-  /** Modo de visualização atual: 'list' ou 'cards' */
   viewMode?: 'list' | 'cards';
-
-  /** Callback ao trocar modo de visualização */
   onViewModeChange?: (mode: 'list' | 'cards') => void;
-
-  // ── Save ───────────────────────────────────────────────────────────────────
-
-  /** Ref do form inline — deve expor FormHandle { submit(): Promise<boolean> } */
   formRef?: React.RefObject<FormHandle | null>;
-
-  // ── Customização ──────────────────────────────────────────────────────────
-
-  /** Botões extras específicos da página (ex: Varredura na ProdutosPage) */
   extraActions?: ReactNode;
-
-  /** Esconde botões específicos — ex: ['cards', 'delete'] */
   hideButtons?: HideableButton[];
-
-  /** Tooltip do botão Novo — ex: 'Novo cliente', 'Novo produto' */
   newTooltip?: string;
-
-  /** Tooltip do botão View — ex: 'Visualizar', personalizado por entidade */
   viewTooltip?: string;
-
-  /** Tooltip do botão Edit — ex: 'Editar' */
   editTooltip?: string;
-
-  /** Tooltip do botão Delete — ex: 'Excluir' */
   deleteTooltip?: string;
-
-  /** Texto quando nenhum item selecionado — ex: 'Selecione um cliente' */
   noSelectionText?: string;
 }
-
-// ─── Separador visual entre grupos de botões ──────────────────────────────────
 
 function Sep() {
   return <div className="mx-2 h-6 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />;
 }
-
-// ─── Componente ───────────────────────────────────────────────────────────────
 
 export function PageActions<T>({
   page,
@@ -162,8 +104,6 @@ export function PageActions<T>({
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // ── Navegação interna (view/edit com tratamento de lock) ──────────────────
-
   const handleView = useCallback((item: T) => {
     page.openView(item);
   }, [page]);
@@ -178,20 +118,23 @@ export function PageActions<T>({
     catch { toast.error(lockMessage); }
   }, [page, lockMessage]);
 
-  // ── Save interno (template cuida de try/catch/isSaving) ───────────────────
-
   const submitForm = useCallback(async () => {
     const ok = await formRef?.current?.submit();
     if (!ok) throw new Error('VALIDATION');
   }, [formRef]);
 
+  /**
+   * FIX: removido o toast.error('Erro ao salvar.') genérico.
+   * O store já mostra o erro real do back via useEffect na página.
+   * Apenas suprime o erro de VALIDATION (form já mostrou toast específico).
+   */
   const doSaveAndBack = useCallback(async () => {
     if (!formRef) return;
     setIsSaving(true);
     try {
       await page.saveAndBack(submitForm);
     } catch (e: any) {
-      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+      // VALIDATION = form já mostrou toast; outros = store já mostrou
       throw e;
     } finally {
       setIsSaving(false);
@@ -203,8 +146,8 @@ export function PageActions<T>({
     setIsSaving(true);
     try {
       await page.saveAndStay(submitForm);
-    } catch (e: any) {
-      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+    } catch {
+      // Idem
     } finally {
       setIsSaving(false);
     }
@@ -215,25 +158,20 @@ export function PageActions<T>({
     setIsSaving(true);
     try {
       await page.saveAndNew(submitForm);
-    } catch (e: any) {
-      if (e?.message !== 'VALIDATION') toast.error('Erro ao salvar.');
+    } catch {
+      // Idem
     } finally {
       setIsSaving(false);
     }
   }, [formRef, page, submitForm]);
 
-  // ── Salvar a partir do dialog de confirmação (trata erro de validação) ────
-
   const handleSaveFromDialog = useCallback(async () => {
     try {
       await doSaveAndBack();
     } catch {
-      // Erro de validação ou outro — fecha o dialog pra mostrar os campos
       page.cancelDiscard();
     }
   }, [doSaveAndBack, page]);
-
-  // ── Dialog de confirmação (sair sem salvar) ───────────────────────────────
 
   const dirtyDialog = (
     <AlertDialog open={page.confirmOpen}>
@@ -256,10 +194,7 @@ export function PageActions<T>({
     </AlertDialog>
   );
 
-  // ── Atalhos de teclado (Ctrl+S / Ctrl+Shift+S) ───────────────────────────
-
   const handleKeyboard = useCallback((e: KeyboardEvent) => {
-    // Só age em modos de edição (new/edit)
     if (page.mode !== 'new' && page.mode !== 'edit') return;
     if (!page.isDirty || isSaving) return;
 
@@ -269,10 +204,8 @@ export function PageActions<T>({
     e.preventDefault();
 
     if (e.shiftKey) {
-      // Ctrl+Shift+S → Salvar e Sair
       doSaveAndBack();
     } else {
-      // Ctrl+S → Salvar e permanecer
       if (page.mode === 'new') {
         doSaveAndNew();
       } else {
@@ -285,8 +218,6 @@ export function PageActions<T>({
     window.addEventListener('keydown', handleKeyboard);
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, [handleKeyboard]);
-
-  // ── Botão Config (presente em todos os modos) ────────────────────────────
 
   const btnConfig = hide.has('config') ? null : (
     <Tooltip>
@@ -306,7 +237,6 @@ export function PageActions<T>({
   if (!inForm) {
     return (
       <div className="flex items-center">
-        {/* SearchBar */}
         {!hide.has('search') && (
           <>
             {searchBarOverride || (
@@ -326,7 +256,6 @@ export function PageActions<T>({
           </>
         )}
 
-        {/* Limpar Filtros */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8"
@@ -340,7 +269,6 @@ export function PageActions<T>({
 
         <Sep />
 
-        {/* Novo / View / Edit / Delete */}
         <div className="flex items-center gap-1">
           {!hide.has('new') && (
             <Tooltip>
@@ -400,7 +328,6 @@ export function PageActions<T>({
           )}
         </div>
 
-        {/* Lista / Cards toggle */}
         {!hide.has('cards') && onViewModeChange && (
           <>
             <Sep />
@@ -429,7 +356,6 @@ export function PageActions<T>({
           </>
         )}
 
-        {/* Extra actions da página */}
         {extraActions && (
           <>
             <Sep />
@@ -437,7 +363,6 @@ export function PageActions<T>({
           </>
         )}
 
-        {/* Config */}
         {btnConfig && (
           <>
             <Sep />
@@ -501,7 +426,6 @@ export function PageActions<T>({
       <>
         <div className="flex items-center">
           <div className="flex items-center gap-1">
-            {/* Salvar e Sair */}
             {formRef && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -517,7 +441,6 @@ export function PageActions<T>({
               </Tooltip>
             )}
 
-            {/* Salvar e Adicionar Outro */}
             {formRef && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -533,7 +456,6 @@ export function PageActions<T>({
               </Tooltip>
             )}
 
-            {/* Cancelar */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8"
@@ -572,7 +494,6 @@ export function PageActions<T>({
     <>
       <div className="flex items-center">
         <div className="flex items-center gap-1">
-          {/* Salvar e Sair */}
           {formRef && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -588,7 +509,6 @@ export function PageActions<T>({
             </Tooltip>
           )}
 
-          {/* Salvar (permanecer editando) */}
           {formRef && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -604,7 +524,6 @@ export function PageActions<T>({
             </Tooltip>
           )}
 
-          {/* Voltar para Visualização */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8"

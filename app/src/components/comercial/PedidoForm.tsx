@@ -1,20 +1,11 @@
 /**
- * PedidoForm.tsx — Form inline do Pedido de Venda (v3.1)
+ * PedidoForm.tsx — Form inline do Pedido de Venda
  *
- * Mudanças v3.1:
- *   - Itens em MEMÓRIA (não persiste no POST/PUT individual; vai junto no save)
- *   - Valida itens >= 1 antes de submeter
- *   - Banner âmbar em edit + status avançado (Andamento/Concluido/AEntregar/Pausado)
- *   - Justificativa obrigatória no save em status avançado (cai no modal antes do save)
- *   - Help contextual no footer da PageShell conforme campo focado
- *   - Cliente: componente PedidoClienteField (autocomplete rico server-side)
- *   - Tipo: componente PedidoTipoPill (pills compactos)
- *   - Data de entrega: DateField (shadcn Calendar+Popover)
- *   - Submit retorna payload consolidado — caller (PedidosPage) chama
- *     createPedido/updatePedido do store.
- *
- * onSave: o form monta PedidoVendaCreateData ou PedidoVendaUpdateData e
- * delega pro caller.
+ * Mudanças nesta versão:
+ *   - submit() agora ESPERA o modal de justificativa via Promise. Quando o
+ *     modal abre, o submit não retorna até o usuário confirmar/cancelar.
+ *     Isso mantém o fluxo dentro do saveAndBack do usePageMode → corrige o
+ *     bug "Salvar e sair não sai após justificativa" e "toast não aparece".
  */
 
 import {
@@ -51,6 +42,7 @@ import {
 } from '@/types/comercial/pedido.types';
 import type {
   PedidoVenda,
+  StatusPedido,
   TipoPedidoVenda,
   PedidoVendaCreateData,
   PedidoVendaUpdateData,
@@ -60,34 +52,34 @@ import type {
 import type { Cliente } from '@/types/admin/cliente.types';
 import type { PageMode } from '@/components/shared/PageShell';
 
-// ═════ Handle exposto ═════
-
 export interface PedidoFormHandle {
   submit: () => Promise<boolean>;
 }
 
-/** Payload que o caller recebe: create ou update, discriminado pela presença de id */
 export type PedidoFormPayload =
-  | { kind: 'create'; data: PedidoVendaCreateData }
-  | { kind: 'update'; data: PedidoVendaUpdateData };
-
-// ═════ Props ═════
+  | {
+      kind: 'create';
+      data: PedidoVendaCreateData;
+    }
+  | {
+      kind: 'update';
+      data: PedidoVendaUpdateData;
+      statusPendente?: StatusPedido;
+      justificativaPendente?: string;
+    }
+  | {
+      kind: 'status-only';
+      statusPendente: StatusPedido;
+      justificativaPendente?: string;
+    };
 
 interface PedidoFormProps {
   mode: Extract<PageMode, 'new' | 'edit' | 'view'>;
   pedido: PedidoVenda | null;
-  onDirty: () => void;
-  /** Caller recebe payload pronto e chama createPedido/updatePedido */
+  onDirtyChange: (dirty: boolean) => void;
   onSave: (payload: PedidoFormPayload) => Promise<void>;
-  /**
-   * Callback opcional: o form chama esse toda vez que o help contextual do
-   * footer mudar (campo focado diferente, tipo mudou, etc).
-   * A page passa isso pro PageShell.footerLeft.
-   */
   onHelpChange?: (help: string | null) => void;
 }
-
-// ═════ Constantes ═════
 
 const TABS = ['pedido', 'itens'];
 
@@ -117,8 +109,6 @@ const EMPTY_HEADER: FormHeader = {
   observacoes: '',
 };
 
-// ═════ Helpers ═════
-
 function isoToDateInputValue(iso?: string | null): string {
   if (!iso) return '';
   try {
@@ -140,64 +130,124 @@ function dateInputToIso(val: string): string | undefined {
   return d.toISOString();
 }
 
-// ═════ Componente ═════
+function headersIguais(a: FormHeader, b: FormHeader): boolean {
+  return (
+    a.clienteId === b.clienteId &&
+    a.tipo === b.tipo &&
+    a.dataEntrega === b.dataEntrega &&
+    (a.observacoes || '') === (b.observacoes || '')
+  );
+}
+
+function itensIguais(a: PedidoItemRow[], b: PedidoItemRow[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.id !== y.id ||
+      Number(x.quantidade) !== Number(y.quantidade) ||
+      (x.descricao || '') !== (y.descricao || '') ||
+      (x.observacao || '') !== (y.observacao || '')
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
 
 export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
-  function PedidoForm({ mode, pedido, onDirty, onSave, onHelpChange }, ref) {
+  function PedidoForm({ mode, pedido, onDirtyChange, onSave, onHelpChange }, ref) {
     const readOnly = mode === 'view';
     const isNew = mode === 'new';
 
-    // ── State: header + itens em memória ────────────────────────────────────
     const [header, setHeader] = useState<FormHeader>(EMPTY_HEADER);
     const [itens, setItens] = useState<PedidoItemRow[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // Baseline pra comparar "mudou algo" (importante na decisão do dirty)
-    const baselineItensJson = useRef<string>('[]');
+    const [statusPendente, setStatusPendente] = useState<StatusPedido | null>(null);
+    const [justificativaPendente, setJustificativaPendente] = useState<string>('');
 
-    // Justificativa pendente (usada em PUT em status avançado)
-    const [justifOpen, setJustifOpen] = useState(false);
-    const [pendingPayload, setPendingPayload] = useState<PedidoVendaUpdateData | null>(
-      null,
-    );
+    const [baselineHeader, setBaselineHeader] = useState<FormHeader>(EMPTY_HEADER);
+    const [baselineItens, setBaselineItens] = useState<PedidoItemRow[]>([]);
 
-    // ── Tab navigation ───────────────────────────────────────────────────────
+    /**
+     * Modal de justificativa em status avançado.
+     * O submit aguarda esse modal via Promise. Quando o usuário confirma,
+     * a Promise resolve com o resultado (true=salvou, false=cancelou).
+     */
+    const [justifAvancadoOpen, setJustifAvancadoOpen] = useState(false);
+    /** Resolver da promise do submit, armazenado pra quando o modal fechar */
+    const justifResolverRef = useRef<((ok: boolean) => void) | null>(null);
+    /** Payload preparado, esperando justificativa */
+    const pendingPayloadRef = useRef<PedidoVendaUpdateData | null>(null);
+
     const { activeTab, setActiveTab, formFieldsRef, handleFieldsKeyDown } =
       useFormTabNavigation({ tabs: TABS, defaultTab: 'pedido' });
 
-    // ── Reset ao trocar item/modo ───────────────────────────────────────────
     useEffect(() => {
       setErrors({});
+      setStatusPendente(null);
+      setJustificativaPendente('');
       if (pedido) {
-        setHeader({
+        const novoHeader: FormHeader = {
           clienteId: pedido.clienteId ?? 0,
           clienteNome: pedido.clienteNome ?? '',
           clienteCodigo: pedido.clienteCodigo ?? '',
           tipo: pedido.tipo ?? 'Normal',
           dataEntrega: isoToDateInputValue(pedido.dataEntrega),
           observacoes: pedido.observacoes ?? '',
-        });
+        };
+        setHeader(novoHeader);
+        setBaselineHeader(novoHeader);
+
         const itensFromBack = (pedido.itens ?? []).map(itemToRow);
         setItens(itensFromBack);
-        baselineItensJson.current = JSON.stringify(itensFromBack);
+        setBaselineItens(itensFromBack);
       } else {
         setHeader({ ...EMPTY_HEADER });
+        setBaselineHeader({ ...EMPTY_HEADER });
         setItens([]);
-        baselineItensJson.current = '[]';
+        setBaselineItens([]);
       }
     }, [pedido, mode]);
 
-    // ── Derivados ────────────────────────────────────────────────────────────
-    const statusAtual = pedido?.status;
+    const statusExibido: StatusPedido = statusPendente ?? pedido?.status ?? 'AguardandoNS';
+    const statusAtualReal = pedido?.status;
+
     const modoAvancado =
-      !isNew && statusAtual !== undefined && exigeJustificativa(statusAtual);
+      !isNew && statusAtualReal !== undefined && exigeJustificativa(statusAtualReal);
     const bloqueado =
-      !isNew && statusAtual !== undefined && bloqueiaEdicao(statusAtual);
+      !isNew && statusAtualReal !== undefined && bloqueiaEdicao(statusAtualReal);
 
-    // ── Dirty: qualquer mudança em itens também dispara ─────────────────────
-    const markDirty = useCallback(() => onDirty(), [onDirty]);
+    const headerMudou = useMemo(
+      () => !headersIguais(header, baselineHeader),
+      [header, baselineHeader],
+    );
+    const itensMudaram = useMemo(
+      () => !itensIguais(itens, baselineItens),
+      [itens, baselineItens],
+    );
+    const statusMudou = statusPendente !== null;
 
-    // ── Help contextual ──────────────────────────────────────────────────────
+    const dirtyNew = useMemo(() => {
+      if (!isNew) return false;
+      return (
+        header.clienteId !== 0 ||
+        header.dataEntrega !== '' ||
+        (header.observacoes && header.observacoes.length > 0) ||
+        itens.length > 0
+      );
+    }, [isNew, header, itens]);
+
+    const isDirtyDerivado = isNew
+      ? dirtyNew
+      : headerMudou || itensMudaram || statusMudou;
+
+    useEffect(() => {
+      onDirtyChange(isDirtyDerivado);
+    }, [isDirtyDerivado, onDirtyChange]);
+
     const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const helpText = useMemo(() => {
@@ -218,7 +268,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
       onHelpChange?.(helpText);
     }, [helpText, onHelpChange]);
 
-    // ── Setters dos campos ───────────────────────────────────────────────────
     const setHeaderField = useCallback(
       <K extends keyof FormHeader>(field: K, value: FormHeader[K]) => {
         setHeader((prev) => ({ ...prev, [field]: value }));
@@ -229,9 +278,8 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
             return next;
           });
         }
-        markDirty();
       },
-      [errors, markDirty],
+      [errors],
     );
 
     const handleClienteChange = useCallback(
@@ -249,9 +297,8 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
             return next;
           });
         }
-        markDirty();
       },
-      [errors.clienteId, markDirty],
+      [errors.clienteId],
     );
 
     const handleItensChange = useCallback(
@@ -264,20 +311,33 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
             return next;
           });
         }
-        // Dirty só se mudou em relação ao baseline
-        const json = JSON.stringify(rows);
-        if (json !== baselineItensJson.current) markDirty();
       },
-      [errors.itens, markDirty],
+      [errors.itens],
     );
 
-    // ── Validação ────────────────────────────────────────────────────────────
+    const handleStatusChange = useCallback(
+      (novoStatus: StatusPedido, justificativa?: string) => {
+        if (novoStatus === statusAtualReal) {
+          setStatusPendente(null);
+          setJustificativaPendente('');
+          return;
+        }
+        setStatusPendente(novoStatus);
+        setJustificativaPendente(justificativa ?? '');
+      },
+      [statusAtualReal],
+    );
+
+    const handleClearPendente = useCallback(() => {
+      setStatusPendente(null);
+      setJustificativaPendente('');
+    }, []);
+
     const validate = useCallback((): Record<string, string> => {
       const e: Record<string, string> = {};
       if (!header.clienteId) e.clienteId = 'Selecione um cliente';
       if (!header.tipo) e.tipo = 'Selecione o tipo do pedido';
       if (itens.length === 0) e.itens = 'Pedido deve ter ao menos 1 item';
-      // Valida itens individuais (quantidade > 0, descrição)
       for (const it of itens) {
         if (!it.descricao || !it.descricao.trim()) {
           e.itens = 'Todos os itens devem ter descrição';
@@ -291,7 +351,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
       return e;
     }, [header, itens]);
 
-    // ── Montagem dos payloads ────────────────────────────────────────────────
     const buildCreatePayload = useCallback((): PedidoVendaCreateData => {
       const itensOut: ItemPedidoCreateData[] = itens.map((r) => ({
         quantidade: Number(r.quantidade),
@@ -330,12 +389,18 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
       [header, itens],
     );
 
-    // ── Submit via ref ───────────────────────────────────────────────────────
+    /**
+     * submit():
+     *   - Valida
+     *   - Em PV avançado com mudanças → abre modal e ESPERA justificativa via Promise
+     *   - Promise resolve só depois do usuário confirmar/cancelar o modal
+     *   - Mantém o fluxo dentro do saveAndBack do usePageMode
+     */
     useImperativeHandle(ref, () => ({
       submit: async () => {
         if (bloqueado) {
           toast.error(
-            `Pedidos em "${STATUS_LABELS[statusAtual!]}" não podem ser editados.`,
+            `Pedidos em "${STATUS_LABELS[statusAtualReal!]}" não podem ser editados.`,
           );
           return false;
         }
@@ -358,42 +423,109 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
           return false;
         }
 
-        // new: sempre POST direto
         if (isNew) {
-          const payload = buildCreatePayload();
-          await onSave({ kind: 'create', data: payload });
-          return true;
+          try {
+            const payload = buildCreatePayload();
+            await onSave({ kind: 'create', data: payload });
+            return true;
+          } catch {
+            return false;
+          }
         }
 
-        // edit: se status avançado, pede justificativa antes
-        const updatePayload = buildUpdatePayload();
+        const houvePV = headerMudou || itensMudaram;
+        const houveStatus = statusMudou;
+
+        if (!houvePV && !houveStatus) {
+          toast.info('Nenhuma alteração para salvar.');
+          return false;
+        }
+
+        if (!houvePV && houveStatus) {
+          try {
+            await onSave({
+              kind: 'status-only',
+              statusPendente: statusPendente!,
+              justificativaPendente: justificativaPendente || undefined,
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        }
+
+        // PV mudou em status avançado → modal aguarda Promise
         if (modoAvancado) {
-          setPendingPayload(updatePayload);
-          setJustifOpen(true);
-          return false; // não salva ainda — o confirmJustif salva depois
+          const updatePayload = buildUpdatePayload();
+          pendingPayloadRef.current = updatePayload;
+          setJustifAvancadoOpen(true);
+
+          // Aguarda o modal fechar (confirmar OU cancelar)
+          return await new Promise<boolean>((resolve) => {
+            justifResolverRef.current = resolve;
+          });
         }
 
-        await onSave({ kind: 'update', data: updatePayload });
-        return true;
+        // PV mudou em status inicial — direto
+        try {
+          const updatePayload = buildUpdatePayload();
+          await onSave({
+            kind: 'update',
+            data: updatePayload,
+            statusPendente: statusPendente ?? undefined,
+            justificativaPendente: justificativaPendente || undefined,
+          });
+          return true;
+        } catch {
+          return false;
+        }
       },
     }));
 
-    // ── Ao confirmar justificativa, salva efetivamente ────────────────────
-    const confirmJustif = useCallback(
+    /**
+     * Confirmação do modal: chama onSave e resolve a Promise do submit
+     * com o resultado real (true=salvou, false=falhou).
+     */
+    const confirmJustifAvancado = useCallback(
       async (justif: string) => {
-        if (!pendingPayload) return;
+        const payload = pendingPayloadRef.current;
+        if (!payload) {
+          justifResolverRef.current?.(false);
+          justifResolverRef.current = null;
+          return;
+        }
         const finalPayload: PedidoVendaUpdateData = {
-          ...pendingPayload,
+          ...payload,
           justificativa: justif,
         };
-        await onSave({ kind: 'update', data: finalPayload });
+        try {
+          await onSave({
+            kind: 'update',
+            data: finalPayload,
+            statusPendente: statusPendente ?? undefined,
+            justificativaPendente: justificativaPendente || undefined,
+          });
+          justifResolverRef.current?.(true);
+        } catch {
+          justifResolverRef.current?.(false);
+        } finally {
+          justifResolverRef.current = null;
+          pendingPayloadRef.current = null;
+        }
       },
-      [pendingPayload, onSave],
+      [onSave, statusPendente, justificativaPendente],
     );
 
-    // ═════════════════════════════════════════════════════════════════════════
-    // RENDER
-    // ═════════════════════════════════════════════════════════════════════════
+    /** Quando o modal fecha sem confirmar (cancelar / esc / clique fora) */
+    const handleJustifClose = useCallback((open: boolean) => {
+      setJustifAvancadoOpen(open);
+      if (!open && justifResolverRef.current) {
+        // Fechou sem confirmar → resolve false (submit retorna false → saveAndBack aborta)
+        justifResolverRef.current(false);
+        justifResolverRef.current = null;
+        pendingPayloadRef.current = null;
+      }
+    }, []);
 
     return (
       <div className="h-full flex flex-col overflow-hidden">
@@ -425,12 +557,10 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
             </TabsList>
           </div>
 
-          {/* ══ Aba Pedido ══ */}
           <TabsContent
             value="pedido"
             className="flex-1 overflow-auto mt-0 px-6 py-4"
           >
-            {/* Banner status avançado */}
             {modoAvancado && !readOnly && (
               <div className="mb-4 rounded-md border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -439,7 +569,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                     Pedido em produção
                   </p>
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                    Alterações nos itens serão registradas no histórico e{' '}
+                    Qualquer alteração será registrada no histórico e{' '}
                     <strong>Engenharia</strong>, <strong>Produção</strong> e{' '}
                     <strong>Almoxarifado</strong> serão notificados. Justificativa obrigatória.
                   </p>
@@ -452,7 +582,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
               onKeyDown={handleFieldsKeyDown}
               className="grid grid-cols-12 gap-x-4 gap-y-4"
             >
-              {/* Linha 1: Tipo (new) / Código + Tipo + Status (edit/view) */}
               {isNew ? (
                 <div
                   className="col-span-12 flex flex-col gap-1.5"
@@ -513,7 +642,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                       <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                         Status
                       </Label>
-                      <div className="h-9 flex items-center">
+                      <div className="h-9 flex items-center gap-1.5">
                         <span
                           className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
                             STATUS_COLORS[pedido.status] || ''
@@ -521,6 +650,18 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                         >
                           {STATUS_LABELS[pedido.status] || pedido.status}
                         </span>
+                        {statusPendente && statusPendente !== pedido.status && (
+                          <>
+                            <span className="text-amber-600 dark:text-amber-400">→</span>
+                            <span
+                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ring-2 ring-amber-300 dark:ring-amber-700 ${
+                                STATUS_COLORS[statusPendente] || ''
+                              }`}
+                            >
+                              {STATUS_LABELS[statusPendente]}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -542,7 +683,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 )
               )}
 
-              {/* Data de Entrega isolada no modo new */}
               {isNew && (
                 <div
                   className="col-span-4 flex flex-col gap-1.5"
@@ -560,7 +700,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 </div>
               )}
 
-              {/* Cliente (linha cheia) */}
               <div
                 className={`${isNew ? 'col-span-8' : 'col-span-12'} flex flex-col gap-1.5`}
                 onFocus={() => setFocusedField('clienteId')}
@@ -579,7 +718,6 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 />
               </div>
 
-              {/* Observações */}
               <div
                 className="col-span-12 flex flex-col gap-1.5"
                 onFocus={() => setFocusedField('observacoes')}
@@ -606,16 +744,21 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 />
               </div>
 
-              {/* Status panel (só se PV já existe) */}
               {!isNew && pedido && (
                 <div className="col-span-12 mt-2">
-                  <PedidoStatusPanel pedido={pedido} editable={mode === 'edit' && !bloqueado} />
+                  <PedidoStatusPanel
+                    pedido={pedido}
+                    statusExibido={statusExibido}
+                    temPendente={statusPendente !== null}
+                    editable={mode === 'edit' && !bloqueado}
+                    onStatusChange={handleStatusChange}
+                    onClearPendente={handleClearPendente}
+                  />
                 </div>
               )}
             </div>
           </TabsContent>
 
-          {/* ══ Aba Itens ══ */}
           <TabsContent
             value="itens"
             className="flex-1 overflow-auto mt-0 px-6 py-4"
@@ -634,18 +777,14 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
           </TabsContent>
         </Tabs>
 
-        {/* Dialog de justificativa (status avançado) */}
         <JustificativaDialog
-          open={justifOpen}
-          onOpenChange={(o) => {
-            setJustifOpen(o);
-            if (!o) setPendingPayload(null);
-          }}
+          open={justifAvancadoOpen}
+          onOpenChange={handleJustifClose}
           title="Confirmar alteração em pedido em produção"
           description="Descreva o motivo da alteração. Este texto ficará registrado no histórico e será enviado nas notificações para Engenharia, Produção e Almoxarifado."
           confirmLabel="Salvar alteração"
           variant="info"
-          onConfirm={confirmJustif}
+          onConfirm={confirmJustifAvancado}
         />
       </div>
     );
