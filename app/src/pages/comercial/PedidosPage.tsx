@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePedidosStore } from '@/stores/comercial/pedidosStore';
+import { useClientesStore } from '@/stores/admin/clientesStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
@@ -41,10 +42,19 @@ interface PedidosPageProps {
 }
 
 const SEARCH_COLUMNS: SearchColumn[] = [
-  { key: 'codigo', label: 'Código' },
-  { key: 'clienteCodigo', label: 'Cód. Cliente' },
+  { key: 'codigo', label: 'Código PV' },
+  { key: 'tipo', label: 'Tipo' },
+  { key: 'status', label: 'Status' },
+  { key: 'clienteCodigo', label: 'Código Cliente' },
   { key: 'clienteNome', label: 'Cliente' },
+  { key: 'clienteCpfCnpj', label: 'CPF/CNPJ' },
+  { key: 'clienteEstado', label: 'Estado' },
+  { key: 'clienteCidade', label: 'Cidade' },
+  { key: 'data', label: 'Data' },
+  { key: 'dataEntrega', label: 'Entrega' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['codigo', 'clienteCodigo', 'clienteNome'];
 
 const TIPO_OPTIONS = [
   { label: 'Normal', value: 'Normal' },
@@ -74,6 +84,20 @@ function formatDate(val?: string | null) {
     return '-';
   }
 }
+
+/**
+ * Pedido enriquecido com dados do Cliente (CPF/CNPJ, Estado, Cidade) que
+ * não vêm no PedidoVenda do back. Esses campos são populados via lookup
+ * no array `clientes` (já carregado em memória pelo store de clientes).
+ *
+ * Ficam como campos opcionais; se o cliente não estiver no cache local
+ * (caso raro), aparecem como '-'.
+ */
+type PedidoVendaEnriched = PedidoVenda & {
+  clienteCpfCnpj?: string | null;
+  clienteEstado?: string | null;
+  clienteCidade?: string | null;
+};
 
 function PedidoCard({ pedido }: { pedido: PedidoVenda }) {
   return (
@@ -133,8 +157,14 @@ export function PedidosPage({ tab }: PedidosPageProps) {
   const alterarStatus = usePedidosStore((s) => s.alterarStatus);
   const clearError = usePedidosStore((s) => s.clearError);
 
+  // Clientes — usados para enriquecer pedidos com CPF/CNPJ, Estado, Cidade
+  const clientes = useClientesStore((s) => s.clientes);
+  const fetchClientes = useClientesStore((s) => s.fetchClientes);
+
   useEffect(() => {
     void fetchPedidos();
+    if (clientes.length === 0) void fetchClientes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchPedidos]);
 
   // Toast de erro vindo do store — única fonte
@@ -144,6 +174,26 @@ export function PedidosPage({ tab }: PedidosPageProps) {
       clearError();
     }
   }, [error, clearError]);
+
+  // Index de clientes por id para lookup O(1) no enriquecimento dos pedidos
+  const clientesById = useMemo(() => {
+    const map = new Map<number, (typeof clientes)[number]>();
+    for (const c of clientes) map.set(c.id, c);
+    return map;
+  }, [clientes]);
+
+  // Pedidos enriquecidos com CPF/CNPJ, Estado e Cidade vindos da tabela de clientes
+  const pedidosEnriched = useMemo<PedidoVendaEnriched[]>(() => {
+    return pedidos.map((p) => {
+      const c = clientesById.get(p.clienteId);
+      return {
+        ...p,
+        clienteCpfCnpj: c?.cpfCnpj ?? null,
+        clienteEstado: c?.estado ?? null,
+        clienteCidade: c?.cidade ?? null,
+      };
+    });
+  }, [pedidos, clientesById]);
 
   const pedidoVivo = useMemo<PedidoVenda | null>(() => {
     if (!page.editingItem) return null;
@@ -160,11 +210,11 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     }
   }, [page.mode, page.editingItem?.id, fetchPedido]);
 
-  const list = useListState<PedidoVenda>({
+  const list = useListState<PedidoVendaEnriched>({
     tabId: tab.id,
-    data: pedidos,
+    data: pedidosEnriched,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['codigo'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
   const [formHelp, setFormHelp] = useState<string | null>(null);
@@ -248,11 +298,12 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     [del],
   );
 
-  const columns: GridColumn<PedidoVenda>[] = useMemo(
+  const columns: GridColumn<PedidoVendaEnriched>[] = useMemo(
     () => [
+      // 1. Código PV
       {
         key: 'codigo',
-        header: 'Código',
+        header: 'Código PV',
         width: 170,
         minWidth: 120,
         filterType: 'exact',
@@ -261,6 +312,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           <span className="font-mono font-medium">{p.codigo || '-'}</span>
         ),
       },
+      // 2. Tipo
       {
         key: 'tipo',
         header: 'Tipo',
@@ -279,22 +331,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           </span>
         ),
       },
-      {
-        key: 'clienteNome',
-        header: 'Cliente',
-        width: 280,
-        minWidth: 160,
-        render: (p) => (
-          <div className="flex items-center gap-2 min-w-0">
-            {p.clienteCodigo && (
-              <span className="font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-muted rounded px-1.5 py-0.5 shrink-0">
-                {p.clienteCodigo}
-              </span>
-            )}
-            <span className="truncate">{p.clienteNome || '-'}</span>
-          </div>
-        ),
-      },
+      // 3. Status
       {
         key: 'status',
         header: 'Status',
@@ -313,14 +350,70 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           </span>
         ),
       },
+      // 4. Código Cliente
       {
-        key: 'totalItens',
-        header: 'Itens',
-        width: 80,
-        minWidth: 60,
+        key: 'clienteCodigo',
+        header: 'Código Cliente',
+        width: 120,
+        minWidth: 100,
+        filterType: 'text',
         contentAlign: 'center',
-        render: (p) => <span className="font-mono">{p.totalItens ?? 0}</span>,
+        render: (p) =>
+          p.clienteCodigo ? (
+            <span className="font-mono text-xs">{p.clienteCodigo}</span>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          ),
       },
+      // 5. Cliente
+      {
+        key: 'clienteNome',
+        header: 'Cliente',
+        width: 240,
+        minWidth: 160,
+        filterType: 'text',
+        render: (p) => (
+          <span className="truncate">{p.clienteNome || '-'}</span>
+        ),
+      },
+      // 6. CPF/CNPJ
+      {
+        key: 'clienteCpfCnpj',
+        header: 'CPF/CNPJ',
+        width: 150,
+        minWidth: 120,
+        filterType: 'text',
+        render: (p) =>
+          p.clienteCpfCnpj ? (
+            <span className="font-mono text-xs">{p.clienteCpfCnpj}</span>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          ),
+      },
+      // 7. Estado
+      {
+        key: 'clienteEstado',
+        header: 'Estado',
+        width: 80,
+        minWidth: 70,
+        contentAlign: 'center',
+        filterType: 'text',
+        render: (p) => p.clienteEstado || <span className="text-muted-foreground">-</span>,
+      },
+      // 8. Cidade
+      {
+        key: 'clienteCidade',
+        header: 'Cidade',
+        width: 160,
+        minWidth: 120,
+        filterType: 'text',
+        render: (p) => (
+          <span className="truncate">
+            {p.clienteCidade || <span className="text-muted-foreground">-</span>}
+          </span>
+        ),
+      },
+      // 9. Data
       {
         key: 'data',
         header: 'Data',
@@ -329,6 +422,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         contentAlign: 'center',
         render: (p) => formatDate(p.data),
       },
+      // 10. Entrega
       {
         key: 'dataEntrega',
         header: 'Entrega',

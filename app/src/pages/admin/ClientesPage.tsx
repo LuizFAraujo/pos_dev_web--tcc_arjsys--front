@@ -29,13 +29,16 @@ interface ClientesPageProps {
 }
 
 const SEARCH_COLUMNS: SearchColumn[] = [
-  { key: 'nome', label: 'Nome' },
-  { key: 'cpfCnpj', label: 'CPF/CNPJ' },
+  { key: 'codigo', label: 'Código' },
+  { key: 'nome', label: 'Cliente' },
   { key: 'razaoSocial', label: 'Razão Social' },
+  { key: 'cpfCnpj', label: 'CPF/CNPJ' },
+  { key: 'estado', label: 'Estado' },
   { key: 'cidade', label: 'Cidade' },
   { key: 'telefone', label: 'Telefone' },
-  { key: 'contatoComercial', label: 'Contato' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['codigo', 'nome'];
 
 function ClienteCard({ cliente }: { cliente: Cliente }) {
   return (
@@ -80,7 +83,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     tabId: tab.id,
     data: clientes,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['nome'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
   // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -105,26 +108,59 @@ export function ClientesPage({ tab }: ClientesPageProps) {
   // ─── Colunas ──────────────────────────────────────────────────────────────────
 
   const columns: GridColumn<Cliente>[] = useMemo(() => [
+    // 1. Código
     {
-      key: 'nome', header: 'Nome', width: 200, minWidth: 120,
+      key: 'codigo', header: 'Código', width: 110, minWidth: 90,
+      contentAlign: 'center', filterType: 'text',
       render: (c) => (
-        <span className="font-semibold text-slate-800 dark:text-slate-200">{c.nome || '-'}</span>
+        <span className="font-mono text-xs">{c.codigo || '-'}</span>
       ),
     },
+    // 2. Cliente (nome fantasia)
+    {
+      key: 'nome', header: 'Cliente', width: 220, minWidth: 140,
+      filterType: 'text',
+      render: (c) => (
+        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+          {c.nome || '-'}
+        </span>
+      ),
+    },
+    // 3. Razão Social
+    {
+      key: 'razaoSocial', header: 'Razão Social', width: 240, minWidth: 140,
+      filterType: 'text',
+      render: (c) => (
+        <span className="truncate">
+          {c.razaoSocial || <span className="text-muted-foreground">-</span>}
+        </span>
+      ),
+    },
+    // 4. CPF/CNPJ
     {
       key: 'cpfCnpj', header: 'CPF/CNPJ', width: 170, minWidth: 130,
       contentAlign: 'center', className: 'font-mono', filterType: 'exact',
     },
-    { key: 'razaoSocial', header: 'Razão Social', width: 220, minWidth: 120 },
+    // 5. Estado
     {
-      key: 'cidade', header: 'Cidade/UF', width: 150, minWidth: 80,
-      render: (c) => (c.cidade ? `${c.cidade}${c.estado ? '/' + c.estado : ''}` : '-'),
+      key: 'estado', header: 'Estado', width: 80, minWidth: 70,
+      contentAlign: 'center', filterType: 'text',
+      render: (c) => c.estado || <span className="text-muted-foreground">-</span>,
     },
-    { key: 'telefone', header: 'Telefone', width: 140, minWidth: 100, contentAlign: 'center' },
+    // 6. Cidade
     {
-      key: 'contatoComercial', header: 'Contato', width: 200, minWidth: 100,
-      contentAlign: 'center', headerAlign: 'center',
-      render: (c) => c.contatoComercial || '-',
+      key: 'cidade', header: 'Cidade', width: 160, minWidth: 110,
+      filterType: 'text',
+      render: (c) => (
+        <span className="truncate">
+          {c.cidade || <span className="text-muted-foreground">-</span>}
+        </span>
+      ),
+    },
+    // 7. Telefone
+    {
+      key: 'telefone', header: 'Telefone', width: 140, minWidth: 100,
+      contentAlign: 'center', className: 'font-mono', filterType: 'text',
     },
   ], []);
 
@@ -209,6 +245,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     </PageShell>
   );
 }
+
 
 
 
