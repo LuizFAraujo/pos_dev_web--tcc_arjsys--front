@@ -1,21 +1,34 @@
 /**
- * PedidoClienteField.tsx — Seletor de cliente com autocomplete rico
+ * PedidoClienteField.tsx — Seletor de cliente em 2 campos digitáveis ligados
  *
- * FIX v2:
- *   - autoComplete="off" (desativa autocomplete nativo do navegador)
- *   - Dropdown só abre ao digitar ou ao clicar na lupa (nunca abre
- *     automaticamente só por foco)
+ * Pattern de autocomplete inline (estilo NovaEstruturaDialog):
+ *   - Digita "5" no Código → completa pra "CLI-0005" com seleção do trecho
+ *     extra ("LI-0005"). Continuar digitando sobrescreve a seleção.
+ *   - Digita "agro" no Cliente → completa pra "Agroindustria Cerrado" com
+ *     seleção do trecho extra. Mesmo comportamento.
+ *   - Backspace/Delete cancela autocomplete da rodada (não re-completa).
+ *   - Tab/Enter aceita o match completo.
+ *   - Match exato em qualquer dos 2 campos → preenche o outro automaticamente.
+ *   - X em qualquer campo → limpa os 2.
+ *   - Lupa OU F4 abre modal de pesquisa avançada (PedidoClienteSearchDialog).
  *
- * Nota: o redesenho completo (campos Código/Nome ligados + modal de pesquisa)
- * fica pra Etapa 2. Aqui é só consertar os 2 bugs críticos.
+ * Carregamento: todos os clientes em memória uma vez (estilo NovaEstrutura).
+ *
+ * Contrato (props) inalterado — chamadores (PedidoForm) não precisam mudar.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useClientesStore } from '@/stores/admin/clientesStore';
 import type { Cliente } from '@/types/admin/cliente.types';
+import { Input } from '@/components/ui/input';
+import { PedidoClienteSearchDialog } from './PedidoClienteSearchDialog';
 
 interface PedidoClienteFieldProps {
   id?: string;
@@ -28,8 +41,6 @@ interface PedidoClienteFieldProps {
   required?: boolean;
   error?: string;
 }
-
-const DEBOUNCE_MS = 300;
 
 export function PedidoClienteField({
   id = 'clienteId',
@@ -45,197 +56,326 @@ export function PedidoClienteField({
   const clientes = useClientesStore((s) => s.clientes);
   const fetchClientes = useClientesStore((s) => s.fetchClientes);
 
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
+  const [codigoText, setCodigoText] = useState('');
+  const [nomeText, setNomeText] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const codigoInputRef = useRef<HTMLInputElement>(null);
+  const nomeInputRef = useRef<HTMLInputElement>(null);
+  const skipAutocompleteRef = useRef(false);
+
+  const hasSelected = value > 0;
 
   useEffect(() => {
     if (clientes.length === 0) void fetchClientes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounce de busca — só dispara se o dropdown estiver aberto
   useEffect(() => {
-    if (!open) return;
-    const term = search.trim();
-    const t = window.setTimeout(() => {
-      void fetchClientes(term || undefined);
-    }, DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [search, open, fetchClientes]);
+    if (hasSelected) {
+      setCodigoText(displayCodigo ?? '');
+      setNomeText(displayName ?? '');
+    } else {
+      setCodigoText('');
+      setNomeText('');
+    }
+  }, [hasSelected, displayCodigo, displayName]);
 
-  // Direção do dropdown
-  useLayoutEffect(() => {
-    if (!open || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    setDropUp(spaceBelow < 260 && spaceAbove > spaceBelow);
-  }, [open]);
+  const matchPorCodigo = useCallback(
+    (term: string): Cliente | null => {
+      const t = term.trim().toLowerCase();
+      if (!t) return null;
+      return clientes.find((c) => (c.codigo ?? '').toLowerCase() === t) ?? null;
+    },
+    [clientes],
+  );
 
-  const handleSelect = useCallback(
+  const matchPorNome = useCallback(
+    (term: string): Cliente | null => {
+      const t = term.trim().toLowerCase();
+      if (!t) return null;
+      return clientes.find((c) => (c.nome ?? '').toLowerCase() === t) ?? null;
+    },
+    [clientes],
+  );
+
+  const acceptCliente = useCallback(
     (c: Cliente) => {
       onChange(c.id, c);
-      setSearch('');
-      setOpen(false);
+      setCodigoText(c.codigo ?? '');
+      setNomeText(c.nome ?? '');
     },
     [onChange],
   );
 
   const handleClear = useCallback(() => {
     onChange(0);
-    setSearch('');
-    requestAnimationFrame(() => inputRef.current?.focus());
+    setCodigoText('');
+    setNomeText('');
+    requestAnimationFrame(() => nomeInputRef.current?.focus());
   }, [onChange]);
 
-  const hasSelected = value > 0;
+  const openSearchDialog = useCallback(() => {
+    setSearchOpen(true);
+  }, []);
+
+  // ─────────────────────── Autocomplete inline — Código ─────────────────────
+
+  const handleCodigoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCodigoText(val);
+
+    if (skipAutocompleteRef.current) {
+      skipAutocompleteRef.current = false;
+      return;
+    }
+
+    if (val.length > 0 && codigoInputRef.current) {
+      const term = val.toLowerCase();
+      const match = clientes.find((c) =>
+        (c.codigo ?? '').toLowerCase().startsWith(term),
+      );
+      if (match && match.codigo) {
+        const full = match.codigo;
+        codigoInputRef.current.value = full;
+        codigoInputRef.current.setSelectionRange(val.length, full.length);
+        setCodigoText(full);
+        return;
+      }
+    }
+  };
+
+  const handleCodigoKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'F4') {
+      e.preventDefault();
+      openSearchDialog();
+      return;
+    }
+
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      skipAutocompleteRef.current = true;
+      return;
+    }
+
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      const currentValue = codigoInputRef.current?.value || '';
+      const match = matchPorCodigo(currentValue);
+      if (match) {
+        e.preventDefault();
+        acceptCliente(match);
+      }
+    }
+  };
+
+  const handleCodigoBlur = () => {
+    const match = matchPorCodigo(codigoText);
+    if (match) {
+      acceptCliente(match);
+    }
+  };
+
+  // ─────────────────────── Autocomplete inline — Nome ───────────────────────
+
+  const handleNomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNomeText(val);
+
+    if (skipAutocompleteRef.current) {
+      skipAutocompleteRef.current = false;
+      return;
+    }
+
+    if (val.length > 0 && nomeInputRef.current) {
+      const term = val.toLowerCase();
+      const match = clientes.find((c) =>
+        (c.nome ?? '').toLowerCase().startsWith(term),
+      );
+      if (match && match.nome) {
+        const full = match.nome;
+        nomeInputRef.current.value = full;
+        nomeInputRef.current.setSelectionRange(val.length, full.length);
+        setNomeText(full);
+        return;
+      }
+    }
+  };
+
+  const handleNomeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'F4') {
+      e.preventDefault();
+      openSearchDialog();
+      return;
+    }
+
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      skipAutocompleteRef.current = true;
+      return;
+    }
+
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      const currentValue = nomeInputRef.current?.value || '';
+      const match = matchPorNome(currentValue);
+      if (match) {
+        e.preventDefault();
+        acceptCliente(match);
+      }
+    }
+  };
+
+  const handleNomeBlur = () => {
+    const match = matchPorNome(nomeText);
+    if (match) {
+      acceptCliente(match);
+    }
+  };
+
+  // ─────────────────────── Render ───────────────────────────────────────────
+
+  if (readOnly) {
+    return (
+      <div className="flex gap-2">
+        <div className="w-36 shrink-0 flex flex-col gap-1.5">
+          <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            Código Cliente
+          </Label>
+          <Input
+            value={displayCodigo ?? '—'}
+            readOnly
+            className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
+            tabIndex={-1}
+          />
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          {label && (
+            <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {label}
+              {required && ' *'}
+            </Label>
+          )}
+          <Input
+            value={displayName ?? '—'}
+            readOnly
+            className="h-9 text-sm bg-white dark:bg-slate-950 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
+            tabIndex={-1}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-1.5 w-full">
-      {label && (
-        <Label
-          htmlFor={id}
-          className={`text-xs font-medium ${
-            error
-              ? 'text-red-500 dark:text-red-400'
-              : 'text-slate-500 dark:text-slate-400'
-          }`}
-        >
-          {label}
-          {required && ' *'}
-        </Label>
-      )}
-
-      {hasSelected && !readOnly ? (
-        /* Selecionado — chip com botão X */
-        <div className="relative">
-          <div
-            className={`flex items-center gap-2 h-9 px-3 pr-9 rounded-md border bg-white dark:bg-slate-950 ${
-              error ? 'border-red-400 dark:border-red-500' : 'border-input'
-            }`}
-          >
-            {displayCodigo && (
-              <span className="font-mono text-[10px] font-medium text-slate-600 dark:text-slate-400 bg-muted rounded px-1.5 py-0.5 shrink-0">
-                {displayCodigo}
-              </span>
-            )}
-            <span className="text-sm text-foreground truncate">
-              {displayName || '—'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
-            title="Limpar seleção"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      ) : readOnly ? (
-        /* Readonly view */
-        <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-white dark:bg-slate-950 border-input">
-          {displayCodigo && (
-            <span className="font-mono text-[10px] font-medium text-slate-600 dark:text-slate-400 bg-muted rounded px-1.5 py-0.5 shrink-0">
-              {displayCodigo}
-            </span>
-          )}
-          <span className="text-sm text-foreground truncate">
-            {displayName || '—'}
-          </span>
-        </div>
-      ) : (
-        /* Input de busca */
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            id={id}
-            ref={inputRef}
-            placeholder="Código, nome, CPF/CNPJ ou cidade"
-            /* Desativa autocomplete nativo do browser */
-            autoComplete="off"
-            name="pedido-cliente-search"
-            data-1p-ignore
-            data-lpignore="true"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              /* Abre dropdown só quando o usuário DIGITA */
-              if (e.target.value.length > 0) setOpen(true);
-            }}
-            /* REMOVIDO: onFocus que abria automaticamente.
-               Pra abrir sem digitar, o usuário clica explicitamente (mousedown). */
-            onMouseDown={() => {
-              if (!open) setOpen(true);
-            }}
-            onBlur={() => window.setTimeout(() => setOpen(false), 150)}
-            className={`h-9 text-sm bg-white dark:bg-slate-950 pl-9 ${
-              error
-                ? 'border-red-400 dark:border-red-500 focus-visible:ring-red-400/30'
-                : ''
-            }`}
-          />
-
-          {open && (
-            <div
-              className={`absolute z-50 w-full rounded-lg border bg-popover shadow-md ${
-                dropUp ? 'bottom-full mb-1' : 'top-full mt-1'
+    <>
+      <div className="flex flex-col gap-1.5 w-full">
+        <div className="flex gap-2">
+          {/* Grupo Código Cliente */}
+          <div className="w-36 shrink-0 flex flex-col gap-1.5">
+            <Label
+              htmlFor={`${id}-codigo`}
+              className={`text-xs font-medium ${
+                error
+                  ? 'text-red-500 dark:text-red-400'
+                  : 'text-slate-500 dark:text-slate-400'
               }`}
-              style={{ maxHeight: 240, overflowY: 'auto' }}
             >
-              {clientes.length === 0 ? (
-                <p className="px-3 py-3 text-xs text-muted-foreground italic">
-                  Nenhum cliente encontrado
-                </p>
-              ) : (
-                clientes.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className="w-full px-3 py-2 text-left hover:bg-muted/60 transition-colors border-b border-border/50 last:border-b-0 flex flex-col gap-0.5"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleSelect(c)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {c.codigo && (
-                        <span className="font-mono text-[10px] font-medium text-slate-600 dark:text-slate-400 bg-muted rounded px-1.5 py-0.5 shrink-0">
-                          {c.codigo}
-                        </span>
-                      )}
-                      <span className="text-sm font-medium truncate">{c.nome}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      {c.cidade && <span>{c.cidade}</span>}
-                      {c.cpfCnpj && (
-                        <>
-                          {c.cidade && <span>·</span>}
-                          <span className="font-mono">{c.cpfCnpj}</span>
-                        </>
-                      )}
-                      {c.telefone && (
-                        <>
-                          {(c.cidade || c.cpfCnpj) && <span>·</span>}
-                          <span className="font-mono">{c.telefone}</span>
-                        </>
-                      )}
-                    </div>
-                  </button>
-                ))
+              Código Cliente
+            </Label>
+            <div className="relative">
+              <input
+                ref={codigoInputRef}
+                id={`${id}-codigo`}
+                type="text"
+                placeholder="CLI-0000"
+                value={codigoText}
+                onChange={handleCodigoChange}
+                onKeyDown={handleCodigoKeyDown}
+                onBlur={handleCodigoBlur}
+                autoComplete="off"
+                name="pedido-cliente-codigo"
+                data-1p-ignore
+                data-lpignore="true"
+                className={`flex h-9 w-full rounded-md border bg-white dark:bg-slate-950 px-3 py-1 text-sm font-mono shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  error
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-input'
+                } ${hasSelected ? 'pr-8' : ''}`}
+              />
+              {hasSelected && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
+                  title="Limpar seleção"
+                  tabIndex={-1}
+                >
+                  <X className="h-3 w-3" />
+                </button>
               )}
             </div>
-          )}
-        </div>
-      )}
+          </div>
 
-      {error && (
-        <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
-          <span className="inline-block h-1 w-1 rounded-full bg-red-400 shrink-0" />
-          {error}
-        </p>
-      )}
-    </div>
+          {/* Grupo Cliente */}
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+            {label && (
+              <Label
+                htmlFor={id}
+                className={`text-xs font-medium ${
+                  error
+                    ? 'text-red-500 dark:text-red-400'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                {label}
+                {required && ' *'}
+              </Label>
+            )}
+
+            <div className="relative">
+              <input
+                ref={nomeInputRef}
+                id={id}
+                type="text"
+                placeholder="Digite o nome do cliente (F4 para pesquisa avançada)"
+                value={nomeText}
+                onChange={handleNomeChange}
+                onKeyDown={handleNomeKeyDown}
+                onBlur={handleNomeBlur}
+                autoComplete="off"
+                name="pedido-cliente-nome"
+                data-1p-ignore
+                data-lpignore="true"
+                className={`flex h-9 w-full rounded-md border bg-white dark:bg-slate-950 px-3 py-1 pr-9 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  error
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-input'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={openSearchDialog}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Pesquisa avançada (F4)"
+                tabIndex={-1}
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+            <span className="inline-block h-1 w-1 rounded-full bg-red-400 shrink-0" />
+            {error}
+          </p>
+        )}
+      </div>
+
+      <PedidoClienteSearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        clientes={clientes}
+        onSelect={acceptCliente}
+      />
+    </>
   );
 }

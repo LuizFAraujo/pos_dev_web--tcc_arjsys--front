@@ -17,7 +17,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,26 +52,81 @@ import type {
 import type { Cliente } from '@/types/admin/cliente.types';
 import type { PageMode } from '@/components/shared/PageShell';
 
+/**
+ * PedidoEmProducaoBadge — Botão compacto que mostra "Pedido em produção"
+ * com ícone de aviso. Clicar abre popover sobreposto com o texto completo,
+ * sem empurrar o layout. Clicar fora fecha.
+ */
+function PedidoEmProducaoBadge() {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapperRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+      >
+        <AlertTriangle className="h-3.5 w-3.5" />
+        <span>Pedido em produção</span>
+        {open ? (
+          <ChevronUp className="h-3 w-3 opacity-70" />
+        ) : (
+          <ChevronDown className="h-3 w-3 opacity-70" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-2 z-50 w-80">
+          <div className="absolute -top-1.5 left-4 w-3 h-3 rotate-45 bg-popover border-l border-t border-border" />
+          <div className="relative rounded-md border border-border bg-popover dark:bg-slate-900 shadow-md p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground leading-relaxed">
+                Qualquer alteração será registrada no histórico e{' '}
+                <strong>Engenharia</strong>, <strong>Produção</strong> e{' '}
+                <strong>Almoxarifado</strong> serão notificados. Justificativa obrigatória.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface PedidoFormHandle {
   submit: () => Promise<boolean>;
 }
 
 export type PedidoFormPayload =
   | {
-      kind: 'create';
-      data: PedidoVendaCreateData;
-    }
+    kind: 'create';
+    data: PedidoVendaCreateData;
+  }
   | {
-      kind: 'update';
-      data: PedidoVendaUpdateData;
-      statusPendente?: StatusPedido;
-      justificativaPendente?: string;
-    }
+    kind: 'update';
+    data: PedidoVendaUpdateData;
+    statusPendente?: StatusPedido;
+    justificativaPendente?: string;
+  }
   | {
-      kind: 'status-only';
-      statusPendente: StatusPedido;
-      justificativaPendente?: string;
-    };
+    kind: 'status-only';
+    statusPendente: StatusPedido;
+    justificativaPendente?: string;
+  };
 
 interface PedidoFormProps {
   mode: Extract<PageMode, 'new' | 'edit' | 'view'>;
@@ -183,7 +238,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
     const pendingPayloadRef = useRef<PedidoVendaUpdateData | null>(null);
 
     const { activeTab, setActiveTab, formFieldsRef, handleFieldsKeyDown } =
-      useFormTabNavigation({ tabs: TABS, defaultTab: 'pedido' });
+      useFormTabNavigation({ tabs: TABS, defaultTab: 'pedido', autoFocus: isNew });
 
     useEffect(() => {
       setErrors({});
@@ -536,8 +591,8 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
         >
           <div className="shrink-0 px-6 pt-4 pb-0 flex items-center gap-3">
             <TabsList>
-              <TabsTrigger value="pedido">Pedido</TabsTrigger>
-              <TabsTrigger value="itens">
+              <TabsTrigger value="pedido" className="px-5">Pedido</TabsTrigger>
+              <TabsTrigger value="itens" className="px-5">
                 Itens{' '}
                 {itens.length > 0 && (
                   <span
@@ -555,34 +610,82 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 )}
               </TabsTrigger>
             </TabsList>
+            {modoAvancado && !readOnly && <PedidoEmProducaoBadge />}
           </div>
 
           <TabsContent
             value="pedido"
             className="flex-1 overflow-auto mt-0 px-6 py-4"
           >
-            {modoAvancado && !readOnly && (
-              <div className="mb-4 rounded-md border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                    Pedido em produção
-                  </p>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                    Qualquer alteração será registrada no histórico e{' '}
-                    <strong>Engenharia</strong>, <strong>Produção</strong> e{' '}
-                    <strong>Almoxarifado</strong> serão notificados. Justificativa obrigatória.
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div
               ref={formFieldsRef}
               onKeyDown={handleFieldsKeyDown}
               className="grid grid-cols-12 gap-x-4 gap-y-4"
             >
-              {isNew ? (
+              {/* ─────────────────────────────────────────────────────────
+                  LINHA 1 — Metadados read-only do PV (apenas em edit/view)
+                  Código Pedido | Tipo | Status
+                  Em modo `new`, o tipo do pedido vai num bloco separado
+                  abaixo (Tipo é editável só em new).
+                  ────────────────────────────────────────────────────────── */}
+              {!isNew && pedido && (
+                <>
+                  <div className="col-span-4 flex flex-col gap-1.5">
+                    <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Código Pedido
+                    </Label>
+                    <Input
+                      value={pedido.codigo || '-'}
+                      readOnly
+                      className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+
+                  <div className="col-span-4 flex flex-col gap-1.5">
+                    <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Tipo
+                    </Label>
+                    <div className="h-9 flex items-center">
+                      <span
+                        className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${TIPO_PV_COLORS[pedido.tipo] || ''
+                          }`}
+                      >
+                        {TIPO_PV_LABELS[pedido.tipo] || pedido.tipo}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="col-span-4 flex flex-col gap-1.5">
+                    <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Status
+                    </Label>
+                    <div className="h-9 flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status] || ''
+                          }`}
+                      >
+                        {STATUS_LABELS[pedido.status] || pedido.status}
+                      </span>
+                      {statusPendente && statusPendente !== pedido.status && (
+                        <>
+                          <span className="text-amber-600 dark:text-amber-400">→</span>
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ring-2 ring-amber-300 dark:ring-amber-700 ${STATUS_COLORS[statusPendente] || ''
+                              }`}
+                          >
+                            {STATUS_LABELS[statusPendente]}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ─────────────────────────────────────────────────────────
+                  Tipo do Pedido (apenas em new — editável)
+                  ────────────────────────────────────────────────────────── */}
+              {isNew && (
                 <div
                   className="col-span-12 flex flex-col gap-1.5"
                   onFocus={() => setFocusedField('tipo')}
@@ -590,11 +693,10 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 >
                   <Label
                     htmlFor="tipo"
-                    className={`text-xs font-medium ${
-                      errors.tipo
+                    className={`text-xs font-medium ${errors.tipo
                         ? 'text-red-500 dark:text-red-400'
                         : 'text-slate-500 dark:text-slate-400'
-                    }`}
+                      }`}
                   >
                     Tipo do Pedido *
                   </Label>
@@ -609,99 +711,17 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                     <p className="text-xs text-red-500 dark:text-red-400">{errors.tipo}</p>
                   )}
                 </div>
-              ) : (
-                pedido && (
-                  <>
-                    <div className="col-span-3 flex flex-col gap-1.5">
-                      <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        Código
-                      </Label>
-                      <Input
-                        value={pedido.codigo || '-'}
-                        readOnly
-                        className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                    </div>
-
-                    <div className="col-span-3 flex flex-col gap-1.5">
-                      <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        Tipo
-                      </Label>
-                      <div className="h-9 flex items-center">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                            TIPO_PV_COLORS[pedido.tipo] || ''
-                          }`}
-                        >
-                          {TIPO_PV_LABELS[pedido.tipo] || pedido.tipo}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="col-span-3 flex flex-col gap-1.5">
-                      <Label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                        Status
-                      </Label>
-                      <div className="h-9 flex items-center gap-1.5">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                            STATUS_COLORS[pedido.status] || ''
-                          }`}
-                        >
-                          {STATUS_LABELS[pedido.status] || pedido.status}
-                        </span>
-                        {statusPendente && statusPendente !== pedido.status && (
-                          <>
-                            <span className="text-amber-600 dark:text-amber-400">→</span>
-                            <span
-                              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ring-2 ring-amber-300 dark:ring-amber-700 ${
-                                STATUS_COLORS[statusPendente] || ''
-                              }`}
-                            >
-                              {STATUS_LABELS[statusPendente]}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div
-                      className="col-span-3 flex flex-col gap-1.5"
-                      onFocus={() => setFocusedField('dataEntrega')}
-                      onBlur={() => setFocusedField(null)}
-                    >
-                      <DateField
-                        id="dataEntrega"
-                        label="Data de Entrega"
-                        value={header.dataEntrega}
-                        onChange={(v) => setHeaderField('dataEntrega', v)}
-                        readOnly={readOnly}
-                        showToday={false}
-                      />
-                    </div>
-                  </>
-                )
               )}
 
-              {isNew && (
-                <div
-                  className="col-span-4 flex flex-col gap-1.5"
-                  onFocus={() => setFocusedField('dataEntrega')}
-                  onBlur={() => setFocusedField(null)}
-                >
-                  <DateField
-                    id="dataEntrega"
-                    label="Data de Entrega"
-                    value={header.dataEntrega}
-                    onChange={(v) => setHeaderField('dataEntrega', v)}
-                    readOnly={readOnly}
-                    showToday={false}
-                  />
-                </div>
-              )}
-
+              {/* ─────────────────────────────────────────────────────────
+                  LINHA 2 — Cliente + Data de Entrega (idêntica em new/edit)
+                  PedidoClienteField já renderiza 2 sub-campos
+                  (Código Cliente + Cliente) lado a lado internamente,
+                  cada um com seu label. Aqui ele ocupa col-span-9 e
+                  Data de Entrega col-span-3.
+                  ────────────────────────────────────────────────────────── */}
               <div
-                className={`${isNew ? 'col-span-8' : 'col-span-12'} flex flex-col gap-1.5`}
+                className="col-span-9 flex flex-col gap-1.5"
                 onFocus={() => setFocusedField('clienteId')}
                 onBlur={() => setFocusedField(null)}
               >
@@ -718,6 +738,24 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                 />
               </div>
 
+              <div
+                className="col-span-3 flex flex-col gap-1.5"
+                onFocus={() => setFocusedField('dataEntrega')}
+                onBlur={() => setFocusedField(null)}
+              >
+                <DateField
+                  id="dataEntrega"
+                  label="Data de Entrega"
+                  value={header.dataEntrega}
+                  onChange={(v) => setHeaderField('dataEntrega', v)}
+                  readOnly={readOnly}
+                  showToday={false}
+                />
+              </div>
+
+              {/* ─────────────────────────────────────────────────────────
+                  LINHA 3 — Observações (full-width, com handle de resize)
+                  ────────────────────────────────────────────────────────── */}
               <div
                 className="col-span-12 flex flex-col gap-1.5"
                 onFocus={() => setFocusedField('observacoes')}
@@ -736,14 +774,16 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
                   readOnly={readOnly}
                   rows={3}
                   placeholder="Observações sobre o pedido..."
-                  className={`text-sm bg-white dark:bg-slate-950 resize-none ${
-                    readOnly
-                      ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0'
+                  className={`text-sm bg-white dark:bg-slate-950 resize-y min-h-18 ${readOnly
+                      ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0 resize-none'
                       : ''
-                  }`}
+                    }`}
                 />
               </div>
 
+              {/* ─────────────────────────────────────────────────────────
+                  Status panel (apenas em edit — ações de status)
+                  ────────────────────────────────────────────────────────── */}
               {!isNew && pedido && (
                 <div className="col-span-12 mt-2">
                   <PedidoStatusPanel
@@ -790,3 +830,4 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
     );
   },
 );
+

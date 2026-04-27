@@ -62,6 +62,15 @@ export interface DataGridProps<T> {
    * Usado para abrir edição diretamente pelo grid.
    */
   onActivate?: (item: T) => void;
+
+  /**
+   * Quando `true`, duplo-clique simples (sem Ctrl) ativa a linha (dispara onActivate).
+   * Default `false` — mantém comportamento histórico (Ctrl+duplo-clique pra ativar)
+   * que evita acionamento acidental em telas de listagem.
+   *
+   * Útil em modais de seleção, onde o duplo-clique direto é o gesto natural.
+   */
+  activateOnDoubleClick?: boolean;
 }
 
 /** Métodos expostos pelo DataGrid via ref */
@@ -109,3 +118,5 @@ export interface CompoundFilter {
 export const DEFAULT_MIN_WIDTH = 50;     // largura mínima padrão de coluna em px
 export const DEFAULT_HEADER_HEIGHT = 32; // altura padrão do header em px
 export const DEFAULT_ROW_HEIGHT = 28;    // altura padrão das linhas em px
+
+

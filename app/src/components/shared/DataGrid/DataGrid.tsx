@@ -50,6 +50,7 @@ function DataGridInner<T extends Record<string, any>>({
   className = '',
   onSelect,
   onActivate,
+  activateOnDoubleClick = false,
 }: DataGridProps<T>, ref: Ref<DataGridHandle>) {
 
   const [sorting, setSorting] = useTabState<SortingState>(tabId + '-sort', []);
@@ -344,7 +345,13 @@ function DataGridInner<T extends Record<string, any>>({
                 <tr key={row.id}
                   style={{ height: rowHeight }}
                   onClick={() => selectRow(i)}
-                  onDoubleClick={(e) => { if (e.ctrlKey) onActivateRef.current?.(row.original); }}
+                  onDoubleClick={(e) => {
+                    // Por padrão exige Ctrl pra evitar ativação acidental em listas.
+                    // Modais de seleção podem ativar com `activateOnDoubleClick`.
+                    if (e.ctrlKey || activateOnDoubleClick) {
+                      onActivateRef.current?.(row.original);
+                    }
+                  }}
                   className={`border-b border-slate-200 dark:border-slate-800 transition-colors cursor-default
                     ${isSelected
                       ? 'bg-sky-200 dark:bg-sky-900'
@@ -392,3 +399,5 @@ function DataGridInner<T extends Record<string, any>>({
 export const DataGrid = forwardRef(DataGridInner) as <T extends Record<string, any>>(
   props: DataGridProps<T> & { ref?: Ref<DataGridHandle> }
 ) => ReturnType<typeof DataGridInner>;
+
+

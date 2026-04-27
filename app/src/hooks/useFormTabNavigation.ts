@@ -42,6 +42,15 @@ interface UseFormTabNavigationOptions {
   tabs: string[];
   /** Aba inicial (default: primeira da lista) */
   defaultTab?: string;
+  /**
+   * Se `true` (default), foca no primeiro campo focável ao montar.
+   * Se `false`, não foca em nada inicialmente — útil em modo edição
+   * onde o usuário pode querer escolher qual campo editar.
+   *
+   * Em ambos os casos, trocar de aba via Tab/Shift+Tab continua focando
+   * o primeiro/último campo da nova aba.
+   */
+  autoFocus?: boolean;
 }
 
 interface UseFormTabNavigationReturn {
@@ -58,12 +67,14 @@ interface UseFormTabNavigationReturn {
 export function useFormTabNavigation({
   tabs,
   defaultTab,
+  autoFocus = true,
 }: UseFormTabNavigationOptions): UseFormTabNavigationReturn {
   const [activeTab, setActiveTabRaw] = useState(defaultTab || tabs[0]);
   const contentEl = useRef<HTMLDivElement | null>(null);
 
-  // Controle de foco pendente: 'first' foca no primeiro campo, 'last' no último
-  const pendingFocusRef = useRef<'first' | 'last' | null>('first');
+  // Controle de foco pendente: 'first' foca no primeiro campo, 'last' no último.
+  // Inicial respeita autoFocus — null = não foca em nada ao montar.
+  const pendingFocusRef = useRef<'first' | 'last' | null>(autoFocus ? 'first' : null);
 
   // ─── Focus helpers ────────────────────────────────────────────────────────
 
