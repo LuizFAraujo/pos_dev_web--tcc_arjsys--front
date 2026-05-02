@@ -5,7 +5,7 @@
  * de todos os registries do sistema.
  *
  * Organizado por SETOR (espelhando backend):
- * - Engenharia, Admin, Comercial, Produção, Compras, Almoxarifado
+ * - Engenharia, Admin, Comercial, Produção, Compras, Almoxarifado, Configurações
  * - Modelos (páginas de desenvolvimento)
  */
 
@@ -17,6 +17,7 @@ import { comercialRegistry } from './comercialRegistry';
 import { producaoRegistry } from './producaoRegistry';
 import { comprasRegistry } from './comprasRegistry';
 import { almoxarifadoRegistry } from './almoxarifadoRegistry';
+import { configuracoesRegistry } from './configuracoesRegistry';
 import { modelosRegistry } from './modelosRegistry';
 
 /**
@@ -30,6 +31,7 @@ export function getTabConfig(type: TabType): TabConfig | undefined {
     producaoRegistry[type] ||
     comprasRegistry[type] ||
     almoxarifadoRegistry[type] ||
+    configuracoesRegistry[type] ||
     modelosRegistry[type]
   );
 }
@@ -51,6 +53,8 @@ export function getTabsByCategory(category: string): Record<string, TabConfig> {
       return comprasRegistry;
     case 'almoxarifado':
       return almoxarifadoRegistry;
+    case 'configuracoes':
+      return configuracoesRegistry;
     case 'modelos':
       return modelosRegistry;
     default:
@@ -69,6 +73,7 @@ export function getAllCategories() {
     producao: producaoRegistry,
     compras: comprasRegistry,
     almoxarifado: almoxarifadoRegistry,
+    configuracoes: configuracoesRegistry,
     modelos: modelosRegistry,
   };
 }

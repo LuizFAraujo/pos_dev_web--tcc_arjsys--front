@@ -304,7 +304,7 @@ pos_dev_web--tcc_front--arjsys/
         │   │   └── notificacao.types.ts           ✅
         │   │
         │   ├── comercial/          # Types Comercial
-        │   │   ├── numeroserie.types.ts           ✅
+        │   │   ├── numeroSerie.types.ts           ✅
         │   │   └── pedido.types.ts                ✅
         │   │
         │   ├── engenharia/         # Types Engenharia

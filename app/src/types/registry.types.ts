@@ -30,6 +30,7 @@ export interface TabConfig {
     | 'producao'
     | 'compras'
     | 'almoxarifado'
+    | 'configuracoes'
     | 'modelos';
 
   /** Descrição da página (opcional) */

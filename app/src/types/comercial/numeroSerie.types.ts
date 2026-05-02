@@ -29,10 +29,11 @@ export interface NumeroSerie {
   modificadoEm?: string | null;
 }
 
-/** POST — só PV PreVenda em AguardandoNS; produtoId opcional */
+/** POST — só PV PreVenda em AguardandoNS; produtoId opcional; codigo opcional (back gera se omitido) */
 export interface NumeroSerieCreateData {
   pedidoVendaId: number;
   produtoId?: number | null;
+  codigo?: string | null;
 }
 
 /** PUT — Engenharia edita o Produto vinculado */

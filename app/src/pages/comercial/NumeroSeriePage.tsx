@@ -1,20 +1,28 @@
 /**
- * NumeroSeriePage.tsx — Página de consulta de Números de Série (v3.1)
+ * NumeroSeriePage.tsx — Página de Números de Série (list + view + new + edit)
  *
- * v3.1 (22/04): coluna Cliente mostra badge [CLI-NNNN] + nome (quando disponível)
+ * Modelo: igual a ProdutosPage / FuncionariosPage (PageShell + PageActions + usePageMode).
  *
- * Versão mínima (list-only). Fase 3 adiciona form de edição.
+ * Particularidades de NS:
+ *   - Sem DELETE (back não suporta) → hideButtons=['delete']
+ *   - "Novo" gateado por ConfiguracaoEmpresa.configurado: se false, mostra toast
+ *     e abre a aba Configurações > Sistema (sem abrir o form)
+ *   - Form unificado pra new/edit/view (NumeroSerieForm)
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNumeroSerieStore } from '@/stores/comercial/numeroSerieStore';
-import { PageShell, PageActions } from '@/components/shared/PageShell';
+import { useConfiguracaoEmpresaStore } from '@/stores/admin/configuracaoEmpresaStore';
+import { usePedidosStore } from '@/stores/comercial/pedidosStore';
+import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
+import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
 import {
   STATUS_COLORS,
@@ -22,7 +30,9 @@ import {
   TIPO_PV_COLORS,
   TIPO_PV_LABELS,
 } from '@/types/comercial/pedido.types';
-import type { NumeroSerie } from '@/types/comercial/numeroserie.types';
+import type { NumeroSerie } from '@/types/comercial/numeroSerie.types';
+import { NumeroSerieForm } from '@/components/comercial/NumeroSerie/NumeroSerieForm';
+import type { NumeroSerieFormHandle, NumeroSerieFormData } from '@/components/comercial/NumeroSerie/NumeroSerieForm';
 
 interface NumeroSeriePageProps {
   tab: { id: string; type: string; title: string };
@@ -119,15 +129,29 @@ function NumeroSerieCard({ serie }: { serie: NumeroSerie }) {
 }
 
 export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
-  // ─── Store ────────────────────────────────────────────────────────────
+  const formRef = useRef<NumeroSerieFormHandle>(null);
+  const page = usePageMode<NumeroSerie>(tab.id, (s) => String(s.id), tab.type);
+
+  // ─── Store NS ─────────────────────────────────────────────────────────
   const series = useNumeroSerieStore((s) => s.series);
   const isLoading = useNumeroSerieStore((s) => s.isLoading);
   const error = useNumeroSerieStore((s) => s.error);
   const fetchSeries = useNumeroSerieStore((s) => s.fetchSeries);
+  const gerarSerie = useNumeroSerieStore((s) => s.gerarSerie);
+  const updateSerie = useNumeroSerieStore((s) => s.updateSerie);
+
+  // ─── Store ConfiguracaoEmpresa (gate do botão Novo) ───────────────────
+  const config = useConfiguracaoEmpresaStore((s) => s.config);
+  const fetchConfig = useConfiguracaoEmpresaStore((s) => s.fetchConfig);
+
+  // ─── Store Pedidos (refresh após gerar NS pra refletir status) ────────
+  const fetchPedidos = usePedidosStore((s) => s.fetchPedidos);
 
   useEffect(() => {
     void fetchSeries();
-  }, [fetchSeries]);
+    void fetchConfig();
+    void fetchPedidos();
+  }, [fetchSeries, fetchConfig, fetchPedidos]);
   useEffect(() => {
     if (error) toast.error(error);
   }, [error]);
@@ -139,6 +163,42 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
     searchColumns: SEARCH_COLUMNS,
     defaultSearchCols: ['codigo', 'pedidoVendaCodigo', 'clienteNome'],
   });
+
+  // ─── Wrapper de page com gate em openNew ──────────────────────────────
+  const wrappedPage = useMemo(
+    () => ({
+      ...page,
+      openNew: () => {
+        if (!config?.configurado) {
+          toast.error(
+            'Configure o ano de fundação da empresa antes de emitir Números de Série. Solicite ao administrador.',
+          );
+          return;
+        }
+        page.openNew();
+      },
+    }),
+    [page, config],
+  );
+
+  // ─── Save ─────────────────────────────────────────────────────────────
+  const handleSave = useCallback(
+    async (data: NumeroSerieFormData) => {
+      if (page.mode === 'edit' && page.editingItem) {
+        await updateSerie(page.editingItem.id, { produtoId: data.produtoId ?? null });
+      } else {
+        await gerarSerie({
+          pedidoVendaId: data.pedidoVendaId,
+          produtoId: data.produtoId ?? null,
+          codigo: data.codigo ?? null,
+        });
+        // Recarrega pedidos pra refletir transição de status (AguardandoNS → RecebidoNS)
+        // que o backend faz ao criar o NS — assim o picker não oferece o mesmo PV de novo.
+        await fetchPedidos();
+      }
+    },
+    [page.mode, page.editingItem, gerarSerie, updateSerie, fetchPedidos],
+  );
 
   // ─── Colunas ──────────────────────────────────────────────────────────
   const columns: GridColumn<NumeroSerie>[] = useMemo(
@@ -162,20 +222,21 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
         className: 'font-mono',
       },
       {
+        key: 'clienteCodigo',
+        header: 'CÓD. CLIENTE',
+        width: 120,
+        minWidth: 100,
+        contentAlign: 'center',
+        filterType: 'text',
+        className: 'font-mono',
+      },
+      {
         key: 'clienteNome',
         header: 'CLIENTE',
-        width: 280,
+        width: 240,
         minWidth: 160,
-        render: (s) => (
-          <div className="flex items-center gap-2 min-w-0">
-            {s.clienteCodigo && (
-              <span className="font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-muted rounded px-1.5 py-0.5 shrink-0">
-                {s.clienteCodigo}
-              </span>
-            )}
-            <span className="truncate">{s.clienteNome || '-'}</span>
-          </div>
-        ),
+        filterType: 'text',
+        render: (s) => <span className="truncate">{s.clienteNome || '-'}</span>,
       },
       {
         key: 'pvTipo',
@@ -197,28 +258,31 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
       },
       {
         key: 'produtoCodigo',
+        header: 'CÓD. PRODUTO',
+        width: 140,
+        minWidth: 110,
+        contentAlign: 'center',
+        filterType: 'text',
+        className: 'font-mono',
+        render: (s) =>
+          s.produtoCodigo ? (
+            <span>{s.produtoCodigo}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">-</span>
+          ),
+      },
+      {
+        key: 'produtoDescricao',
         header: 'PRODUTO',
-        width: 260,
-        minWidth: 180,
-        render: (s) => {
-          if (!s.produtoId) {
-            return (
-              <span className="text-xs text-muted-foreground italic">
-                Não vinculado
-              </span>
-            );
-          }
-          return (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="font-mono text-xs text-slate-700 dark:text-slate-300 shrink-0">
-                {s.produtoCodigo}
-              </span>
-              <span className="text-xs text-muted-foreground truncate">
-                {s.produtoDescricao}
-              </span>
-            </div>
-          );
-        },
+        width: 240,
+        minWidth: 160,
+        filterType: 'text',
+        render: (s) =>
+          s.produtoDescricao ? (
+            <span className="truncate">{s.produtoDescricao}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Não vinculado</span>
+          ),
       },
       {
         key: 'pvStatus',
@@ -251,16 +315,23 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
   );
 
   // ─── Render ───────────────────────────────────────────────────────────
+  const inForm = page.mode !== 'list';
+
   return (
     <PageShell
       module="Comercial"
       title="Números de Série"
-      footer={<ListFooter filtered={list.filtrados.length} total={series.length} />}
+      mode={page.mode}
+      footer={
+        page.mode === 'list' ? (
+          <ListFooter filtered={list.filtrados.length} total={series.length} />
+        ) : undefined
+      }
       headerRight={
         <PageActions
-          page={{ mode: 'list' } as any}
+          page={wrappedPage}
           activeItem={list.activeItem}
-          hideButtons={['new', 'view', 'edit', 'delete']}
+          hideButtons={['delete']}
           searchColumns={SEARCH_COLUMNS}
           searchTerm={list.searchTerm}
           onSearchChange={list.setSearchTerm}
@@ -269,11 +340,14 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           gridRef={list.gridRef}
           viewMode={list.viewMode}
           onViewModeChange={list.handleViewMode}
+          formRef={formRef}
+          newTooltip="Novo número de série"
           noSelectionText="Selecione um número de série"
         />
       }
     >
-      <div style={{ display: list.isListMode ? 'contents' : 'none' }}>
+      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef}
           tabId={tab.id}
@@ -283,23 +357,46 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           loading={isLoading}
           loadingText="Carregando séries..."
           emptyTitle="Nenhum número de série encontrado"
-          emptyDescription="Números de série são gerados a partir de pedidos de pré-venda"
+          emptyDescription="Crie o primeiro número de série"
           onSelect={(item) => list.setSelectedItem(item as NumeroSerie | null)}
+          onActivate={(item) => page.openView(item as NumeroSerie)}
+          emptyAction={
+            <Button onClick={() => wrappedPage.openNew()}>
+              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+            </Button>
+          }
         />
       </div>
-      <div style={{ display: !list.isListMode ? 'contents' : 'none' }}>
+      <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef}
           data={list.filtrados}
           selectedId={list.selectedCardId}
           onSelect={(s) => list.setSelectedCardId(s?.id ?? null)}
+          onActivate={(item) => page.openView(item as NumeroSerie)}
           loading={isLoading}
           loadingText="Carregando séries..."
           emptyTitle="Nenhum número de série encontrado"
-          emptyDescription="Números de série são gerados a partir de pedidos de pré-venda"
+          emptyDescription="Crie o primeiro número de série"
           renderCard={(s) => <NumeroSerieCard serie={s} />}
+          emptyAction={
+            <Button onClick={() => wrappedPage.openNew()}>
+              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
+            </Button>
+          }
         />
       </div>
+
+      {inForm && (
+        <NumeroSerieForm
+          key={page.resetKey}
+          ref={formRef}
+          mode={page.mode as 'view' | 'new' | 'edit'}
+          serie={page.editingItem}
+          onDirty={() => page.setDirty(true)}
+          onSave={handleSave}
+        />
+      )}
     </PageShell>
   );
 }

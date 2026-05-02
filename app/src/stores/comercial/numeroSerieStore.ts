@@ -19,7 +19,7 @@ import type {
   NumeroSerie,
   NumeroSerieCreateData,
   NumeroSerieUpdateData,
-} from '@/types/comercial/numeroserie.types';
+} from '@/types/comercial/numeroSerie.types';
 
 interface NumeroSerieState {
   series: NumeroSerie[];

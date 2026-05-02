@@ -76,6 +76,9 @@ export type TabType =
   // Almoxarifado (futuro)
   | 'alm-estoque'
 
+  // Configurações
+  | 'cfg-sistema'
+
   // @deprecated — renomeados pra 'prod-*' no v3. Mantidos só pra não quebrar abas persistidas.
   | 'pcp-ordens'
   | 'pcp-kanban';
