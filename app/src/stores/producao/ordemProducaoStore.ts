@@ -203,6 +203,9 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
       await apiPatch(`/api/producao/OrdemProducao/${id}/status`, payload);
       await get().fetchOrdens();
       if (get().ordemDetalhe?.id === id) await get().fetchOrdem(id);
+      // Atualiza histórico se já estiver carregado pra esta OP — assim a aba
+      // Histórico no form reflete o evento recém-criado sem precisar fechar/reabrir.
+      await get().fetchHistorico(id);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao alterar status';
       set({ error: message });
@@ -216,6 +219,7 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
       await apiPatch(`/api/producao/OrdemProducao/${id}/itens/${itemId}/apontar`, data);
       await get().fetchOrdens();
       if (get().ordemDetalhe?.id === id) await get().fetchOrdem(id);
+      await get().fetchHistorico(id);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao apontar produção';
       set({ error: message });

@@ -58,6 +58,7 @@ export type TabType =
   | 'eng-estrutura'
   | 'eng-grupos'
   | 'eng-configuracoes'
+  | 'eng-liberacao-projetos'
 
   // Admin
   | 'adm-clientes'

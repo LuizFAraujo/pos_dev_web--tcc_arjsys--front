@@ -1,13 +1,19 @@
 /**
  * producaoRegistry.ts - Registry do módulo Produção
- * 
- * Registra todas as páginas do módulo de produção:
- * - Ordens de Produção (lista e cadastro)
- * - Kanban de Produção
+ *
+ * Registra páginas do setor Produção:
+ * - Ordens de Produção (lista + visualização + criação de OP Master)
  */
 
 import type { TabRegistry } from '@/types/registry.types';
+import { Factory } from 'lucide-react';
+import { OrdensProducaoPage } from '@/pages/producao/OrdensProducaoPage';
 
 export const producaoRegistry: TabRegistry = {
-    // Será preenchido posteriormente
+  'prod-ordens': {
+    defaultTitle: 'Ordens de Produção',
+    icon: Factory,
+    component: OrdensProducaoPage,
+    category: 'producao',
+  },
 };

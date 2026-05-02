@@ -48,6 +48,9 @@ interface PedidosState {
   /** PATCH /status — justificativa obrigatória em pausar/cancelar/reabrir/devolver/retroceder */
   alterarStatus: (id: number, novoStatus: StatusPedido, justificativa?: string) => Promise<void>;
 
+  /** PATCH /projeto — define ou limpa o Produto BOM liberado pela Engenharia */
+  definirProjeto: (id: number, produtoBomId: number | null) => Promise<void>;
+
   fetchHistorico: (id: number) => Promise<void>;
 
   // Endpoints individuais (fallback raro, fora do fluxo do form)
@@ -173,6 +176,19 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
       if (get().pedidoDetalhe?.id === id) await get().fetchPedido(id);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao alterar status';
+      set({ error: message });
+      throw err;
+    }
+  },
+
+  definirProjeto: async (id, produtoBomId) => {
+    set({ error: null });
+    try {
+      await apiPatch(`/api/comercial/PedidoVenda/${id}/projeto`, { produtoBomId });
+      await get().fetchPedidos();
+      if (get().pedidoDetalhe?.id === id) await get().fetchPedido(id);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Erro ao liberar projeto';
       set({ error: message });
       throw err;
     }

@@ -313,6 +313,12 @@ export interface PedidoVenda {
   observacoes?: string | null;
   itens?: ItemPedido[];
   totalItens?: number;
+
+  /** Projeto BOM liberado pela Engenharia. Null = não liberado. */
+  produtoBomId?: number | null;
+  produtoBomCodigo?: string | null;
+  produtoBomDescricao?: string | null;
+
   criadoEm?: string;
   modificadoEm?: string | null;
 
