@@ -3,7 +3,7 @@
  *
  * POST /api/admin/Auth/login
  * Armazena FuncionarioLogado + permissões no Zustand com persist.
- * Sem JWT — armazena apenas dados retornados pelo backend.
+ * Sem JWT - armazena apenas dados retornados pelo backend.
  */
 
 import { create } from 'zustand';

@@ -1,5 +1,5 @@
 /**
- * PedidoItensGrid.tsx — Grid de itens do PV (v3.1) — OPERA EM MEMÓRIA
+ * PedidoItensGrid.tsx - Grid de itens do PV (v3.1) - OPERA EM MEMÓRIA
  *
  * Diferente da v3: não faz mais chamadas de API ao adicionar/remover/editar.
  * O caller (PedidoForm) passa `rows` e recebe `onChange(rows)`. Os itens só
@@ -8,7 +8,7 @@
  * Isso resolve: "PV sem itens não salva", "itens só somem se eu cancelar",
  * "botão Salvar deve ativar ao mexer em item".
  *
- * Colunas: Qtde | Descrição | Observação (descrição livre — sem produto/preço)
+ * Colunas: Qtde | Descrição | Observação (descrição livre - sem produto/preço)
  */
 
 import { InlineEditGrid } from '@/components/shared/InlineEditGrid';
@@ -16,7 +16,7 @@ import type { InlineColumn } from '@/components/shared/InlineEditGrid';
 import type { ItemPedido } from '@/types/comercial/pedido.types';
 
 /**
- * Linha interna do grid — pode ter id numérico (item persistido) ou
+ * Linha interna do grid - pode ter id numérico (item persistido) ou
  * "new-xxxx" (item temporário adicionado no form).
  */
 export interface PedidoItemRow {

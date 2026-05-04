@@ -1,5 +1,5 @@
 /**
- * DataGridTree.tsx — Grid hierárquico (tree) com visual padronizado do DataGrid
+ * DataGridTree.tsx - Grid hierárquico (tree) com visual padronizado do DataGrid
  *
  * Mesmo header (cores, fontes, resize, sort, filtros), footer, zebra/hover.
  * Linhas hierárquicas com indent e expand/collapse.

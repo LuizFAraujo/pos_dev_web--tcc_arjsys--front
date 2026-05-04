@@ -1,5 +1,5 @@
 /**
- * SidebarItemButton.tsx — Botão de item na sidebar com tooltip condicional
+ * SidebarItemButton.tsx - Botão de item na sidebar com tooltip condicional
  *
  * Mostra tooltip via AppTooltip APENAS quando o texto está truncado.
  * Verifica truncamento no onMouseEnter (não no mount) pra garantir

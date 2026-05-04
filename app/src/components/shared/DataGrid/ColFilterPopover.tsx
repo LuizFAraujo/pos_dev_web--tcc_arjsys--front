@@ -1,5 +1,5 @@
 /**
- * ColFilterPopover.tsx — Popover de filtro por coluna
+ * ColFilterPopover.tsx - Popover de filtro por coluna
  *
  * Renderiza o ícone de filtro no header da coluna.
  * Ao clicar, abre popover com opções de filtro conforme o tipo:
@@ -72,7 +72,7 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
 
   return (
     <Popover onOpenChange={(open) => { if (open) ensureConditions(); }}>
-      {/* Ícone — amarelo preenchido quando ativo */}
+      {/* Ícone - amarelo preenchido quando ativo */}
       <PopoverTrigger asChild>
         <button className={`p-0.5 rounded hover:bg-slate-600 ${on ? 'text-yellow-400 bg-slate-600' : 'opacity-40 hover:opacity-80'}`}>
           <Filter className="h-3 w-3" fill={on ? 'currentColor' : 'none'} />
@@ -113,7 +113,7 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
                 <TooltipContent><p>Resetar filtro</p></TooltipContent>
               </Tooltip>
             )}
-            {/* Limpar checklist — aparece quando filtro checklist está ativo */}
+            {/* Limpar checklist - aparece quando filtro checklist está ativo */}
             {type === 'checklist' && value.checkedValues !== undefined && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -133,7 +133,7 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
           <div className="space-y-0.5">
             {conditions.map((cond, idx) => (
               <div key={idx}>
-                {/* Toggle E/OU entre condições — independente por par */}
+                {/* Toggle E/OU entre condições - independente por par */}
                 {idx > 0 && (
                   <LogicToggle
                     logic={conditions[idx - 1].logic}

@@ -1,9 +1,9 @@
 /**
- * ConfiguracoesPage.tsx — Configurações do módulo de engenharia
+ * ConfiguracoesPage.tsx - Configurações do módulo de engenharia
  *
  * Abas:
- *   Documentos — Path raiz, checkbox por subpasta, paths alternativos por prefixo (CRUD), varredura
- *   Código Inteligente — Flag de controle (futuro)
+ *   Documentos - Path raiz, checkbox por subpasta, paths alternativos por prefixo (CRUD), varredura
+ *   Código Inteligente - Flag de controle (futuro)
  *
  * Varredura em lotes:
  *   Frontend controla o loop (BATCH_SIZE = 500).
@@ -248,7 +248,7 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
         prefixoVarredura.trim() || undefined,
         BATCH_SIZE,
         (progresso) => {
-          // Callback de progresso — atualizado a cada lote
+          // Callback de progresso - atualizado a cada lote
           setVarreduraResult(progresso);
         },
         cancelRef.current,
@@ -441,7 +441,7 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
                                   ) : (
                                     prefixosSemPath.map((g) => (
                                       <SelectItem key={g.id} value={String(g.id)}>
-                                        {g.codigo} — {g.descricao}
+                                        {g.codigo} - {g.descricao}
                                       </SelectItem>
                                     ))
                                   )}
@@ -542,7 +542,7 @@ export function ConfiguracoesPage({ tab }: ConfiguracoesPageProps) {
                           <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 mt-1">
                             <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                             <p className="text-xs text-amber-700 dark:text-amber-300">
-                              Varredura cancelada — resultados parciais abaixo ({varreduraResult.processados.toLocaleString('pt-BR')} de {varreduraResult.totalGeral.toLocaleString('pt-BR')} verificados).
+                              Varredura cancelada - resultados parciais abaixo ({varreduraResult.processados.toLocaleString('pt-BR')} de {varreduraResult.totalGeral.toLocaleString('pt-BR')} verificados).
                               Os produtos já processados foram atualizados no banco.
                             </p>
                           </div>

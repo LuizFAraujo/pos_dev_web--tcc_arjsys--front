@@ -70,6 +70,7 @@ export type TabType =
 
   // Produção (v3)
   | 'prod-ordens'
+  | 'prod-demanda'
 
   // Compras (futuro)
   | 'cpr-requisicoes'
@@ -80,7 +81,7 @@ export type TabType =
   // Configurações
   | 'cfg-sistema'
 
-  // @deprecated — renomeados pra 'prod-*' no v3. Mantidos só pra não quebrar abas persistidas.
+  // @deprecated - renomeados pra 'prod-*' no v3. Mantidos só pra não quebrar abas persistidas.
   | 'pcp-ordens'
   | 'pcp-kanban';
 

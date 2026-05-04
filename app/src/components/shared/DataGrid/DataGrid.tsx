@@ -1,5 +1,5 @@
 /**
- * DataGrid/DataGrid.tsx — Componente principal do grid
+ * DataGrid/DataGrid.tsx - Componente principal do grid
  *
  * Grid baseado em TanStack Table com:
  * - Sort por coluna (click no header)
@@ -328,9 +328,9 @@ function DataGridInner<T extends Record<string, any>>({
             ))}
           </thead>
 
-          {/* BODY — Virtualizado */}
+          {/* BODY - Virtualizado */}
           <tbody>
-            {/* Spacer top — empurra as linhas visíveis pra posição correta */}
+            {/* Spacer top - empurra as linhas visíveis pra posição correta */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
                 <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length} />
@@ -374,7 +374,7 @@ function DataGridInner<T extends Record<string, any>>({
               );
             })}
 
-            {/* Spacer bottom — completa a altura total pra scrollbar ficar correta */}
+            {/* Spacer bottom - completa a altura total pra scrollbar ficar correta */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
                 <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length} />

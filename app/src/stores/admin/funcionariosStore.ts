@@ -1,5 +1,5 @@
 // ========================================
-// STORE — FUNCIONÁRIOS (Admin) — API Real
+// STORE - FUNCIONÁRIOS (Admin) - API Real
 // ========================================
 
 import { create } from 'zustand';
@@ -68,7 +68,7 @@ export const useFuncionariosStore = create<FuncionariosState>((set, get) => ({
           funcionarios: state.funcionarios.map((f) => (f.id === id ? resposta : f)),
         }));
       } else {
-        // 204 No Content — mescla dados locais
+        // 204 No Content - mescla dados locais
         set((state) => ({
           funcionarios: state.funcionarios.map((f) =>
             f.id === id ? { ...f, ...data, updatedAt: new Date().toISOString() } : f

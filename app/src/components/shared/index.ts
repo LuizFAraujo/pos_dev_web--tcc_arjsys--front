@@ -1,4 +1,4 @@
-// Componentes compartilhados — import centralizado
+// Componentes compartilhados - import centralizado
 // import { DataGrid, CardGrid, PageShell, usePageMode, PageActions } from '@/components/shared';
 
 export { Tooltip, TooltipTrigger, TooltipContent } from './AppTooltip';

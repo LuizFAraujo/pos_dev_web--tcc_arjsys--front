@@ -1,5 +1,5 @@
 // ========================================
-// STORE — PRODUTOS (Engenharia) — API Real
+// STORE - PRODUTOS (Engenharia) - API Real
 // ========================================
 
 import { create } from 'zustand';
@@ -57,7 +57,7 @@ async function chamarHelper(endpoint: string, path: string): Promise<void> {
       throw new Error(data.erro || 'Erro no ArjSys Helper');
     }
   } catch {
-    // Se falhou aqui, não propaga — backend já abriu no servidor
+    // Se falhou aqui, não propaga - backend já abriu no servidor
     return;
   }
 }
@@ -75,7 +75,7 @@ interface ProdutosState {
   deleteProduto: (id: number) => Promise<void>;
   varreduraDocumentos: (prefixo?: string) => Promise<void>;
 
-  // Novos — documentos
+  // Novos - documentos
   abrirPasta: (id: number) => Promise<AbrirPastaResult>;
   extensoesDocumento: (id: number) => Promise<ExtensoesDocumentoResult>;
   abrirDocumento: (id: number, extensao?: string) => Promise<AbrirDocumentoResult>;

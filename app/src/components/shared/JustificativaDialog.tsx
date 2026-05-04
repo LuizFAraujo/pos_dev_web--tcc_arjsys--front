@@ -1,5 +1,5 @@
 /**
- * JustificativaDialog.tsx — Modal genérico com campo de justificativa obrigatória
+ * JustificativaDialog.tsx - Modal genérico com campo de justificativa obrigatória
  *
  * Reutilizável em:
  *   - PV: Pausar, Cancelar, Reabrir, Devolver, Retroceder, Edição em status avançado

@@ -1,5 +1,5 @@
 /**
- * PageShell.tsx — Template de página
+ * PageShell.tsx - Template de página
  *
  * Layout:
  *   HEADER

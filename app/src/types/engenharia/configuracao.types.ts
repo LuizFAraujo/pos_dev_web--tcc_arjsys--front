@@ -1,5 +1,5 @@
 // ========================================
-// TYPES — CONFIGURAÇÃO ENGENHARIA
+// TYPES - CONFIGURAÇÃO ENGENHARIA
 // ========================================
 // CRUD /api/engenharia/ConfiguracaoEngenharia
 // CRUD /api/engenharia/PathDocumentos

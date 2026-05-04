@@ -1,5 +1,5 @@
 /**
- * SidebarNormal.tsx — Modo normal (240px, lista completa)
+ * SidebarNormal.tsx - Modo normal (240px, lista completa)
  *
  * Tooltip condicional nos itens via SidebarItemButton.
  * Sem TooltipProvider do shadcn.

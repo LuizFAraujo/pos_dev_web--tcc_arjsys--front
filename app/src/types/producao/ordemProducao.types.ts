@@ -1,9 +1,9 @@
 // ========================================
-// TYPES — ORDEM DE PRODUÇÃO (Produção) — v3.1
+// TYPES - ORDEM DE PRODUÇÃO (Produção) - v3.1
 // ========================================
-// Alinhado com backend ASP.NET Core 10 — /api/producao/OrdemProducao
+// Alinhado com backend ASP.NET Core 10 - /api/producao/OrdemProducao
 //
-// v3.1 (22/04): ganha clienteCodigo (nullable — OP de estoque não tem cliente)
+// v3.1 (22/04): ganha clienteCodigo (nullable - OP de estoque não tem cliente)
 //
 // Códigos:
 //   Master: OP.AAAA.MM.NNNN
@@ -99,10 +99,10 @@ export interface OrdemProducao {
   id: number;
   codigo: string;
 
-  // PV (opcional — null = estoque)
+  // PV (opcional - null = estoque)
   pedidoVendaId?: number | null;
   pedidoVendaCodigo?: string | null;
-  /** v3.1 — nullable: OP de estoque (sem PV) não tem cliente */
+  /** v3.1 - nullable: OP de estoque (sem PV) não tem cliente */
   clienteCodigo?: string | null;
   clienteNome?: string | null;
 
@@ -134,6 +134,7 @@ export interface OrdemProducao {
 export interface OrdemProducaoHistorico {
   id: number;
   ordemProducaoId: number;
+  ordemProducaoItemId?: number | null;
   evento: EventoOrdemProducao;
   statusAnterior?: StatusOrdemProducao | null;
   statusNovo?: StatusOrdemProducao | null;

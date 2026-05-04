@@ -1,5 +1,5 @@
 /**
- * PedidoClienteSearchDialog.tsx — Modal de pesquisa avançada de cliente
+ * PedidoClienteSearchDialog.tsx - Modal de pesquisa avançada de cliente
  *
  * Layout:
  *   - Header: título compacto
@@ -155,7 +155,7 @@ export function PedidoClienteSearchDialog({
           />
         </div>
 
-        {/* Tabela — altura limitada a ~10 linhas, scroll horizontal interno */}
+        {/* Tabela - altura limitada a ~10 linhas, scroll horizontal interno */}
         <div className="h-84 overflow-x-auto overflow-y-hidden">
           <DataGrid<Cliente>
             tabId="cliente-search-dialog"

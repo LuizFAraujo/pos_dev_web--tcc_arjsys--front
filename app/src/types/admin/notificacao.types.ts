@@ -1,7 +1,7 @@
 // ========================================
-// TYPES — NOTIFICAÇÕES (Admin) — v3
+// TYPES - NOTIFICAÇÕES (Admin) - v3
 // ========================================
-// Alinhado com backend ASP.NET Core 10 — feature/vendas
+// Alinhado com backend ASP.NET Core 10 - feature/vendas
 // /api/admin/Notificacoes
 //
 // Notificações são por módulo destino (não por usuário).
@@ -77,7 +77,7 @@ export interface Notificacao {
 }
 
 // ============================================
-// FORM DATA (criação manual — uso raro, back gera sozinho na maioria dos casos)
+// FORM DATA (criação manual - uso raro, back gera sozinho na maioria dos casos)
 // ============================================
 
 export interface NotificacaoCreateData {

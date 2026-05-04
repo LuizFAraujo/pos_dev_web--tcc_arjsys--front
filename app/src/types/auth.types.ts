@@ -1,11 +1,11 @@
 // ========================================
-// TYPES — AUTENTICAÇÃO
+// TYPES - AUTENTICAÇÃO
 // ========================================
 // Alinhado com o backend ASP.NET Core 10.
 // POST /api/admin/Auth/login
 
 /**
- * Credenciais para login — campo é "usuario" (não email)
+ * Credenciais para login - campo é "usuario" (não email)
  */
 export interface LoginCredentials {
   usuario: string;
@@ -43,7 +43,7 @@ export type NivelPermissao =
   | 'Admin';
 
 /**
- * Dados do funcionário logado — resposta do /api/admin/Auth/login
+ * Dados do funcionário logado - resposta do /api/admin/Auth/login
  */
 export interface FuncionarioLogado {
   funcionarioId: number;

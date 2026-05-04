@@ -1,5 +1,5 @@
 /**
- * ListFooter.tsx — Footer reutilizável para páginas em modo lista
+ * ListFooter.tsx - Footer reutilizável para páginas em modo lista
  *
  * Exibe contagem de registros (filtrados / total) e botão "Limpar filtros".
  * Usado via prop `footer` do PageShell.
@@ -12,7 +12,7 @@
  *     ) : undefined}
  *   >
  *
- * Props opcionais — se não passar hasFilters/onClearFilters, não mostra botão.
+ * Props opcionais - se não passar hasFilters/onClearFilters, não mostra botão.
  */
 
 import { X } from 'lucide-react';
@@ -23,7 +23,7 @@ interface ListFooterProps {
   filtered: number;
   /** Quantidade total de registros (antes dos filtros de coluna) */
   total: number;
-  /** Se há filtros de coluna ativos (opcional — se false/omitido, não mostra botão) */
+  /** Se há filtros de coluna ativos (opcional - se false/omitido, não mostra botão) */
   hasFilters?: boolean;
   /** Callback para limpar filtros de coluna (opcional) */
   onClearFilters?: () => void;

@@ -1,9 +1,9 @@
 /**
- * LiberacaoProjetosPage.tsx — Engenharia libera Projetos (Produto BOM) para PVs.
+ * LiberacaoProjetosPage.tsx - Engenharia libera Projetos (Produto BOM) para PVs.
  *
  * Padrão idêntico a NumeroSeriePage / ProdutosPage:
  *   - Grid é overview (sem botão de ação por linha)
- *   - Header tem os botões padrão (view, edit) — sem new/delete (PVs vêm do Comercial)
+ *   - Header tem os botões padrão (view, edit) - sem new/delete (PVs vêm do Comercial)
  *   - Editar abre form com picker de Projeto BOM
  */
 
@@ -65,7 +65,7 @@ function PedidoCard({ pv }: { pv: PedidoVenda }) {
         </span>
       </div>
       <p className="text-xs text-muted-foreground mt-1 truncate">
-        {pv.clienteCodigo} — {pv.clienteNome}
+        {pv.clienteCodigo} - {pv.clienteNome}
       </p>
       <div className="flex items-center justify-between mt-2 gap-2">
         {pv.produtoBomCodigo ? (
@@ -191,7 +191,7 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
               {p.produtoBomCodigo}
             </span>
           ) : (
-            <span className="text-xs italic text-amber-700 dark:text-amber-400">—</span>
+            <span className="text-xs italic text-amber-700 dark:text-amber-400">-</span>
           ),
       },
       {

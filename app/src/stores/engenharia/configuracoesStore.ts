@@ -1,5 +1,5 @@
 // ========================================
-// STORE — CONFIGURAÇÕES ENGENHARIA
+// STORE - CONFIGURAÇÕES ENGENHARIA
 // ========================================
 // Configurações globais (chave/valor) + PathDocumentos (CRUD) + Varredura
 
@@ -49,10 +49,10 @@ interface ConfiguracoesState {
   isVarrendo: boolean;
   varreduraProgresso: VarreduraProgresso | null;
 
-  /** Varredura legada — sem lotes (usada pelo botão da ProdutosPage) */
+  /** Varredura legada - sem lotes (usada pelo botão da ProdutosPage) */
   executarVarredura: (prefixo?: string) => Promise<VarreduraResultado | null>;
 
-  /** Varredura em lotes com progresso — usada pela ConfiguracoesPage */
+  /** Varredura em lotes com progresso - usada pela ConfiguracoesPage */
   executarVarreduraEmLotes: (
     prefixo: string | undefined,
     batchSize: number,

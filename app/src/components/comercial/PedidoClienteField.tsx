@@ -1,5 +1,5 @@
 /**
- * PedidoClienteField.tsx — Seletor de cliente em 2 campos digitáveis ligados
+ * PedidoClienteField.tsx - Seletor de cliente em 2 campos digitáveis ligados
  *
  * Pattern de autocomplete inline (estilo NovaEstruturaDialog):
  *   - Digita "5" no Código → completa pra "CLI-0005" com seleção do trecho
@@ -14,7 +14,7 @@
  *
  * Carregamento: todos os clientes em memória uma vez (estilo NovaEstrutura).
  *
- * Contrato (props) inalterado — chamadores (PedidoForm) não precisam mudar.
+ * Contrato (props) inalterado - chamadores (PedidoForm) não precisam mudar.
  */
 
 import {
@@ -119,7 +119,7 @@ export function PedidoClienteField({
     setSearchOpen(true);
   }, []);
 
-  // ─────────────────────── Autocomplete inline — Código ─────────────────────
+  // ─────────────────────── Autocomplete inline - Código ─────────────────────
 
   const handleCodigoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -174,7 +174,7 @@ export function PedidoClienteField({
     }
   };
 
-  // ─────────────────────── Autocomplete inline — Nome ───────────────────────
+  // ─────────────────────── Autocomplete inline - Nome ───────────────────────
 
   const handleNomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -239,7 +239,7 @@ export function PedidoClienteField({
             Código Cliente
           </Label>
           <Input
-            value={displayCodigo ?? '—'}
+            value={displayCodigo ?? '-'}
             readOnly
             className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
             tabIndex={-1}
@@ -253,7 +253,7 @@ export function PedidoClienteField({
             </Label>
           )}
           <Input
-            value={displayName ?? '—'}
+            value={displayName ?? '-'}
             readOnly
             className="h-9 text-sm bg-white dark:bg-slate-950 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
             tabIndex={-1}

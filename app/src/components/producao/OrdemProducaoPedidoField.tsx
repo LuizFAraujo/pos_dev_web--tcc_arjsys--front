@@ -1,5 +1,5 @@
 /**
- * OrdemProducaoPedidoField.tsx — Seletor de Pedido para criar OP Master.
+ * OrdemProducaoPedidoField.tsx - Seletor de Pedido para criar OP Master.
  *
  * Filtra PVs com status que aceitam OP nova: Liberado, Andamento, Pausado.
  * Suporta marcar "OP de estoque" (sem PV) via prop estoque.
@@ -146,7 +146,7 @@ export function OrdemProducaoPedidoField({
           {label}
         </Label>
         <Input
-          value={displayCodigo ?? '—'}
+          value={displayCodigo ?? '-'}
           readOnly
           className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
           tabIndex={-1}
@@ -173,7 +173,7 @@ export function OrdemProducaoPedidoField({
             ref={codigoInputRef}
             id={`${id}-codigo`}
             type="text"
-            placeholder={disabled ? '— (Estoque)' : 'PV.AAAA.MM.NNNN'}
+            placeholder={disabled ? '- (Estoque)' : 'PV.AAAA.MM.NNNN'}
             value={codigoText}
             onChange={handleCodigoChange}
             onKeyDown={handleCodigoKeyDown}

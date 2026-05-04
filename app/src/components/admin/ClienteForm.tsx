@@ -1,10 +1,10 @@
 /**
- * ClienteForm.tsx — Form inline de cadastro/edição/visualização de cliente
+ * ClienteForm.tsx - Form inline de cadastro/edição/visualização de cliente
  *
  * Modos:
- *   view — inputs readOnly
- *   edit — inputs editáveis
- *   new  — inputs editáveis, campos vazios
+ *   view - inputs readOnly
+ *   edit - inputs editáveis
+ *   new  - inputs editáveis, campos vazios
  *
  * Usa useFormTabNavigation para:
  *   - Foco automático no primeiro campo ao montar
@@ -158,11 +158,11 @@ export const ClienteForm = forwardRef<ClienteFormHandle, ClienteFormProps>(
       },
     }));
 
-    // Sem isDirtyRef — onDirty chamado a cada keystroke
+    // Sem isDirtyRef - onDirty chamado a cada keystroke
     // useState no usePageMode aguenta múltiplos setDirty(true) sem problema
     const set = (field: keyof ClienteFormData, value: string) => {
       setData((prev) => ({ ...prev, [field]: value }));
-      // Limpa erro do campo ao editar — próximo Salvar revalida tudo
+      // Limpa erro do campo ao editar - próximo Salvar revalida tudo
       if (errors[field]) {
         setErrors((prev) => {
           const next = { ...prev };

@@ -1,5 +1,5 @@
 /**
- * FuncionariosPage.tsx — Página de funcionários com modos list/view/new/edit
+ * FuncionariosPage.tsx - Página de funcionários com modos list/view/new/edit
  *
  * Template: PageShell + PageActions + usePageMode
  * Hooks: useListState, useDeleteDialog
@@ -152,7 +152,7 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
       }
     >
 
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="funcionarios"

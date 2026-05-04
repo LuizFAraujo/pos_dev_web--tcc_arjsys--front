@@ -1,5 +1,5 @@
 /**
- * PedidosPage.tsx — Página de Pedidos de Venda
+ * PedidosPage.tsx - Página de Pedidos de Venda
  *
  * Mudanças:
  *   - Sem toast.success extra no handleSave (usePageMode já mostra "Registro atualizado")
@@ -157,7 +157,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
   const alterarStatus = usePedidosStore((s) => s.alterarStatus);
   const clearError = usePedidosStore((s) => s.clearError);
 
-  // Clientes — usados para enriquecer pedidos com CPF/CNPJ, Estado, Cidade
+  // Clientes - usados para enriquecer pedidos com CPF/CNPJ, Estado, Cidade
   const clientes = useClientesStore((s) => s.clientes);
   const fetchClientes = useClientesStore((s) => s.fetchClientes);
 
@@ -167,7 +167,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchPedidos]);
 
-  // Toast de erro vindo do store — única fonte
+  // Toast de erro vindo do store - única fonte
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -233,7 +233,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
    *   - update:      PUT + opcional PATCH /status
    *   - status-only: SÓ PATCH /status (sem PUT)
    *
-   * Sem toasts de sucesso aqui — usePageMode já mostra "Registro atualizado".
+   * Sem toasts de sucesso aqui - usePageMode já mostra "Registro atualizado".
    * Erros vêm via store.error (toast unificado no useEffect acima).
    */
   const handleSave = useCallback(

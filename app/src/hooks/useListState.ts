@@ -1,5 +1,5 @@
 /**
- * useListState.ts — Hook para estado da lista em páginas de cadastro
+ * useListState.ts - Hook para estado da lista em páginas de cadastro
  *
  * Encapsula toda a lógica de estado do modo list:
  *   - SearchBar: termo de busca, colunas selecionadas
@@ -25,7 +25,7 @@ import type { CardGridHandle } from '@/components/shared/CardGrid';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 
 interface UseListStateOptions<T> {
-  /** ID da aba — pra persistir estado entre trocas de aba */
+  /** ID da aba - pra persistir estado entre trocas de aba */
   tabId: string;
   /** Dados brutos da store */
   data: T[];
@@ -37,7 +37,7 @@ interface UseListStateOptions<T> {
 
 interface UseListStateReturn<T> {
   // ── Refs ──────────────────────────────────────────────────────────────────
-  /** Ref do DataGrid — passar no componente e no PageActions */
+  /** Ref do DataGrid - passar no componente e no PageActions */
   gridRef: React.RefObject<DataGridHandle | null>;
   /** Ref do CardGrid */
   cardGridRef: React.RefObject<CardGridHandle | null>;
@@ -59,7 +59,7 @@ interface UseListStateReturn<T> {
   // ── View mode ─────────────────────────────────────────────────────────────
   /** Modo de visualização: 'list' ou 'cards' */
   viewMode: 'list' | 'cards';
-  /** Handler para trocar modo — limpa seleção automaticamente */
+  /** Handler para trocar modo - limpa seleção automaticamente */
   handleViewMode: (mode: 'list' | 'cards') => void;
   /** Se está no modo lista (atalho) */
   isListMode: boolean;
@@ -73,7 +73,7 @@ interface UseListStateReturn<T> {
   selectedCardId: number | string | null;
   /** Setter do ID do card selecionado */
   setSelectedCardId: (id: number | string | null) => void;
-  /** Item ativo unificado — grid ou card, dependendo do viewMode */
+  /** Item ativo unificado - grid ou card, dependendo do viewMode */
   activeItem: T | null;
 }
 

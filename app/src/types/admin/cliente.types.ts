@@ -1,7 +1,7 @@
 // ========================================
-// TYPES — CLIENTE (Admin)
+// TYPES - CLIENTE (Admin)
 // ========================================
-// Alinhado com backend ASP.NET Core 10 — /api/admin/Clientes
+// Alinhado com backend ASP.NET Core 10 - /api/admin/Clientes
 //
 // v3.1 (22/04):
 //   - Campo `codigo` adicionado (ex: "CLI-0042"), gerado automaticamente pelo back
@@ -30,7 +30,7 @@ export interface Cliente {
   ativo?: boolean;
 }
 
-/** Dados do form — nunca envia `codigo` (back ignora se vier). */
+/** Dados do form - nunca envia `codigo` (back ignora se vier). */
 export interface ClienteFormData {
   nome: string;
   cpfCnpj?: string;

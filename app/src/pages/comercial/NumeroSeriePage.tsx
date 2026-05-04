@@ -1,5 +1,5 @@
 /**
- * NumeroSeriePage.tsx — Página de Números de Série (list + view + new + edit)
+ * NumeroSeriePage.tsx - Página de Números de Série (list + view + new + edit)
  *
  * Modelo: igual a ProdutosPage / FuncionariosPage (PageShell + PageActions + usePageMode).
  *
@@ -193,7 +193,7 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           codigo: data.codigo ?? null,
         });
         // Recarrega pedidos pra refletir transição de status (AguardandoNS → RecebidoNS)
-        // que o backend faz ao criar o NS — assim o picker não oferece o mesmo PV de novo.
+        // que o backend faz ao criar o NS - assim o picker não oferece o mesmo PV de novo.
         await fetchPedidos();
       }
     },
@@ -346,7 +346,7 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
         />
       }
     >
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef}

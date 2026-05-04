@@ -1,5 +1,5 @@
 /**
- * PedidoForm.tsx — Form inline do Pedido de Venda
+ * PedidoForm.tsx - Form inline do Pedido de Venda
  *
  * Mudanças nesta versão:
  *   - submit() agora ESPERA o modal de justificativa via Promise. Quando o
@@ -53,7 +53,7 @@ import type { Cliente } from '@/types/admin/cliente.types';
 import type { PageMode } from '@/components/shared/PageShell';
 
 /**
- * PedidoEmProducaoBadge — Botão compacto que mostra "Pedido em produção"
+ * PedidoEmProducaoBadge - Botão compacto que mostra "Pedido em produção"
  * com ícone de aviso. Clicar abre popover sobreposto com o texto completo,
  * sem empurrar o layout. Clicar fora fecha.
  */
@@ -521,7 +521,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
           });
         }
 
-        // PV mudou em status inicial — direto
+        // PV mudou em status inicial - direto
         try {
           const updatePayload = buildUpdatePayload();
           await onSave({
@@ -623,7 +623,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
               className="grid grid-cols-12 gap-x-4 gap-y-4"
             >
               {/* ─────────────────────────────────────────────────────────
-                  LINHA 1 — Metadados read-only do PV (apenas em edit/view)
+                  LINHA 1 - Metadados read-only do PV (apenas em edit/view)
                   Código Pedido | Tipo | Status
                   Em modo `new`, o tipo do pedido vai num bloco separado
                   abaixo (Tipo é editável só em new).
@@ -683,7 +683,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
               )}
 
               {/* ─────────────────────────────────────────────────────────
-                  Tipo do Pedido (apenas em new — editável)
+                  Tipo do Pedido (apenas em new - editável)
                   ────────────────────────────────────────────────────────── */}
               {isNew && (
                 <div
@@ -714,7 +714,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
               )}
 
               {/* ─────────────────────────────────────────────────────────
-                  LINHA 2 — Cliente + Data de Entrega (idêntica em new/edit)
+                  LINHA 2 - Cliente + Data de Entrega (idêntica em new/edit)
                   PedidoClienteField já renderiza 2 sub-campos
                   (Código Cliente + Cliente) lado a lado internamente,
                   cada um com seu label. Aqui ele ocupa col-span-9 e
@@ -754,7 +754,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
               </div>
 
               {/* ─────────────────────────────────────────────────────────
-                  LINHA 3 — Observações (full-width, com handle de resize)
+                  LINHA 3 - Observações (full-width, com handle de resize)
                   ────────────────────────────────────────────────────────── */}
               <div
                 className="col-span-12 flex flex-col gap-1.5"
@@ -782,7 +782,7 @@ export const PedidoForm = forwardRef<PedidoFormHandle, PedidoFormProps>(
               </div>
 
               {/* ─────────────────────────────────────────────────────────
-                  Status panel (apenas em edit — ações de status)
+                  Status panel (apenas em edit - ações de status)
                   ────────────────────────────────────────────────────────── */}
               {!isNew && pedido && (
                 <div className="col-span-12 mt-2">

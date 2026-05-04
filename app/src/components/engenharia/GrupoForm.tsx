@@ -1,5 +1,5 @@
 /**
- * GrupoForm.tsx — Form inline de cadastro/edição/visualização de grupo de produto
+ * GrupoForm.tsx - Form inline de cadastro/edição/visualização de grupo de produto
  *
  * Modos: view (readOnly), edit, new
  * Abas: Identificação | Configuração

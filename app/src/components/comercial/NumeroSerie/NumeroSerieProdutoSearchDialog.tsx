@@ -1,5 +1,5 @@
 /**
- * NumeroSerieProdutoSearchDialog.tsx — Pesquisa avançada de Produto BOM
+ * NumeroSerieProdutoSearchDialog.tsx - Pesquisa avançada de Produto BOM
  *
  * Espelha PedidoClienteSearchDialog: SearchBar global + DataGrid com filtros.
  * Enter ou duplo-clique seleciona, Esc fecha.

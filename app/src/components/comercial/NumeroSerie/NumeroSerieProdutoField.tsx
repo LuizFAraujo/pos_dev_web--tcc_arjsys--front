@@ -1,12 +1,12 @@
 /**
- * NumeroSerieProdutoField.tsx — Seletor de Produto BOM
+ * NumeroSerieProdutoField.tsx - Seletor de Produto BOM
  *
  * Renderiza UM input (Código BOM) com:
  *   - autocomplete inline ao digitar
  *   - X pra limpar seleção
  *   - lupa (ou F4) abre NumeroSerieProdutoSearchDialog
  *
- * A descrição derivada é responsabilidade do componente pai —
+ * A descrição derivada é responsabilidade do componente pai -
  * este Field não desenha o input de descrição pra deixar o layout livre.
  */
 
@@ -146,7 +146,7 @@ export function NumeroSerieProdutoField({
           {label}
         </Label>
         <Input
-          value={displayCodigo ?? '—'}
+          value={displayCodigo ?? '-'}
           readOnly
           className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
           tabIndex={-1}

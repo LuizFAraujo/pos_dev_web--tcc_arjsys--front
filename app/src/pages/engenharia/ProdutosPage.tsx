@@ -1,10 +1,10 @@
 /**
- * ProdutosPage.tsx — Página de produtos com modos list/view/new/edit
+ * ProdutosPage.tsx - Página de produtos com modos list/view/new/edit
  *
  * Template: PageShell + PageActions + usePageMode
  * Hooks: useListState, useDeleteDialog
  * Extra: botão Varredura via extraActions do PageActions
- * Coluna DOC.: dois botões — abrir pasta (esq) e abrir documento (dir)
+ * Coluna DOC.: dois botões - abrir pasta (esq) e abrir documento (dir)
  *   DocButtons recebe prop extensao: se passada, abre direto; se não, lista extensões
  *
  * Filtros sincronizados: PanelFilters ↔ DataGrid ↔ CardGrid via useTabState(tabId + '-filters')
@@ -439,7 +439,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       ) : undefined}
     >
 
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef} tabId={tab.id} storageId="produtos"

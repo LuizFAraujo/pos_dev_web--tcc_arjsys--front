@@ -1,7 +1,7 @@
 // ========================================
-// TYPES — NÚMERO DE SÉRIE (Comercial) — v3.1
+// TYPES - NÚMERO DE SÉRIE (Comercial) - v3.1
 // ========================================
-// Alinhado com backend ASP.NET Core 10 — /api/comercial/NumeroSerie
+// Alinhado com backend ASP.NET Core 10 - /api/comercial/NumeroSerie
 //
 // v3.1 (22/04): ganha clienteCodigo (ex: "CLI-0042")
 
@@ -29,14 +29,14 @@ export interface NumeroSerie {
   modificadoEm?: string | null;
 }
 
-/** POST — só PV PreVenda em AguardandoNS; produtoId opcional; codigo opcional (back gera se omitido) */
+/** POST - só PV PreVenda em AguardandoNS; produtoId opcional; codigo opcional (back gera se omitido) */
 export interface NumeroSerieCreateData {
   pedidoVendaId: number;
   produtoId?: number | null;
   codigo?: string | null;
 }
 
-/** PUT — Engenharia edita o Produto vinculado */
+/** PUT - Engenharia edita o Produto vinculado */
 export interface NumeroSerieUpdateData {
   produtoId?: number | null;
 }

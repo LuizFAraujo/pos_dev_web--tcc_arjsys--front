@@ -1,5 +1,5 @@
 // ========================================
-// TYPES — FUNCIONÁRIO (Admin)
+// TYPES - FUNCIONÁRIO (Admin)
 // ========================================
 // Alinhado com backend ASP.NET Core 10
 // CRUD /api/admin/Funcionarios

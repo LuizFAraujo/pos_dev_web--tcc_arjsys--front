@@ -1,5 +1,5 @@
 /**
- * GruposPage.tsx — Página de grupos de produto com modos list/view/new/edit
+ * GruposPage.tsx - Página de grupos de produto com modos list/view/new/edit
  *
  * Template: PageShell + PageActions + usePageMode
  * Hooks: useListState, useDeleteDialog
@@ -170,7 +170,7 @@ export function GruposPage({ tab }: GruposPageProps) {
       }
     >
 
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="grupos"

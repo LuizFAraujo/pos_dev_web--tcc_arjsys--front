@@ -1,5 +1,5 @@
 /**
- * filterEngine.ts — Motor de filtros compartilhado
+ * filterEngine.ts - Motor de filtros compartilhado
  *
  * Centraliza toda a lógica de filtragem usada por:
  * - DataGrid (compoundFilterFn para TanStack Table)

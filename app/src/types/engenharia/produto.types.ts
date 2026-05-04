@@ -1,11 +1,11 @@
 // ========================================
-// TYPES — PRODUTO (Engenharia)
+// TYPES - PRODUTO (Engenharia)
 // ========================================
 // Alinhado com o backend ASP.NET Core 10.
 // CRUD em /api/engenharia/Produtos
 
 /**
- * Tipo de produto — enums do backend (PascalCase)
+ * Tipo de produto - enums do backend (PascalCase)
  */
 export type TipoProduto =
   | 'Fabricado'
@@ -15,7 +15,7 @@ export type TipoProduto =
   | 'Servico';
 
 /**
- * Unidades de medida — enums do backend
+ * Unidades de medida - enums do backend
  */
 export type UnidadeMedida =
   | 'UN'
@@ -29,7 +29,7 @@ export type UnidadeMedida =
   | 'LT';
 
 /**
- * Produto — resposta do GET /api/engenharia/Produtos
+ * Produto - resposta do GET /api/engenharia/Produtos
  *
  * Campos alinhados com o backend:
  * - id é number (int sequencial)
@@ -78,7 +78,7 @@ export interface ProdutoFilters {
 }
 
 // ============================================
-// LABELS — Para exibição na UI
+// LABELS - Para exibição na UI
 // ============================================
 
 export const TIPO_PRODUTO_LABELS: Record<TipoProduto, string> = {

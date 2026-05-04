@@ -1,5 +1,5 @@
 /**
- * NumeroSeriePedidoField.tsx — Seletor de Pedido (PV em AguardandoNS)
+ * NumeroSeriePedidoField.tsx - Seletor de Pedido (PV em AguardandoNS)
  *
  * Renderiza UM input (Código PV) com:
  *   - autocomplete inline ao digitar
@@ -7,7 +7,7 @@
  *   - lupa (ou F4) abre NumeroSeriePedidoSearchDialog
  *
  * O cliente derivado (código/nome) é responsabilidade do componente pai
- * — este Field não desenha colunas extras pra evitar lock no layout.
+ * - este Field não desenha colunas extras pra evitar lock no layout.
  */
 
 import {
@@ -149,7 +149,7 @@ export function NumeroSeriePedidoField({
           {label}
         </Label>
         <Input
-          value={displayCodigo ?? '—'}
+          value={displayCodigo ?? '-'}
           readOnly
           className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
           tabIndex={-1}

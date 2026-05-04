@@ -1,5 +1,5 @@
 /**
- * OrdemProducaoProdutoSearchDialog.tsx — Pesquisa avançada de Produto Fabricado
+ * OrdemProducaoProdutoSearchDialog.tsx - Pesquisa avançada de Produto Fabricado
  * para servir de raiz de uma OP Master. Recebe lista já filtrada.
  */
 

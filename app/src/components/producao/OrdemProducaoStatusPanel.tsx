@@ -1,5 +1,5 @@
 /**
- * OrdemProducaoStatusPanel.tsx — Painel controlado de status da OP.
+ * OrdemProducaoStatusPanel.tsx - Painel controlado de status da OP.
  *
  * Não chama store. Apenas EMITE mudança via onStatusChange.
  * Form pai segura o pendente e aplica no Save.
@@ -105,7 +105,7 @@ export function OrdemProducaoStatusPanel({
                 className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ring-2 ring-amber-300 dark:ring-amber-700 ${
                   STATUS_OP_COLORS[statusExibido] || ''
                 }`}
-                title="Pendente — salve para aplicar"
+                title="Pendente - salve para aplicar"
               >
                 {STATUS_OP_LABELS[statusExibido] || statusExibido}
               </span>
@@ -153,7 +153,7 @@ export function OrdemProducaoStatusPanel({
 
         {editable && semAcoes && (
           <span className="text-xs text-muted-foreground italic">
-            Estado terminal — sem transições.
+            Estado terminal - sem transições.
           </span>
         )}
       </div>

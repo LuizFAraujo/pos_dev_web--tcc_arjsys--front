@@ -1,5 +1,5 @@
 // ========================================
-// STORE — BOM / Estrutura de Produto — API Real
+// STORE - BOM / Estrutura de Produto - API Real
 // ========================================
 // Endpoints:
 //   GET  /api/engenharia/Bom                         → lista produtos que têm estrutura
@@ -68,7 +68,7 @@ interface BOMState {
   fetchBomFlat: () => Promise<void>;
   fetchProdutosPai: () => Promise<void>;
   fetchFilhosProduto: (produtoId: number) => Promise<BomItem[]>;
-  /** Busca explosão consolidada (todos itens folha somados) — usado no módulo Produção */
+  /** Busca explosão consolidada (todos itens folha somados) - usado no módulo Produção */
   fetchExplosao: (produtoId: number, forceRefresh?: boolean) => Promise<BomExplosao | null>;
   createBomItem: (data: BomItemFormData) => Promise<void>;
   updateBomItem: (id: number, data: BomItemFormData) => Promise<void>;

@@ -1,5 +1,5 @@
 /**
- * DateField.tsx — Campo de data digitável com calendário popover
+ * DateField.tsx - Campo de data digitável com calendário popover
  *
  * Componente genérico de uso geral (não acoplado a nenhuma página).
  *
@@ -9,7 +9,7 @@
  *      - Aceita digitar com `/` também
  *      - Ano com 2 dígitos: pivô <50 → 20xx, >=50 → 19xx
  *      - Auto-completa zero (ex: "5/" → "05/")
- *   2. Ícone de calendário à esquerda — clique abre popover
+ *   2. Ícone de calendário à esquerda - clique abre popover
  *   3. Tab/Enter/Esc fecham o popover sem cancelar
  *   4. Calendar abre no mês/ano da data atual (ou hoje, se vazio/inválido)
  *   5. 1 clique seleciona o dia e fecha
@@ -18,7 +18,7 @@
  *      - Setinhas no topo/rodapé clicáveis (avança 1 sem fechar o drop)
  *      - Item selecionado destacado em azul, scroll com 1 linha de folga
  *      - Range de ano sem teto: clique na seta de baixo expande em 1
- *   7. Visual coerente com shadcn — overrides 100% via <style> escopado
+ *   7. Visual coerente com shadcn - overrides 100% via <style> escopado
  *      em .arjsys-datefield (sem CALENDAR_THEME, sem !important do Tailwind)
  *
  * Dependência:
@@ -139,10 +139,10 @@ const ARROW_HEIGHT = 24;
 /** Cor do dia selecionado da lib react-datepicker (referência única) */
 const SELECTED_BLUE = '#216ba5';
 
-/* ---------- CSS escopado (Opção B — única fonte de estilo da lib) ---------- */
+/* ---------- CSS escopado (Opção B - única fonte de estilo da lib) ---------- */
 
 const CALENDAR_CSS = `
-  /* Wrapper raiz da lib — sem visual próprio, herda do wrapper externo */
+  /* Wrapper raiz da lib - sem visual próprio, herda do wrapper externo */
   .arjsys-datefield .react-datepicker {
     background-color: transparent;
     border: none;
@@ -160,7 +160,7 @@ const CALENDAR_CSS = `
     background-color: transparent;
   }
 
-  /* Header da lib — zera padding/bg/border que causam faixa cinza */
+  /* Header da lib - zera padding/bg/border que causam faixa cinza */
   .arjsys-datefield .react-datepicker__header {
     padding: 0 !important;
     background-color: transparent !important;
@@ -228,7 +228,7 @@ const CALENDAR_CSS = `
     background-color: hsl(217 33% 17%);
   }
 
-  /* Selecionado — usa a cor referência ${SELECTED_BLUE} */
+  /* Selecionado - usa a cor referência ${SELECTED_BLUE} */
   .arjsys-datefield .react-datepicker__day--selected,
   .arjsys-datefield .react-datepicker__day--keyboard-selected {
     background-color: ${SELECTED_BLUE} !important;
@@ -263,7 +263,7 @@ const CALENDAR_CSS = `
   }
 `;
 
-/* ---------- dropdown customizado (mês e ano) — Portal + fixed ---------- */
+/* ---------- dropdown customizado (mês e ano) - Portal + fixed ---------- */
 
 interface ItemDropdownProps {
   value: number;
@@ -583,7 +583,7 @@ export function DateField({
 
   return (
     <div className={`flex flex-col gap-1.5 ${className ?? ''}`}>
-      {/* CSS escopado da lib (Opção B — única fonte) */}
+      {/* CSS escopado da lib (Opção B - única fonte) */}
       <style>{CALENDAR_CSS}</style>
 
       {label && (

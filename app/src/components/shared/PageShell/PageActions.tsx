@@ -1,5 +1,5 @@
 /**
- * PageActions.tsx — Botões padrão do header por modo (list/view/new/edit)
+ * PageActions.tsx - Botões padrão do header por modo (list/view/new/edit)
  *
  * FIX: removido o toast.error('Erro ao salvar.') genérico. A mensagem
  *      específica do back já vem via store (useEffect na page consume `error`).
@@ -9,15 +9,15 @@
  * A página só passa callbacks e configuração específica (colunas do SearchBar, etc).
  *
  * Modos:
- *   list — SearchBar | LimparFiltros | Novo+View+Edit+Delete | Lista/Cards | extraActions | Config
- *   view — Editar + Fechar | extraActions | Config
- *   new  — Salvar e Sair + Salvar (=adicionar outro) + Cancelar | Config
- *   edit — Salvar e Sair + Salvar + Voltar p/ Visualização | Config
+ *   list - SearchBar | LimparFiltros | Novo+View+Edit+Delete | Lista/Cards | extraActions | Config
+ *   view - Editar + Fechar | extraActions | Config
+ *   new  - Salvar e Sair + Salvar (=adicionar outro) + Cancelar | Config
+ *   edit - Salvar e Sair + Salvar + Voltar p/ Visualização | Config
  *
  * Props opcionais:
- *   hideButtons — esconde botões específicos (ex: ['cards', 'delete'])
- *   extraActions — ReactNode com botões extras específicos da página
- *   searchBarOverride — substitui o SearchBar padrão por um customizado
+ *   hideButtons - esconde botões específicos (ex: ['cards', 'delete'])
+ *   extraActions - ReactNode com botões extras específicos da página
+ *   searchBarOverride - substitui o SearchBar padrão por um customizado
  */
 
 import { useMemo, useEffect, useCallback, useState } from 'react';
@@ -60,6 +60,8 @@ export interface PageActionsProps<T> {
   onViewModeChange?: (mode: 'list' | 'cards') => void;
   formRef?: React.RefObject<FormHandle | null>;
   extraActions?: ReactNode;
+  /** Override do clique do botão Editar - substitui o comportamento padrão (page.openEdit). */
+  onEditClick?: (item: T) => void;
   hideButtons?: HideableButton[];
   newTooltip?: string;
   viewTooltip?: string;
@@ -90,6 +92,7 @@ export function PageActions<T>({
   onViewModeChange,
   formRef,
   extraActions,
+  onEditClick,
   hideButtons = [],
   newTooltip = 'Novo',
   viewTooltip = 'Visualizar',
@@ -301,7 +304,11 @@ export function PageActions<T>({
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8"
                   disabled={!activeItem}
-                  onClick={() => { if (activeItem) handleEdit(activeItem); }}>
+                  onClick={() => {
+                    if (!activeItem) return;
+                    if (onEditClick) onEditClick(activeItem);
+                    else handleEdit(activeItem);
+                  }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -379,6 +386,7 @@ export function PageActions<T>({
 
   if (page.mode === 'view') {
     return (
+      <>
       <div className="flex items-center">
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -414,6 +422,8 @@ export function PageActions<T>({
           </>
         )}
       </div>
+      {dirtyDialog}
+      </>
     );
   }
 

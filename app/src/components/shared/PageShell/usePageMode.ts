@@ -1,8 +1,8 @@
 /**
- * usePageMode.ts — Hook para páginas de cadastro com modos list/view/new/edit
+ * usePageMode.ts - Hook para páginas de cadastro com modos list/view/new/edit
  *
  * Lock de edição:
- *   - editLock: Map<lockKey, tabId> — só uma aba pode editar um item por vez
+ *   - editLock: Map<lockKey, tabId> - só uma aba pode editar um item por vez
  *   - Visualização nunca é bloqueada
  *   - Lock usa tabType como prefixo (comum entre abas do mesmo tipo)
  *
@@ -36,7 +36,7 @@ function releaseEdit(lockKey: string, tabId: string) {
 export function usePageMode<T>(
   tabId: string,
   getItemId?: (item: T) => string | number,
-  /** Tipo da aba (ex: 'adm-clientes') — prefixo do lock entre abas do mesmo tipo */
+  /** Tipo da aba (ex: 'adm-clientes') - prefixo do lock entre abas do mesmo tipo */
   tabType?: string,
 ): PageModeState<T> {
   const [mode, setMode] = useTabState<PageMode>(tabId + '-mode', 'list');
@@ -71,7 +71,7 @@ export function usePageMode<T>(
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup ao desmontar — libera lock só se a aba foi realmente fechada
+  // Cleanup ao desmontar - libera lock só se a aba foi realmente fechada
   // (trocar de aba ativa desmonta/remonta, mas a aba continua existindo no store)
   useEffect(() => {
     const tid = tabId;
@@ -81,7 +81,7 @@ export function usePageMode<T>(
       setTimeout(() => {
         const tabExists = useTabsStore.getState().tabs.some((t) => t.id === tid);
         if (!tabExists) {
-          // Aba foi realmente fechada — libera lock
+          // Aba foi realmente fechada - libera lock
           const item = editingItemRef.current;
           if (item && getItemId) {
             const lockKey = `${prefix}-${getItemId(item)}`;

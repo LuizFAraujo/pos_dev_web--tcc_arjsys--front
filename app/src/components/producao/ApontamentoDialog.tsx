@@ -1,5 +1,5 @@
 /**
- * ApontamentoDialog.tsx — Modal de apontamento de produção em um item da OP.
+ * ApontamentoDialog.tsx - Modal de apontamento de produção em um item da OP.
  * Quantidade obrigatória > 0, observação opcional.
  */
 
@@ -80,7 +80,7 @@ export function ApontamentoDialog({ open, onOpenChange, ordemId, item }: Props) 
             Apontar produção
           </DialogTitle>
           <DialogDescription>
-            {item.produtoCodigo} — {item.produtoDescricao}
+            {item.produtoCodigo} - {item.produtoDescricao}
           </DialogDescription>
         </DialogHeader>
 

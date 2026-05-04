@@ -1,10 +1,10 @@
 /**
- * FuncionarioForm.tsx — Form inline de cadastro/edição/visualização de funcionário
+ * FuncionarioForm.tsx - Form inline de cadastro/edição/visualização de funcionário
  *
  * Modos:
- *   view — inputs readOnly
- *   edit — inputs editáveis (usuario não editável, senha opcional)
- *   new  — inputs editáveis, campos vazios (usuario e senha obrigatórios)
+ *   view - inputs readOnly
+ *   edit - inputs editáveis (usuario não editável, senha opcional)
+ *   new  - inputs editáveis, campos vazios (usuario e senha obrigatórios)
  *
  * Abas: Identificação | Contato | Endereço
  * Usa useFormTabNavigation para foco e navegação entre abas.

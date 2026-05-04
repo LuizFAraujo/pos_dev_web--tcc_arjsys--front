@@ -1,5 +1,5 @@
 /**
- * BOMForm.tsx — Form inline de estrutura de produto (BOM)
+ * BOMForm.tsx - Form inline de estrutura de produto (BOM)
  *
  * === Identidade por instância ===
  * _treePath: caminho único "-1/5/12" pra expand independente

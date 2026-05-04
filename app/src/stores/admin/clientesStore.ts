@@ -1,5 +1,5 @@
 // ========================================
-// STORE — CLIENTES (Admin) — v3.1
+// STORE - CLIENTES (Admin) - v3.1
 // ========================================
 // Endpoints:
 //   GET    /api/admin/Clientes?busca=texto  → LIKE em nome/codigo/cpfCnpj/cidade

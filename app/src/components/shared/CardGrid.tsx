@@ -1,19 +1,19 @@
 /**
- * CardGrid.tsx — Componente base reutilizável de visualização em cards
+ * CardGrid.tsx - Componente base reutilizável de visualização em cards
  *
  * Funcionalidades:
  * - Hover e seleção com as mesmas cores do DataGrid (sky-200 / slate-100)
  * - Navegação por teclado: setas ←→↑↓ entre cards
  * - Enter com card selecionado → onActivate (abre visualização)
  * - Duplo clique no card → onActivate
- * - Sem botões de ação internos — ações ficam no header da página
- * - Colunas configuráveis (1–4), responsivo por padrão
+ * - Sem botões de ação internos - ações ficam no header da página
+ * - Colunas configuráveis (1-4), responsivo por padrão
  * - Cores de hover e seleção configuráveis via props
  * - Callback onSelect para a página reagir ao item selecionado
  * - forwardRef com CardGridHandle para controle externo (clearSelection)
  * - Virtualização via @tanstack/react-virtual (suporta 70k+ itens)
  *
- * Footer removido — agora cada page usa ListFooter via prop footer do PageShell.
+ * Footer removido - agora cada page usa ListFooter via prop footer do PageShell.
  *
  * Espaçamentos controlados pelas constantes GAP_X, GAP_Y, PAD_X, PAD_Y no topo.
  */
@@ -57,11 +57,11 @@ export interface CardGridProps<T extends { id: number | string }> {
 
   /**
    * Função que recebe o item e retorna o conteúdo interno do card.
-   * Não incluir botões de ação — ações ficam no header da página.
+   * Não incluir botões de ação - ações ficam no header da página.
    */
   renderCard: (item: T, isSelected: boolean) => React.ReactNode;
 
-  /** ID do item selecionado — controlado pela página via useTabState */
+  /** ID do item selecionado - controlado pela página via useTabState */
   selectedId: number | string | null;
 
   /** Callback ao clicar ou navegar para um card. null = deselecionar */

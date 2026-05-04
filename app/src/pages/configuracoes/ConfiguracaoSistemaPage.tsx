@@ -1,5 +1,5 @@
 /**
- * ConfiguracaoSistemaPage.tsx — Página de configurações do sistema
+ * ConfiguracaoSistemaPage.tsx - Página de configurações do sistema
  *
  * Reúne ajustes gerais do ARJSYS em seções isoladas.
  * Atualmente: somente "Dados da Empresa" (ano de fundação).

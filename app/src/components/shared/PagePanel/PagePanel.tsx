@@ -1,5 +1,5 @@
 /**
- * PagePanel.tsx — Painel lateral direito limitado à área de conteúdo da página
+ * PagePanel.tsx - Painel lateral direito limitado à área de conteúdo da página
  *
  * Diferente do RightSidebar global (que cobre a tela toda),
  * este painel fica restrito à altura do conteúdo da page (dentro do PageShell).
@@ -9,7 +9,7 @@
  * - Backdrop escuro com click-outside para fechar
  * - Tecla ESC fecha
  * - Altura limitada à área de conteúdo (não cobre header/footer do PageShell)
- * - Componente genérico — cada page passa título e children
+ * - Componente genérico - cada page passa título e children
  *
  * Uso:
  *   <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Filtros">
@@ -64,7 +64,7 @@ export function PagePanel({ open, onClose, title, width = 'w-80', headerActions,
 
   return (
     <>
-      {/* Backdrop — absolute pra ficar dentro do container pai */}
+      {/* Backdrop - absolute pra ficar dentro do container pai */}
       <div
         className={`absolute inset-0 z-40 bg-black/50 transition-opacity ease-in-out ${open
           ? 'opacity-100 duration-500'

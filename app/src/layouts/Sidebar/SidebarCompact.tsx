@@ -1,5 +1,5 @@
 /**
- * SidebarCompact.tsx — Modo compact (64px, só ícones com tooltip)
+ * SidebarCompact.tsx - Modo compact (64px, só ícones com tooltip)
  *
  * Tooltip via AppTooltip (delay centralizado).
  */

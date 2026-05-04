@@ -1,5 +1,5 @@
 /**
- * ProdutoForm.tsx — Form inline de cadastro/edição/visualização de produto
+ * ProdutoForm.tsx - Form inline de cadastro/edição/visualização de produto
  *
  * Modos: view (readOnly), edit, new
  * Abas: Identificação | Detalhes

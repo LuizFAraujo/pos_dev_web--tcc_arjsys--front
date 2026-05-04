@@ -1,7 +1,7 @@
 // ========================================
-// TYPES — PEDIDO DE VENDA (Comercial) — v3.1
+// TYPES - PEDIDO DE VENDA (Comercial) - v3.1
 // ========================================
-// Alinhado com backend ASP.NET Core 10 — feature/vendas
+// Alinhado com backend ASP.NET Core 10 - feature/vendas
 // CRUD /api/comercial/PedidoVenda
 //
 // Mudanças v3.1 em relação a v3:
@@ -74,7 +74,7 @@ export const FLUXO_NORMAL: StatusPedido[] = [
   'Entregue',
 ];
 
-/** Status iniciais — edição livre, sem justificativa */
+/** Status iniciais - edição livre, sem justificativa */
 export const STATUS_INICIAL: StatusPedido[] = [
   'AguardandoNS',
   'RecebidoNS',
@@ -83,7 +83,7 @@ export const STATUS_INICIAL: StatusPedido[] = [
 ];
 
 /**
- * Status avançados — edição permitida com justificativa obrigatória.
+ * Status avançados - edição permitida com justificativa obrigatória.
  * Gera evento ItensAlterados e notifica Eng/Prod/Almox.
  */
 export const STATUS_AVANCADO: StatusPedido[] = [
@@ -93,7 +93,7 @@ export const STATUS_AVANCADO: StatusPedido[] = [
   'Pausado',
 ];
 
-/** Status bloqueados — edição 100% proibida. Front esconde botão Editar. */
+/** Status bloqueados - edição 100% proibida. Front esconde botão Editar. */
 export const STATUS_BLOQUEADO: StatusPedido[] = [
   'Entregue',
   'Devolvido',
@@ -255,7 +255,7 @@ export interface PedidoHistorico {
 }
 
 // ============================================
-// ITENS — v3: descrição livre
+// ITENS - v3: descrição livre
 // ============================================
 
 export interface ItemPedido {
@@ -288,7 +288,7 @@ export interface ItemPedidoCreateData {
   justificativa?: string;
 }
 
-/** Usado no PUT consolidado — id? preenchido = update, vazio = insert */
+/** Usado no PUT consolidado - id? preenchido = update, vazio = insert */
 export interface ItemPedidoUpsertData {
   id?: number;
   quantidade: number;
@@ -304,7 +304,7 @@ export interface PedidoVenda {
   id: number;
   codigo: string;
   clienteId: number;
-  clienteCodigo?: string; // v3.1 — "CLI-0042"
+  clienteCodigo?: string; // v3.1 - "CLI-0042"
   clienteNome?: string;
   tipo: TipoPedidoVenda;
   status: StatusPedido;
@@ -326,7 +326,7 @@ export interface PedidoVenda {
   total?: number;
 }
 
-/** POST /PedidoVenda — cria cabeçalho + itens atomicamente */
+/** POST /PedidoVenda - cria cabeçalho + itens atomicamente */
 export interface PedidoVendaCreateData {
   clienteId: number;
   tipo: TipoPedidoVenda;
@@ -336,7 +336,7 @@ export interface PedidoVendaCreateData {
   itens: ItemPedidoCreateData[];
 }
 
-/** PUT /PedidoVenda/{id} — replace full com diff no back */
+/** PUT /PedidoVenda/{id} - replace full com diff no back */
 export interface PedidoVendaUpdateData {
   clienteId: number;
   tipo: TipoPedidoVenda;

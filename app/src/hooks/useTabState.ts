@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // Map global para armazenar estado de cada aba
 const tabStates = new Map<string, any>();
 
-// Subscribers por key — cada listener é um forceUpdate de um componente
+// Subscribers por key - cada listener é um forceUpdate de um componente
 const subscribers = new Map<string, Set<() => void>>();
 
 function notify(key: string) {

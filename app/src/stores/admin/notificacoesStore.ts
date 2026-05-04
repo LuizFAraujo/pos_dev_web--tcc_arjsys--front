@@ -1,5 +1,5 @@
 // ========================================
-// STORE — NOTIFICAÇÕES (Admin) — v3
+// STORE - NOTIFICAÇÕES (Admin) - v3
 // ========================================
 // Endpoints (feature/vendas):
 //   GET    /api/admin/Notificacoes?modulo=X&lidas=true|false&pagina=N&tamanho=N

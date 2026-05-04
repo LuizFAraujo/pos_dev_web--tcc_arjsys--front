@@ -1,5 +1,5 @@
 /**
- * PedidoStatusPanel.tsx — Painel de status (com indicador pendente real → futuro)
+ * PedidoStatusPanel.tsx - Painel de status (com indicador pendente real → futuro)
  *
  * Mudanças:
  *   - Quando há statusPendente: mostra [Real] → [Pendente] com seta
@@ -64,7 +64,7 @@ interface PedidoStatusPanelProps {
 }
 
 function formatDateTime(iso?: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try {
     const d = new Date(iso);
     const day = String(d.getDate()).padStart(2, '0');
@@ -179,7 +179,7 @@ export function PedidoStatusPanel({
                   className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ring-2 ring-amber-300 dark:ring-amber-700 ${
                     STATUS_COLORS[statusExibido] || ''
                   }`}
-                  title="Pendente — salve para aplicar"
+                  title="Pendente - salve para aplicar"
                 >
                   {STATUS_LABELS[statusExibido] || statusExibido}
                 </span>
@@ -470,11 +470,11 @@ export function PedidoStatusPanel({
               </span>
             </div>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">-</span>
           )}
         </td>
         <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400 italic truncate">
-          {ev.justificativa ? `"${ev.justificativa}"` : '—'}
+          {ev.justificativa ? `"${ev.justificativa}"` : '-'}
         </td>
       </tr>
     );

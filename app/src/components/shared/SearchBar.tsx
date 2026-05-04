@@ -1,5 +1,5 @@
 /**
- * SearchBar.tsx — Barra de pesquisa com seletor de colunas
+ * SearchBar.tsx - Barra de pesquisa com seletor de colunas
  *
  * Componente reutilizável que permite:
  * - Digitar termo de busca
@@ -61,7 +61,7 @@ export function SearchBar({
 
   const toggleColumn = (key: string) => {
     if (selectedColumns.includes(key)) {
-      // Não permite desmarcar todas — pelo menos 1
+      // Não permite desmarcar todas - pelo menos 1
       if (selectedColumns.length > 1) {
         onColumnsChange(selectedColumns.filter(k => k !== key));
       }
@@ -91,7 +91,7 @@ export function SearchBar({
         className="flex-1 h-full px-2 text-xs bg-transparent outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 min-w-0"
       />
 
-      {/* Botão limpar — só aparece com texto */}
+      {/* Botão limpar - só aparece com texto */}
       {value && (
         <button
           onClick={() => onChange('')}

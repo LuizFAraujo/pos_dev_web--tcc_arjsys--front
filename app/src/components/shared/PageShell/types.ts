@@ -1,5 +1,5 @@
 /**
- * PageShell/types.ts — Tipos compartilhados
+ * PageShell/types.ts - Tipos compartilhados
  */
 
 import type { ReactNode } from 'react';
@@ -13,7 +13,7 @@ export interface PageShellProps {
   headerRight?: ReactNode;
   /**
    * Footer completo (substitui o footer automático).
-   * Compat com pages antigas — prefira `footerLeft` + `mode`.
+   * Compat com pages antigas - prefira `footerLeft` + `mode`.
    */
   footer?: ReactNode;
   /**

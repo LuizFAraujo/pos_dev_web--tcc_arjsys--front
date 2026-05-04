@@ -1,5 +1,5 @@
 /**
- * NumeroSerieForm.tsx — Form de criação/edição/visualização de Número de Série
+ * NumeroSerieForm.tsx - Form de criação/edição/visualização de Número de Série
  *
  * Layout em grid 2 colunas:
  *   [ Pedido Venda    ] | [ Número de Série          ]
@@ -15,7 +15,7 @@
  *   - view: tudo readonly
  *
  * Preview do código (local):
- *   II.MM.AA.NNNNN — idade da empresa, mês, ano, max sequencial conhecido + 1.
+ *   II.MM.AA.NNNNN - idade da empresa, mês, ano, max sequencial conhecido + 1.
  *   Race condition: se outro cliente criar NS antes do save, o backend recusa
  *   por unicidade. Usuário vê toast e refaz.
  */

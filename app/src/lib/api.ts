@@ -1,5 +1,5 @@
 // ========================================
-// API CLIENT — Cliente HTTP centralizado
+// API CLIENT - Cliente HTTP centralizado
 // ========================================
 // Base para todas as chamadas ao backend.
 // Usa fetch nativo com tipagem forte.
@@ -94,7 +94,7 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // ============================================
-// HELPERS — Atalhos para cada método HTTP
+// HELPERS - Atalhos para cada método HTTP
 // ============================================
 
 /** GET request */

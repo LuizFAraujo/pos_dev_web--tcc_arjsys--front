@@ -1,5 +1,5 @@
 /**
- * OrdensProducaoPage.tsx — Página de Ordens de Produção (list + view + new + edit)
+ * OrdensProducaoPage.tsx - Página de Ordens de Produção (list + view + new + edit)
  *
  * Modelo: ProdutosPage / NumeroSeriePage (PageShell + PageActions + usePageMode).
  *
@@ -92,7 +92,7 @@ function OrdemProducaoCard({ op }: { op: OrdemProducao }) {
         </span>
       </div>
       <p className="text-xs text-muted-foreground mt-1 truncate">
-        {op.produtoCodigo} — {op.produtoDescricao}
+        {op.produtoCodigo} - {op.produtoDescricao}
       </p>
       {op.pedidoVendaCodigo && (
         <p className="text-[11px] text-muted-foreground font-mono mt-1 truncate">

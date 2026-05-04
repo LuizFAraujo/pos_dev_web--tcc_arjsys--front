@@ -1,5 +1,5 @@
 // ========================================
-// STORE — NÚMERO DE SÉRIE (Comercial) — v3
+// STORE - NÚMERO DE SÉRIE (Comercial) - v3
 // ========================================
 // Endpoints (feature/vendas):
 //   GET  /api/comercial/NumeroSerie                → lista (?pagina=N&tamanho=N)
@@ -94,7 +94,7 @@ export const useNumeroSerieStore = create<NumeroSerieState>((set, get) => ({
     set({ error: null });
     try {
       await apiPut(`/api/comercial/NumeroSerie/${id}`, data);
-      // 204 — refaz fetch pra pegar produtoCodigo/produtoDescricao atualizados
+      // 204 - refaz fetch pra pegar produtoCodigo/produtoDescricao atualizados
       await get().fetchSeries();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar número de série';

@@ -1,5 +1,5 @@
 // ========================================
-// STORE — GRUPOS DE PRODUTO (Engenharia)
+// STORE - GRUPOS DE PRODUTO (Engenharia)
 // ========================================
 
 import { create } from 'zustand';

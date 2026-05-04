@@ -1,5 +1,5 @@
 /**
- * BOMPage.tsx — Estrutura de Produtos (BOM)
+ * BOMPage.tsx - Estrutura de Produtos (BOM)
  *
  * Flat: DataGrid com todas as relações pai-filho.
  *   - Botão deletar → exclui estrutura COMPLETA (todos filhos diretos do pai selecionado)

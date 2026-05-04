@@ -1,5 +1,5 @@
 /**
- * types.ts — Tipos compartilhados do DataGrid
+ * types.ts - Tipos compartilhados do DataGrid
  *
  * Centraliza todos os tipos usados por DataGrid, ColFilterPopover
  * e FilterConditionRow. Importado por todos os arquivos da pasta.
@@ -38,7 +38,7 @@ export interface GridColumn<T> {
 
 /** Props do componente DataGrid */
 export interface DataGridProps<T> {
-  tabId: string;                // ID da aba — pra persistir sort/filters entre trocas de aba
+  tabId: string;                // ID da aba - pra persistir sort/filters entre trocas de aba
   storageId?: string;           // ID fixo pra localStorage (ex: 'clientes'). Se não passar, usa tabId
   columns: GridColumn<T>[];     // definição das colunas
   data: T[];                    // dados a exibir
@@ -65,7 +65,7 @@ export interface DataGridProps<T> {
 
   /**
    * Quando `true`, duplo-clique simples (sem Ctrl) ativa a linha (dispara onActivate).
-   * Default `false` — mantém comportamento histórico (Ctrl+duplo-clique pra ativar)
+   * Default `false` - mantém comportamento histórico (Ctrl+duplo-clique pra ativar)
    * que evita acionamento acidental em telas de listagem.
    *
    * Útil em modais de seleção, onde o duplo-clique direto é o gesto natural.
@@ -93,7 +93,7 @@ export interface FilterCondition {
   logic: 'E' | 'OU';  // lógica com a próxima condição (independente por par)
 }
 
-/** Filtro composto — suporta múltiplas condições ou formatos simples */
+/** Filtro composto - suporta múltiplas condições ou formatos simples */
 export interface CompoundFilter {
   type: GridFilterType;
   // Múltiplas condições (usado por filterType 'text')

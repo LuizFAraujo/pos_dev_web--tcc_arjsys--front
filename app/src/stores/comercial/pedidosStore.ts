@@ -1,5 +1,5 @@
 // ========================================
-// STORE — PEDIDOS DE VENDA (Comercial) — v3.1
+// STORE - PEDIDOS DE VENDA (Comercial) - v3.1
 // ========================================
 // Endpoints consolidados (feature/vendas v3.1):
 //   POST   /api/comercial/PedidoVenda                → cria cabeçalho + itens atomicamente
@@ -37,18 +37,18 @@ interface PedidosState {
   fetchPedidos: () => Promise<void>;
   fetchPedido: (id: number) => Promise<void>;
 
-  /** POST consolidado — cria PV + itens em 1 chamada (itens.length >= 1). */
+  /** POST consolidado - cria PV + itens em 1 chamada (itens.length >= 1). */
   createPedido: (data: PedidoVendaCreateData) => Promise<PedidoVenda | null>;
 
-  /** PUT consolidado — replace full, back faz diff. Retorna PV completo. */
+  /** PUT consolidado - replace full, back faz diff. Retorna PV completo. */
   updatePedido: (id: number, data: PedidoVendaUpdateData) => Promise<PedidoVenda | null>;
 
   deletePedido: (id: number) => Promise<void>;
 
-  /** PATCH /status — justificativa obrigatória em pausar/cancelar/reabrir/devolver/retroceder */
+  /** PATCH /status - justificativa obrigatória em pausar/cancelar/reabrir/devolver/retroceder */
   alterarStatus: (id: number, novoStatus: StatusPedido, justificativa?: string) => Promise<void>;
 
-  /** PATCH /projeto — define ou limpa o Produto BOM liberado pela Engenharia */
+  /** PATCH /projeto - define ou limpa o Produto BOM liberado pela Engenharia */
   definirProjeto: (id: number, produtoBomId: number | null) => Promise<void>;
 
   fetchHistorico: (id: number) => Promise<void>;

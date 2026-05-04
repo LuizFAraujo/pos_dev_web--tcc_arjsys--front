@@ -1,5 +1,5 @@
 /**
- * InlineEditGrid.tsx — Grid flat com edição inline por linha
+ * InlineEditGrid.tsx - Grid flat com edição inline por linha
  *
  * Visual coeso com o DataGrid (headers uppercase, zebra, hover, borda fina)
  * mas simplificado pra 3-50 linhas editáveis dentro de um form (itens de PV,
@@ -10,7 +10,7 @@
  *   - Enter confirma, Esc cancela
  *   - Linha temporária (id `new-*`) cancelada é removida
  *   - Validação por coluna (retorno string = erro)
- *   - Opera em memória — caller decide quando persistir
+ *   - Opera em memória - caller decide quando persistir
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -215,7 +215,7 @@ export function InlineEditGrid<T>({
     const raw = (c.getValue ?? ((r: T) => defaultGet(r, c.key)))(row);
     if (c.render) return c.render(row, raw);
     if (raw == null || raw === '') {
-      return <span className="text-muted-foreground/60">—</span>;
+      return <span className="text-muted-foreground/60">-</span>;
     }
     if (c.inputType === 'decimal') {
       const n = typeof raw === 'number' ? raw : parseFloat(String(raw));

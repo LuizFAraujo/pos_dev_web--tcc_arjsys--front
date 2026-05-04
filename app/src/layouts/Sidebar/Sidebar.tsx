@@ -1,5 +1,5 @@
 /**
- * Sidebar.tsx — Componente principal do menu lateral
+ * Sidebar.tsx - Componente principal do menu lateral
  *
  * Delega renderização para SidebarCompact ou SidebarNormal conforme o modo.
  * 3 modos: closed (0px), compact (64px, ícones), normal (240px, lista).

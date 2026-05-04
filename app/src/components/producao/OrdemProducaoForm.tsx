@@ -1,5 +1,5 @@
 /**
- * OrdemProducaoForm.tsx — Form de OP (criar Master / editar / visualizar).
+ * OrdemProducaoForm.tsx - Form de OP (criar Master / editar / visualizar).
  *
  * Modos:
  *   - new:  cria OP Master (PV opcional + Produto Fabricado raiz + observações)
@@ -51,7 +51,7 @@ export interface OrdemProducaoFormData {
 interface OrdemProducaoFormProps {
   mode: Extract<PageMode, 'new' | 'edit' | 'view'>;
   ordem: OrdemProducao | null;
-  /** ID da aba pai — usado pelos DataGrids internos. */
+  /** ID da aba pai - usado pelos DataGrids internos. */
   tabId: string;
   onDirty: () => void;
   onSave: (data: OrdemProducaoFormData) => Promise<void>;
@@ -60,7 +60,7 @@ interface OrdemProducaoFormProps {
 const TABS = ['identificacao', 'itens', 'filhas', 'historico'];
 
 function formatDateTime(iso?: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try {
     const d = new Date(iso);
     const day = String(d.getDate()).padStart(2, '0');
@@ -125,7 +125,7 @@ export const OrdemProducaoForm = forwardRef<
   const [observacoes, setObservacoes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  /** Quando true, Produto vem do NS do PV — campo bloqueado pra evitar inconsistência. */
+  /** Quando true, Produto vem do NS do PV - campo bloqueado pra evitar inconsistência. */
   const [produtoLockedByNs, setProdutoLockedByNs] = useState(false);
   const [nsHint, setNsHint] = useState<string | null>(null);
   /** ok = produto vinculado (emerald) · warn = falta NS em PreVenda (amber) · info = PV Normal sem produto (slate) */
@@ -136,7 +136,7 @@ export const OrdemProducaoForm = forwardRef<
   const [apontOpen, setApontOpen] = useState(false);
   const [itemAponto, setItemAponto] = useState<OrdemProducaoItem | null>(null);
 
-  // Linhas selecionadas nos grids internos (itens / filhas) — local ao form,
+  // Linhas selecionadas nos grids internos (itens / filhas) - local ao form,
   // resetam ao trocar de OP. Histórico não tem seleção (read-only).
   const [itemSelecionado, setItemSelecionado] = useState<OrdemProducaoItem | null>(null);
 
@@ -350,12 +350,12 @@ export const OrdemProducaoForm = forwardRef<
                 h.isPendente ? 'text-amber-700 dark:text-amber-400' : ''
               }`}
             >
-              {h.statusAnterior ? STATUS_OP_LABELS[h.statusAnterior] : '—'}
+              {h.statusAnterior ? STATUS_OP_LABELS[h.statusAnterior] : '-'}
               {' → '}
-              {h.statusNovo ? STATUS_OP_LABELS[h.statusNovo] : '—'}
+              {h.statusNovo ? STATUS_OP_LABELS[h.statusNovo] : '-'}
             </span>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">-</span>
           ),
       },
       {
@@ -372,7 +372,7 @@ export const OrdemProducaoForm = forwardRef<
               )}
             </span>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">-</span>
           ),
       },
     ],
@@ -422,7 +422,7 @@ export const OrdemProducaoForm = forwardRef<
 
       // Persistência: 1) cria/edita observações; 2) aplica mudança de status
       // pendente (se houver). Status pendente só faz sentido em edit/view de
-      // OP existente — em new o status é sempre Pendente recém-criado.
+      // OP existente - em new o status é sempre Pendente recém-criado.
       await onSave({
         pedidoVendaId: estoque ? null : pedidoVendaId,
         produtoId: produtoId ?? ordem?.produtoId ?? 0,
@@ -515,7 +515,7 @@ export const OrdemProducaoForm = forwardRef<
             className="grid gap-x-3 gap-y-5"
             style={{ gridTemplateColumns: '240px minmax(0, 1fr)' }}
           >
-            {/* Código (existente) | Status (existente) — só fora do new */}
+            {/* Código (existente) | Status (existente) - só fora do new */}
             {!isNew && (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -549,7 +549,7 @@ export const OrdemProducaoForm = forwardRef<
               </>
             )}
 
-            {/* Linha PV — checkbox estoque + campo */}
+            {/* Linha PV - checkbox estoque + campo */}
             {isNew && (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -646,7 +646,7 @@ export const OrdemProducaoForm = forwardRef<
                     Pedido de Venda
                   </Label>
                   <Input
-                    value={ordem?.pedidoVendaCodigo ?? '— (Estoque)'}
+                    value={ordem?.pedidoVendaCodigo ?? '- (Estoque)'}
                     readOnly
                     className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
                     tabIndex={-1}
@@ -659,8 +659,8 @@ export const OrdemProducaoForm = forwardRef<
                   <Input
                     value={
                       ordem?.clienteNome
-                        ? `${ordem.clienteCodigo ?? ''} — ${ordem.clienteNome}`
-                        : '—'
+                        ? `${ordem.clienteCodigo ?? ''} - ${ordem.clienteNome}`
+                        : '-'
                     }
                     readOnly
                     className="h-9 text-sm bg-white dark:bg-slate-950 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -670,7 +670,7 @@ export const OrdemProducaoForm = forwardRef<
               </>
             )}
 
-            {/* Cód. Cliente | Cliente — só no new mostra derivado do PV */}
+            {/* Cód. Cliente | Cliente - só no new mostra derivado do PV */}
             {isNew && (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -680,7 +680,7 @@ export const OrdemProducaoForm = forwardRef<
                   <Input
                     value={pedidoDisplay.clienteCodigo ?? ''}
                     readOnly
-                    placeholder={estoque ? '—' : ''}
+                    placeholder={estoque ? '-' : ''}
                     className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
                     tabIndex={-1}
                   />
@@ -692,7 +692,7 @@ export const OrdemProducaoForm = forwardRef<
                   <Input
                     value={pedidoDisplay.clienteNome ?? ''}
                     readOnly
-                    placeholder={estoque ? '— (sem PV)' : 'Selecione um pedido'}
+                    placeholder={estoque ? '- (sem PV)' : 'Selecione um pedido'}
                     className="h-9 text-sm bg-white dark:bg-slate-950 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
                     tabIndex={-1}
                   />
@@ -823,7 +823,7 @@ export const OrdemProducaoForm = forwardRef<
                 </Button>
               </div>
 
-              <div className="flex-1 min-h-[300px]">
+              <div className="flex-1 min-h-75">
                 <DataGrid<OrdemProducaoItem>
                   tabId={`${tabId}-op-itens`}
                   storageId="op-itens"
@@ -854,7 +854,7 @@ export const OrdemProducaoForm = forwardRef<
             value="filhas"
             className="flex-1 overflow-auto mt-0 px-6 py-3"
           >
-            <div className="flex-1 min-h-[300px] h-full">
+            <div className="flex-1 min-h-75 h-full">
               <DataGrid<OrdemProducaoFilhaResumo>
                 tabId={`${tabId}-op-filhas`}
                 storageId="op-filhas"
@@ -871,7 +871,7 @@ export const OrdemProducaoForm = forwardRef<
             value="historico"
             className="flex-1 overflow-auto mt-0 px-6 py-3"
           >
-            <div className="flex-1 min-h-[300px] h-full">
+            <div className="flex-1 min-h-75 h-full">
               <DataGrid<HistoricoLinha>
                 tabId={`${tabId}-op-historico`}
                 storageId="op-historico"

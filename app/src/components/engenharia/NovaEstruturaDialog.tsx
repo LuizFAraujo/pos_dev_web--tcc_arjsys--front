@@ -1,5 +1,5 @@
 /**
- * NovaEstruturaDialog.tsx — Dialog para criar nova estrutura de produto (BOM)
+ * NovaEstruturaDialog.tsx - Dialog para criar nova estrutura de produto (BOM)
  *
  * Autocomplete inline. Todos os produtos aparecem.
  * Fabricado/Kit/Conjunto → aceita direto.
@@ -186,7 +186,7 @@ export function NovaEstruturaDialog({ open, onOpenChange, onEstruturaCreated }: 
 
             <div className="space-y-1.5">
               <Label>Descrição</Label>
-              <Input value={descricao} readOnly placeholder="—"
+              <Input value={descricao} readOnly placeholder="-"
                 className="bg-white dark:bg-slate-950 cursor-default focus-visible:ring-0 focus-visible:ring-offset-0" />
             </div>
           </div>

@@ -1,5 +1,5 @@
 /**
- * useBomEditState.ts — Estado de edição em lote da BOM
+ * useBomEditState.ts - Estado de edição em lote da BOM
  *
  * Gerencia pendências locais antes de salvar no banco:
  *   - Linhas novas (added): criadas pelo usuário, ainda não persistidas
@@ -9,7 +9,7 @@
  * Ao salvar, retorna as 3 listas pro chamador processar (POST/PUT/DELETE).
  * Ao resetar, limpa tudo (usado quando dados recarregam do banco).
  *
- * Não faz chamadas à API — responsabilidade do BOMForm/BOMPage.
+ * Não faz chamadas à API - responsabilidade do BOMForm/BOMPage.
  *
  * NOTA: nextTempId começa em -100 pra não colidir com o id=-1 do nó raiz da tree.
  */

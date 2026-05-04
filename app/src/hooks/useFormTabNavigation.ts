@@ -1,5 +1,5 @@
 /**
- * useFormTabNavigation.ts — Hook para navegação automática entre abas de formulário
+ * useFormTabNavigation.ts - Hook para navegação automática entre abas de formulário
  *
  * Funciona com Radix Tabs (shadcn) que desmonta conteúdo de abas inativas.
  *
@@ -44,7 +44,7 @@ interface UseFormTabNavigationOptions {
   defaultTab?: string;
   /**
    * Se `true` (default), foca no primeiro campo focável ao montar.
-   * Se `false`, não foca em nada inicialmente — útil em modo edição
+   * Se `false`, não foca em nada inicialmente - útil em modo edição
    * onde o usuário pode querer escolher qual campo editar.
    *
    * Em ambos os casos, trocar de aba via Tab/Shift+Tab continua focando
@@ -54,9 +54,9 @@ interface UseFormTabNavigationOptions {
 }
 
 interface UseFormTabNavigationReturn {
-  /** Aba ativa atual — usar como value do Tabs */
+  /** Aba ativa atual - usar como value do Tabs */
   activeTab: string;
-  /** Setter da aba ativa — usar como onValueChange do Tabs */
+  /** Setter da aba ativa - usar como onValueChange do Tabs */
   setActiveTab: (tab: string) => void;
   /** Ref para o div que envolve os campos da aba ativa */
   formFieldsRef: React.RefCallback<HTMLDivElement>;
@@ -73,7 +73,7 @@ export function useFormTabNavigation({
   const contentEl = useRef<HTMLDivElement | null>(null);
 
   // Controle de foco pendente: 'first' foca no primeiro campo, 'last' no último.
-  // Inicial respeita autoFocus — null = não foca em nada ao montar.
+  // Inicial respeita autoFocus - null = não foca em nada ao montar.
   const pendingFocusRef = useRef<'first' | 'last' | null>(autoFocus ? 'first' : null);
 
   // ─── Focus helpers ────────────────────────────────────────────────────────
@@ -105,12 +105,12 @@ export function useFormTabNavigation({
     applyPendingFocus();
   }, [activeTab, applyPendingFocus]);
 
-  // ─── Ref callback — chamado quando o div monta/desmonta ───────────────────
+  // ─── Ref callback - chamado quando o div monta/desmonta ───────────────────
 
   const formFieldsRef = useCallback((el: HTMLDivElement | null) => {
     contentEl.current = el;
     if (el && pendingFocusRef.current) {
-      // O div acabou de montar — aplica foco
+      // O div acabou de montar - aplica foco
       applyPendingFocus();
     }
   }, [applyPendingFocus]);

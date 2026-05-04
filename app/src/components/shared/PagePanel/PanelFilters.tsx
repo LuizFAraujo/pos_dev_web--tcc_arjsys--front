@@ -1,17 +1,17 @@
 /**
- * PanelFilters.tsx — Conteúdo de filtros para o PagePanel (controlled)
+ * PanelFilters.tsx - Conteúdo de filtros para o PagePanel (controlled)
  *
  * Accordion de filtros que replica exatamente os filtros do ColFilterPopover.
  * Reutiliza FilterConditionRow e LogicToggle do DataGrid.
  *
- * Componente CONTROLLED — recebe values e onChange da page.
+ * Componente CONTROLLED - recebe values e onChange da page.
  * A page conecta ao mesmo useTabState(tabId + '-filters') que o DataGrid usa,
  * garantindo sincronização bidirecional completa.
  *
  * Cada seção é colapsável. Ícone de funil amarelo quando filtro ativo.
  * Botões: expandir/recolher todos, limpar todos, limpar individual.
  *
- * Template genérico — cada page passa suas colunas filtráveis:
+ * Template genérico - cada page passa suas colunas filtráveis:
  *
  *   <PanelFilters
  *     filters={panelFilterColumns}
@@ -39,9 +39,9 @@ export interface PanelFilterColumn {
 interface PanelFiltersProps {
   /** Definição das colunas filtráveis */
   filters: PanelFilterColumn[];
-  /** Valores atuais dos filtros (Record<columnKey, CompoundFilter>) — controlled */
+  /** Valores atuais dos filtros (Record<columnKey, CompoundFilter>) - controlled */
   values: Record<string, CompoundFilter>;
-  /** Callback ao mudar qualquer filtro — controlled */
+  /** Callback ao mudar qualquer filtro - controlled */
   onChange: (values: Record<string, CompoundFilter>) => void;
 }
 
@@ -68,7 +68,7 @@ function countActive(f?: CompoundFilter): number {
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export function PanelFilters({ filters, values, onChange }: PanelFiltersProps) {
-  // Accordion expand/collapse — local (não precisa sincronizar)
+  // Accordion expand/collapse - local (não precisa sincronizar)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const getValue = (key: string, type: GridFilterType): CompoundFilter =>

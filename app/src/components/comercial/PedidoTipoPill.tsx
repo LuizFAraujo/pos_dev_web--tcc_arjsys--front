@@ -1,5 +1,5 @@
 /**
- * PedidoTipoPill.tsx — Seletor compacto de Tipo do Pedido (Normal | PreVenda)
+ * PedidoTipoPill.tsx - Seletor compacto de Tipo do Pedido (Normal | PreVenda)
  *
  * Estilo segmented control. Substitui os cartões grandes com texto explicativo
  * (esse texto agora vai pro footer contextual da página conforme seleção).
@@ -13,7 +13,7 @@ interface PedidoTipoPillProps {
   disabled?: boolean;
   /** id do input raiz (focus/accessible) */
   id?: string;
-  /** Texto de erro — se passado, a borda destaca em vermelho */
+  /** Texto de erro - se passado, a borda destaca em vermelho */
   error?: string;
 }
 
@@ -89,7 +89,7 @@ export function PedidoTipoPill({
   );
 }
 
-/** Texto de ajuda contextual conforme o tipo selecionado — pro footer da PageShell */
+/** Texto de ajuda contextual conforme o tipo selecionado - pro footer da PageShell */
 export function helpTipo(tipo: TipoPedidoVenda): string {
   if (tipo === 'Normal') {
     return 'Normal: venda realizada. Nasce em "Liberado"; a Engenharia libera o projeto para a Produção.';

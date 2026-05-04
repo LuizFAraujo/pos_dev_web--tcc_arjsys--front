@@ -1,5 +1,5 @@
 /**
- * useDeleteDialog.ts — Hook para estado do dialog de confirmação de exclusão
+ * useDeleteDialog.ts - Hook para estado do dialog de confirmação de exclusão
  *
  * Encapsula:
  *   - Estado de abertura do dialog
@@ -21,7 +21,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 interface UseDeleteDialogOptions<T> {
-  /** Callback de exclusão — recebe o item e faz a operação no store */
+  /** Callback de exclusão - recebe o item e faz a operação no store */
   onDelete: (item: T) => Promise<void>;
   /** Callback extra após exclusão (ex: limpar seleção) */
   onAfterDelete?: (item: T) => void;
@@ -38,7 +38,7 @@ interface UseDeleteDialogReturn<T> {
   item: T | null;
   /** Abre o dialog com o item selecionado */
   requestDelete: (item: T) => void;
-  /** Confirma a exclusão — chama onDelete, fecha dialog, mostra toast */
+  /** Confirma a exclusão - chama onDelete, fecha dialog, mostra toast */
   confirmDelete: () => Promise<void>;
 }
 

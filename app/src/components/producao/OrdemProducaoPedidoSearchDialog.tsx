@@ -1,5 +1,5 @@
 /**
- * OrdemProducaoPedidoSearchDialog.tsx — Pesquisa avançada de PV elegível para OP.
+ * OrdemProducaoPedidoSearchDialog.tsx - Pesquisa avançada de PV elegível para OP.
  * Recebe lista já filtrada (Liberado/Andamento/Pausado).
  */
 

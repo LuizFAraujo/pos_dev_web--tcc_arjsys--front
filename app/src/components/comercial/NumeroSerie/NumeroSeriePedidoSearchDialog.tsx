@@ -1,5 +1,5 @@
 /**
- * NumeroSeriePedidoSearchDialog.tsx — Pesquisa avançada de Pedido (PreVenda em AguardandoNS)
+ * NumeroSeriePedidoSearchDialog.tsx - Pesquisa avançada de Pedido (PreVenda em AguardandoNS)
  *
  * Espelha NumeroSerieProdutoSearchDialog. Recebe a lista já filtrada
  * pra elegibilidade (somente PVs em AguardandoNS).

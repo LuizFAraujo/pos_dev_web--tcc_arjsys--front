@@ -1,5 +1,5 @@
 /**
- * ClientesPage.tsx — Página de clientes com modos list/view/new/edit
+ * ClientesPage.tsx - Página de clientes com modos list/view/new/edit
  *
  * Template: PageShell + PageActions + usePageMode (header, botões, modos)
  * Hooks: useListState (search, filtro, seleção), useDeleteDialog (exclusão)
@@ -194,7 +194,7 @@ export function ClientesPage({ tab }: ClientesPageProps) {
       }
     >
 
-      {/* Grid e Cards sempre montados — alterna visibilidade */}
+      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
           <DataGrid
             ref={list.gridRef} tabId={tab.id} storageId="clientes"

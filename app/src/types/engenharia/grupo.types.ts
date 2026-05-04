@@ -1,5 +1,5 @@
 // ========================================
-// TYPES — GRUPO DE PRODUTO (Engenharia)
+// TYPES - GRUPO DE PRODUTO (Engenharia)
 // ========================================
 // CRUD /api/engenharia/GrupoProduto
 // Vínculos /api/engenharia/GrupoVinculo

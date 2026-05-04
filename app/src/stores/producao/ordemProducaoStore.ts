@@ -1,5 +1,5 @@
 // ========================================
-// STORE — ORDEM DE PRODUÇÃO (Produção) — v3
+// STORE - ORDEM DE PRODUÇÃO (Produção) - v3
 // ========================================
 // Endpoints (feature/vendas):
 //   GET    /api/producao/OrdemProducao                      → lista (?pagina=N&tamanho=N)
@@ -203,7 +203,7 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
       await apiPatch(`/api/producao/OrdemProducao/${id}/status`, payload);
       await get().fetchOrdens();
       if (get().ordemDetalhe?.id === id) await get().fetchOrdem(id);
-      // Atualiza histórico se já estiver carregado pra esta OP — assim a aba
+      // Atualiza histórico se já estiver carregado pra esta OP - assim a aba
       // Histórico no form reflete o evento recém-criado sem precisar fechar/reabrir.
       await get().fetchHistorico(id);
     } catch (err) {

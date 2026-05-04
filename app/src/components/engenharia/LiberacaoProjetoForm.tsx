@@ -1,5 +1,5 @@
 /**
- * LiberacaoProjetoForm.tsx — Form de Liberação de Projeto (BOM) num PV.
+ * LiberacaoProjetoForm.tsx - Form de Liberação de Projeto (BOM) num PV.
  *
  * Modos:
  *   - view: tudo readonly

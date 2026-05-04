@@ -1,11 +1,11 @@
 // ========================================
-// TYPES — BOM / Estrutura de Produto (Engenharia)
+// TYPES - BOM / Estrutura de Produto (Engenharia)
 // ========================================
 // Alinhado com o backend ASP.NET Core 10.
 // Endpoints em /api/engenharia/Bom
 
 /**
- * Item de estrutura BOM — resposta do backend
+ * Item de estrutura BOM - resposta do backend
  *
  * GET /api/engenharia/Bom/flat retorna lista destes itens.
  * GET /api/engenharia/Bom/produto/{produtoPaiId} retorna filhos de um produto.
@@ -31,7 +31,7 @@ export interface BomItem {
 }
 
 /**
- * Produto que possui estrutura — resposta do GET /api/engenharia/Bom
+ * Produto que possui estrutura - resposta do GET /api/engenharia/Bom
  * Lista paginável de produtos que são "pais" na BOM.
  */
 export interface BomProdutoPai {

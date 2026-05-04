@@ -1,5 +1,5 @@
 /**
- * OrdemProducaoProdutoField.tsx — Seletor de Produto raiz para OP Master.
+ * OrdemProducaoProdutoField.tsx - Seletor de Produto raiz para OP Master.
  * Filtra apenas Fabricados (OP só faz sentido para fabricar).
  */
 
@@ -138,7 +138,7 @@ export function OrdemProducaoProdutoField({
           {label}
         </Label>
         <Input
-          value={displayCodigo ?? '—'}
+          value={displayCodigo ?? '-'}
           readOnly
           className="h-9 text-sm bg-white dark:bg-slate-950 font-mono cursor-default focus-visible:ring-0 focus-visible:ring-offset-0"
           tabIndex={-1}
