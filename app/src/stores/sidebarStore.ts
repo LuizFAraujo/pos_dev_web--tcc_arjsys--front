@@ -19,7 +19,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { userScopedStorage } from '@/lib/userScopedStorage';
 
 type SidebarMode = 'normal' | 'compact' | 'closed';
 
@@ -63,7 +64,8 @@ export const useSidebarStore = create<SidebarState>()(
             },
         }),
         {
-            name: 'sidebar-storage',  // ← Nome no localStorage
+            name: 'sidebar-storage',  // ← Nome base; user-scoped via storage
+            storage: createJSONStorage(() => userScopedStorage),
         }
     )
 );

@@ -7,7 +7,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { userScopedStorage } from '@/lib/userScopedStorage';
 
 interface RecentsState {
     /** Array de tipos de abas acessadas recentemente (max 10) */
@@ -41,6 +42,7 @@ export const useRecentsStore = create<RecentsState>()(
         }),
         {
             name: 'arjsys-recents',
+            storage: createJSONStorage(() => userScopedStorage),
         }
     )
 );

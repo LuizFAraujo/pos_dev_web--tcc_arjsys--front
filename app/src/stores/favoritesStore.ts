@@ -6,7 +6,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { userScopedStorage } from '@/lib/userScopedStorage';
 
 interface FavoritesState {
     /** Array de tipos de abas favoritadas */
@@ -48,6 +49,7 @@ export const useFavoritesStore = create<FavoritesState>()(
         }),
         {
             name: 'arjsys-favorites',
+            storage: createJSONStorage(() => userScopedStorage),
         }
     )
 );

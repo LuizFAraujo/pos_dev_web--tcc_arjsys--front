@@ -63,4 +63,7 @@ export interface AuthState {
 
   /** Se está autenticado */
   isAuthenticated: boolean;
+
+  /** Timestamp do login (Date.now()). Usado para TTL de sessão. */
+  loggedInAt: number | null;
 }

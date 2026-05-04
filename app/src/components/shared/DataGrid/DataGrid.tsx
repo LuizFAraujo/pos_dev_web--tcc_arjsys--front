@@ -30,6 +30,7 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
+import { userScopedLocalStorage } from '@/lib/userScopedStorage';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ColFilterPopover } from './ColFilterPopover';
 import { compoundFilterFn } from './filterEngine';
@@ -87,14 +88,14 @@ function DataGridInner<T extends Record<string, any>>({
 
   const [colW, setColW] = useState<Record<string, number>>(() => {
     try {
-      const s = localStorage.getItem(lsKey);
+      const s = userScopedLocalStorage.get(lsKey);
       if (s) return { ...defaultW, ...JSON.parse(s) };
     } catch { }
     return { ...defaultW };
   });
 
   useEffect(() => {
-    try { localStorage.setItem(lsKey, JSON.stringify(colW)); } catch { }
+    try { userScopedLocalStorage.set(lsKey, JSON.stringify(colW)); } catch { }
   }, [colW, lsKey]);
 
   const resRef = useRef<{ key: string; startX: number; startW: number } | null>(null);

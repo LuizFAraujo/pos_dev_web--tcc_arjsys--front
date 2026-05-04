@@ -6,7 +6,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { userScopedStorage } from '@/lib/userScopedStorage';
 
 type ThemeName = 'default' | 'emerald' | 'orange' | 'purple';
 
@@ -53,6 +54,7 @@ export const useThemeStore = create<ThemeState>()(
         }),
         {
             name: 'arjsys-theme',
+            storage: createJSONStorage(() => userScopedStorage),
             onRehydrateStorage: () => (state) => {
                 // Aplicar dark mode ao carregar do localStorage
                 state?.applyDarkMode();

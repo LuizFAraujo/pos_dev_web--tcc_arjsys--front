@@ -12,6 +12,7 @@ import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImper
 import type { Ref, ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
+import { userScopedLocalStorage } from '@/lib/userScopedStorage';
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ColFilterPopover } from './ColFilterPopover';
@@ -75,8 +76,8 @@ function DataGridTreeInner<T extends Record<string, any>>({
 
   const lsKey = `grid-widths-${storageId || tabId}-tree`;
   const defaultW = useMemo(() => { const w: Record<string, number> = {}; gc.forEach((c) => { if (c.width) w[c.key] = c.width; }); return w; }, [gc]);
-  const [colW, setColW] = useState<Record<string, number>>(() => { try { const s = localStorage.getItem(lsKey); if (s) return { ...defaultW, ...JSON.parse(s) }; } catch { } return { ...defaultW }; });
-  useEffect(() => { try { localStorage.setItem(lsKey, JSON.stringify(colW)); } catch { } }, [colW, lsKey]);
+  const [colW, setColW] = useState<Record<string, number>>(() => { try { const s = userScopedLocalStorage.get(lsKey); if (s) return { ...defaultW, ...JSON.parse(s) }; } catch { } return { ...defaultW }; });
+  useEffect(() => { try { userScopedLocalStorage.set(lsKey, JSON.stringify(colW)); } catch { } }, [colW, lsKey]);
 
   const resRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const onResizeDown = useCallback((k: string, e: React.MouseEvent) => {

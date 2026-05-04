@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useBOMStore } from '@/stores/engenharia/bomStore';
+import { userScopedLocalStorage } from '@/lib/userScopedStorage';
 
 export type SortField = 'descPai' | 'codigoPai' | 'qtde' | 'codigoFilho' | 'descFilho' | 'unidade' | null;
 export type SortOrder = 'asc' | 'desc';
@@ -123,7 +124,7 @@ export function useBOMFlatState({ clearFiltersFlag, onOpenPai, selectedPai }: Us
   }, [bomFlat.length, fetchBomFlat]);
 
   const [colWidths, setColWidths] = useState<ColumnWidths>(() => {
-    const saved = localStorage.getItem('bom-flat-column-widths');
+    const saved = userScopedLocalStorage.get('bom-flat-column-widths');
     return saved ? JSON.parse(saved) : DEFAULT_WIDTHS;
   });
 
@@ -138,7 +139,7 @@ export function useBOMFlatState({ clearFiltersFlag, onOpenPai, selectedPai }: Us
   } | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('bom-flat-column-widths', JSON.stringify(colWidths));
+    userScopedLocalStorage.set('bom-flat-column-widths', JSON.stringify(colWidths));
   }, [colWidths]);
 
   useEffect(() => {
