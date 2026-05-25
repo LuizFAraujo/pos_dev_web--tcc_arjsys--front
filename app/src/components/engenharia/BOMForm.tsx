@@ -97,7 +97,9 @@ function TreeDocButtons({ item }: { item: BomTreeItemNum }) {
   const abrirDocumento = useProdutosStore((s) => s.abrirDocumento);
   const produtos = useProdutosStore((s) => s.produtos);
   const produto = produtos.find((p) => p.codigo === item.codigo);
-  if (!produto || !item.temDocumento) return <span className="text-muted-foreground">-</span>;
+  // Usa produto.temDocumento (store atualizado) em vez de item.temDocumento
+  // (snapshot do bomFlat que pode estar defasado).
+  if (!produto || !produto.temDocumento) return <span className="text-muted-foreground">-</span>;
   return (
     <div className="flex items-center justify-center gap-0.5">
       <Tooltip><TooltipTrigger asChild><button type="button" onClick={async (e) => { e.stopPropagation(); try { await abrirPasta(produto.id); } catch (err: any) { toast.error(err?.body?.erro || err?.message || 'Erro'); } }} className="inline-flex items-center justify-center h-6 w-6 rounded transition-colors text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"><FolderOpen className="h-3.5 w-3.5" /></button></TooltipTrigger><TooltipContent><p>Abrir pasta</p></TooltipContent></Tooltip>
