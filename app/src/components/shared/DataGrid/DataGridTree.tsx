@@ -89,12 +89,25 @@ function DataGridTreeInner<T extends Record<string, any>>({
     document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
   }, [colW, gc]);
 
+  // Quando há filtro ativo, mostra tudo expandido (filtro de árvore só faz
+  // sentido com todos os nós visíveis). Toggle do consumer fica ignorado
+  // enquanto o filtro estiver ativo - basta limpar o filtro pra voltar.
+  const filtroAtivo = Object.values(colFilters).some(isFilterActive);
+  const isExpandedEffective = useCallback(
+    (node: T) => (filtroAtivo ? true : isExpanded(node)),
+    [filtroAtivo, isExpanded],
+  );
+  const onToggleEffective = useCallback(
+    (node: T) => { if (!filtroAtivo) onToggle(node); },
+    [filtroAtivo, onToggle],
+  );
+
   const flatRows = (() => {
     const rows: T[] = [];
     function walk(nodes: T[]) {
       for (const n of nodes) {
         rows.push(n);
-        if (hasKids(n) && isExpanded(n)) walk(getChildren(n));
+        if (hasKids(n) && isExpandedEffective(n)) walk(getChildren(n));
       }
     }
     walk(rootNodes);
@@ -210,7 +223,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
             {virtualRows.map((vRow) => {
               const row = sorted[vRow.index];
               const i = vRow.index;
-              const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpanded(row); const isSel = selectedIdx === i; return (
+              const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpandedEffective(row); const isSel = selectedIdx === i; return (
                 <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={(e) => { if (e.ctrlKey) onActRef.current?.(row); }}
                   className={(() => {
                     const rc = rowClassName?.(row) || '';
@@ -222,7 +235,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
                   {gc.map((col) => {
                     if (col.key === codeColumnKey) {
                       const indent = (level - 1) * indentPx;
-                      return (<td key={col.key} className={`px-2 py-0 text-sm truncate ${col.className || ''}`}><div className="flex items-center" style={{ paddingLeft: `${indent}px` }}>{kids ? (<button type="button" className="shrink-0 mr-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" onClick={(e) => { e.stopPropagation(); onToggle(row); }}>{exp ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>) : (<span className="inline-block w-4.5 shrink-0" />)}<span className="truncate">{col.render ? col.render(row) : String((row as any)[col.key] ?? '-')}</span></div></td>);
+                      return (<td key={col.key} className={`px-2 py-0 text-sm truncate ${col.className || ''}`}><div className="flex items-center" style={{ paddingLeft: `${indent}px` }}>{kids ? (<button type="button" className="shrink-0 mr-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" onClick={(e) => { e.stopPropagation(); onToggleEffective(row); }}>{exp ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>) : (<span className="inline-block w-4.5 shrink-0" />)}<span className="truncate">{col.render ? col.render(row) : String((row as any)[col.key] ?? '-')}</span></div></td>);
                     }
                     return (<td key={col.key} className={`px-2 py-0 text-sm truncate ${col.className || ''}`}><div className={`flex items-center ${col.contentAlign === 'center' ? 'justify-center' : col.contentAlign === 'right' ? 'justify-end' : 'justify-start'}`}>{col.render ? col.render(row) : String((row as any)[col.key] ?? '-')}</div></td>);
                   })}

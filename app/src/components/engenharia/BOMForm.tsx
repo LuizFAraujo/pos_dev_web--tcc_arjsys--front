@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useBOMStore } from '@/stores/engenharia/bomStore';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
-import { useTabState } from '@/hooks/useTabState';
+import { useTabState, clearTabState } from '@/hooks/useTabState';
 import { useBomEditState } from '@/hooks/useBomEditState';
 import { DataGridTree } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
@@ -206,6 +206,14 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { if (bomFlat.length === 0) fetchBomFlat(); if (produtos.length === 0) fetchProdutos(); }, [bomFlat.length, fetchBomFlat, produtos.length, fetchProdutos]);
+
+    useEffect(() => {
+      clearTabState(`${tabId}-bomtree-${codigoPai}`);
+    }, [tabId, codigoPai]);
+
+    useEffect(() => {
+      clearTabState(`${tabId}-bomtree-${codigoPai}`);
+    }, [tabId, codigoPai]);
     const didExpandRef = useRef(false);
     useEffect(() => { if (codigoPai && !didExpandRef.current) { didExpandRef.current = true; setExpandedKeys((p) => p.includes(codigoPai) ? p : [...p, codigoPai]); } }, [codigoPai, setExpandedKeys]);
     useEffect(() => { onDirty(editState.hasPendingChanges); }, [editState.hasPendingChanges, onDirty]);
@@ -447,7 +455,12 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
 
         const banco = bomFlat.filter((r) => r.produtoPaiId === parentProductId).map((r): BomTreeItemNum => {
           const path = `${parentPath}/${r.id}`;
-          return { id: r.id, codigo: r.produtoFilhoCodigo || '', descricao: r.produtoFilhoDescricao || '', unidade: r.produtoFilhoUnidade || 'UN', tipo: r.produtoFilhoTipo || '', quantidade: r.quantidade, posicao: r.posicao, nivel, temDocumento: r.produtoFilhoTemDocumento || false, hasChildren: idsPai.has(r.produtoFilhoId), children: [], _rowNum: 0, _bomItemId: r.id, _treePath: path, _produtoId: r.produtoFilhoId };
+          // Consulta temDocumento direto do store de produtos (fonte da verdade).
+          // bomFlat.produtoFilhoTemDocumento pode estar defasado se a varredura
+          // de documentos rodou depois da BOM ser carregada.
+          const prod = produtos.find((p) => p.id === r.produtoFilhoId);
+          const temDoc = prod?.temDocumento ?? (r.produtoFilhoTemDocumento || false);
+          return { id: r.id, codigo: r.produtoFilhoCodigo || '', descricao: r.produtoFilhoDescricao || '', unidade: r.produtoFilhoUnidade || 'UN', tipo: r.produtoFilhoTipo || '', quantidade: r.quantidade, posicao: r.posicao, nivel, temDocumento: temDoc, hasChildren: idsPai.has(r.produtoFilhoId), children: [], _rowNum: 0, _bomItemId: r.id, _treePath: path, _produtoId: r.produtoFilhoId };
         });
         banco.forEach((n) => { if (n.hasChildren) n.children = getFilhos(bomFlat.find((b) => b.id === n.id)!.produtoFilhoId, n.id, n._treePath, nivel + 1, pathVisited); });
 
@@ -471,7 +484,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       let seq = 0;
       (function rn(ns: BomTreeItemNum[]) { for (const n of ns) { seq++; n._rowNum = seq; if (n.children.length > 0) rn(n.children); } })([root]);
       return [root];
-    }, [bomFlat, paiId, codigoPai, produtoPai, editState.pendingAdds, editState.pendingChanges, newRow]);
+    }, [bomFlat, produtos, paiId, codigoPai, produtoPai, editState.pendingAdds, editState.pendingChanges, newRow]);
 
     const allNodes = useMemo(() => { const n: BomTreeItemNum[] = []; (function w(is: BomTreeItemNum[]) { for (const i of is) { n.push(i); if (i.children.length > 0) w(i.children); } })(treeData); return n; }, [treeData]);
 
@@ -543,7 +556,20 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
         }
       },
       { key: 'unidade', header: 'UN', width: 70, minWidth: 55, contentAlign: 'center', sortable: false, render: (i) => <span className="text-slate-600">{i.unidade}</span> },
-      { key: 'temDocumento', header: 'DOC.', width: 90, minWidth: 80, contentAlign: 'center', sortable: false, render: (i) => <TreeDocButtons item={i} /> },
+      {
+        key: 'temDocumento',
+        header: 'DOC.',
+        width: 90,
+        minWidth: 80,
+        contentAlign: 'center',
+        sortable: false,
+        filterType: 'checklist',
+        filterOptions: [
+          { label: 'Sim', value: 'true' },
+          { label: 'Não', value: 'false' },
+        ],
+        render: (i) => <TreeDocButtons item={i} />,
+      },
     ], [isEditing, editState, activeCellId, newRow, newRowIds, autocompleteDesc, autocompleteIsCircular, getEffQtde, getEffPos, handleQtdeConfirm, handlePosConfirm, handleAutocompleteConfirm, handleAutocompleteCancel, handleAddChildOf, handleToggleDelete, handleReopenAutocomplete]);
 
     if (!codigoPai) return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Nenhum produto selecionado</div>;
@@ -551,7 +577,8 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     return (
       <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
         <DataGridTree<BomTreeItemNum>
-          tabId={tabId + '-bomtree'} storageId="bom-tree" columns={columns} data={allNodes} rootNodes={treeData}
+          tabId={`${tabId}-bomtree-${codigoPai}`} storageId="bom-tree"
+          columns={columns} data={allNodes} rootNodes={treeData}
           getChildren={(n) => n.children || []} getKey={(n) => n._treePath}
           getLevel={(n) => n.nivel} hasChildren={(n) => n.hasChildren}
           isExpanded={isNodeExpanded} onToggle={handleToggle}

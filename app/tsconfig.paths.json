@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["src/*"],
       "@components/*": ["src/components/*"],
@@ -24,7 +25,7 @@
       "@styles/*": ["src/styles/*"],
       "@styles": ["src/styles/index.ts"],
       "@types/*": ["src/types/*"],
-      "@types": ["src/types/index.ts"],
+      "@types": ["src/types/index.ts"]
     }
   }
 }
