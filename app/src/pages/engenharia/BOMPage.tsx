@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { Plus, FolderOpen, FileText } from 'lucide-react';
+import { Plus, FolderOpen, FileText, ChevronsDown, ChevronsRight, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBOMStore } from '@/stores/engenharia/bomStore';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
@@ -167,24 +167,71 @@ export function BOMPage({ tab }: BOMPageProps) {
   const extraTag = page.mode !== 'list' && codigoPai ? codigoPai : undefined;
 
   const columns: GridColumn<BomItem>[] = useMemo(() => [
-    { key: 'produtoPaiDescricao', header: 'DESC. PAI', width: 280, minWidth: 150,
-      render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoPaiDescricao || '-'}</span> },
-    { key: 'produtoPaiCodigo', header: 'CÓD. PAI', width: 180, minWidth: 130, contentAlign: 'center',
-      render: (i) => <span className="font-mono font-semibold text-blue-900 dark:text-blue-300">{i.produtoPaiCodigo || '-'}</span> },
-    { key: 'quantidade', header: 'QTDE', width: 100, minWidth: 70, contentAlign: 'right', filterType: 'number',
-      render: (i) => <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(i.quantidade)}</span> },
-    { key: 'produtoFilhoCodigo', header: 'CÓD. FILHO', width: 180, minWidth: 130, contentAlign: 'center',
-      render: (i) => <span className="font-mono text-blue-900 dark:text-blue-300">{i.produtoFilhoCodigo || '-'}</span> },
-    { key: 'produtoFilhoDescricao', header: 'DESC. FILHO', width: 280, minWidth: 150,
-      render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoFilhoDescricao || '-'}</span> },
-    { key: 'produtoFilhoUnidade', header: 'UN', width: 70, minWidth: 60, contentAlign: 'center',
-      filterType: 'checklist', filterOptions: UNIDADE_OPTIONS },
-    { key: 'produtoFilhoTemDocumento', header: 'DOC.', width: 90, minWidth: 80, contentAlign: 'center', sortable: false,
+    {
+      key: 'produtoPaiDescricao', header: 'DESC. PAI', width: 280, minWidth: 150,
+      render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoPaiDescricao || '-'}</span>
+    },
+    {
+      key: 'produtoPaiCodigo', header: 'CÓD. PAI', width: 180, minWidth: 130, contentAlign: 'center',
+      render: (i) => <span className="font-mono font-semibold text-blue-900 dark:text-blue-300">{i.produtoPaiCodigo || '-'}</span>
+    },
+    {
+      key: 'quantidade', header: 'QTDE', width: 100, minWidth: 70, contentAlign: 'right', filterType: 'number',
+      render: (i) => <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(i.quantidade)}</span>
+    },
+    {
+      key: 'produtoFilhoCodigo', header: 'CÓD. FILHO', width: 180, minWidth: 130, contentAlign: 'center',
+      render: (i) => <span className="font-mono text-blue-900 dark:text-blue-300">{i.produtoFilhoCodigo || '-'}</span>
+    },
+    {
+      key: 'produtoFilhoDescricao', header: 'DESC. FILHO', width: 280, minWidth: 150,
+      render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoFilhoDescricao || '-'}</span>
+    },
+    {
+      key: 'produtoFilhoUnidade', header: 'UN', width: 70, minWidth: 60, contentAlign: 'center',
+      filterType: 'checklist', filterOptions: UNIDADE_OPTIONS
+    },
+    {
+      key: 'produtoFilhoTemDocumento', header: 'DOC.', width: 90, minWidth: 80, contentAlign: 'center', sortable: false,
       filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS,
-      render: (i) => <BomDocButtons item={i} extensao="pdf" /> },
+      render: (i) => <BomDocButtons item={i} extensao="pdf" />
+    },
   ], []);
 
   const inForm = page.mode !== 'list';
+
+  // Botões extras só dentro do form (view/edit/new). Na lista não fazem sentido.
+  const extraActions = inForm ? (
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8"
+            onClick={() => formRef.current?.collapseAll()}>
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>Recolher todos</p></TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8"
+            onClick={() => formRef.current?.expandAll()}>
+            <ChevronsDown className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>Expandir todos</p></TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8"
+            onClick={() => toast.info('Exportação para Excel em desenvolvimento.')}>
+            <FileSpreadsheet className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>Exportar para Excel</p></TooltipContent>
+      </Tooltip>
+    </div>
+  ) : undefined;
 
   return (
     <PageShell module="Engenharia" title="Estrutura de Produtos" mode={page.mode} extraTag={extraTag}
@@ -201,6 +248,7 @@ export function BOMPage({ tab }: BOMPageProps) {
           onSearchColumnsChange={list.setSearchCols} gridRef={list.gridRef}
           viewMode={list.viewMode} onViewModeChange={list.handleViewMode}
           formRef={formRef} hideButtons={['cards']}
+          extraActions={extraActions}
           newTooltip="Nova estrutura" viewTooltip="Abrir estrutura"
           editTooltip="Editar estrutura" deleteTooltip="Excluir estrutura"
           noSelectionText="Selecione uma estrutura"

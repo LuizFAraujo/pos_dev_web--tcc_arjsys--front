@@ -35,7 +35,12 @@ import type { BomRowStatus } from '@/hooks/useBomEditState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface BOMFormHandle { submit: () => Promise<boolean>; addItem: () => void; }
+export interface BOMFormHandle {
+  submit: () => Promise<boolean>;
+  addItem: () => void;
+  expandAll: () => void;
+  collapseAll: () => void;
+}
 
 interface BOMFormProps {
   mode: Extract<PageMode, 'new' | 'edit' | 'view'>;
@@ -409,6 +414,15 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
         return await doSave();
       },
       addItem: handleAddItem,
+      expandAll: () => {
+        // Todos os _treePath de nós que têm filhos. Inclui a raiz '-1'.
+        const paths = allNodes.filter((n) => n.hasChildren).map((n) => n._treePath);
+        setExpandedKeys(paths);
+      },
+      collapseAll: () => {
+        // Mantém apenas a raiz expandida pra usuário não ficar olhando pra nada.
+        setExpandedKeys(['-1']);
+      },
     }));
 
     // ── Tree ──────────────────────────────────────────────────────────────────
