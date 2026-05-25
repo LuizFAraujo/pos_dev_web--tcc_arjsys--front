@@ -26,6 +26,7 @@ import { BOMForm } from '@/components/engenharia/BOMForm';
 import type { BOMFormHandle } from '@/components/engenharia/BOMForm';
 import { NovaEstruturaDialog } from '@/components/engenharia/NovaEstruturaDialog';
 import { BomDeleteDialog } from '@/components/engenharia/BomDeleteDialog';
+import { ExportarBOMDialog } from '@/components/engenharia/ExportarBOMDialog';
 import type { BomItem } from '@/types/engenharia/bom.types';
 
 interface BOMPageProps {
@@ -113,6 +114,7 @@ export function BOMPage({ tab }: BOMPageProps) {
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // ── Delete estrutura completa ───────────────────────────────────────────────
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -224,7 +226,7 @@ export function BOMPage({ tab }: BOMPageProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => toast.info('Exportação para Excel em desenvolvimento.')}>
+            onClick={() => setExportDialogOpen(true)}>
             <FileSpreadsheet className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
@@ -277,6 +279,13 @@ export function BOMPage({ tab }: BOMPageProps) {
 
       <NovaEstruturaDialog open={dialogOpen} onOpenChange={setDialogOpen} onEstruturaCreated={handleEstruturaCreated} />
       <BomDeleteDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} item={deleteItem} quantidadeFilhos={deleteFilhosCount} onConfirm={handleConfirmDelete} />
+      <ExportarBOMDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        codigoPai={codigoPai}
+        getTreeNodes={() => (formRef.current?.getTreeNodes() ?? []) as never}
+        hasDirtyChanges={formRef.current?.hasDirtyChanges() ?? false}
+      />
     </PageShell>
   );
 }

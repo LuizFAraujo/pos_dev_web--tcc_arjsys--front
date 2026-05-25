@@ -40,6 +40,10 @@ export interface BOMFormHandle {
   addItem: () => void;
   expandAll: () => void;
   collapseAll: () => void;
+  /** Retorna a lista achatada e ordenada de nós da árvore (mesma do DataGridTree). */
+  getTreeNodes: () => BomTreeItemNum[];
+  /** True quando há alterações pendentes não salvas. */
+  hasDirtyChanges: () => boolean;
 }
 
 interface BOMFormProps {
@@ -423,6 +427,8 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
         // Mantém apenas a raiz expandida pra usuário não ficar olhando pra nada.
         setExpandedKeys(['-1']);
       },
+      getTreeNodes: () => allNodes,
+      hasDirtyChanges: () => editState.hasPendingChanges,
     }));
 
     // ── Tree ──────────────────────────────────────────────────────────────────

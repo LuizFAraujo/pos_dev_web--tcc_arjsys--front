@@ -75,7 +75,8 @@ export function NumberStepper({
         type="text"
         inputMode="decimal"
         autoFocus={autoFocus}
-        readOnly={readOnly || disabled}
+        readOnly={readOnly}
+        disabled={disabled}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={(e) => e.currentTarget.select()}
@@ -89,11 +90,10 @@ export function NumberStepper({
           }
         }}
         tabIndex={readOnly || disabled ? -1 : 0}
-        className={`h-9 font-mono bg-white dark:bg-slate-950 text-center ${
-          readOnly || disabled
-            ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0'
-            : ''
-        }`}
+        className={`h-9 font-mono bg-white dark:bg-slate-950 text-center disabled:opacity-50 disabled:cursor-not-allowed ${readOnly || disabled
+          ? 'cursor-default focus-visible:ring-0 focus-visible:ring-offset-0'
+          : ''
+          }`}
       />
 
       <Button
