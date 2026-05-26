@@ -179,11 +179,11 @@ export function BOMPage({ tab }: BOMPageProps) {
 
   const columns: GridColumn<BomItem>[] = useMemo(() => [
     {
-      key: 'produtoPaiDescricao', header: 'DESC. PAI', width: 280, minWidth: 150,
+      key: 'produtoPaiDescricao', header: 'DESC. PAI', width: 670, minWidth: 150,
       render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoPaiDescricao || '-'}</span>
     },
     {
-      key: 'produtoPaiCodigo', header: 'CÓD. PAI', width: 180, minWidth: 130, contentAlign: 'center',
+      key: 'produtoPaiCodigo', header: 'CÓD. PAI', width: 220, minWidth: 130, contentAlign: 'center',
       render: (i) => <span className="font-mono font-semibold text-blue-900 dark:text-blue-300">{i.produtoPaiCodigo || '-'}</span>
     },
     {
@@ -191,15 +191,15 @@ export function BOMPage({ tab }: BOMPageProps) {
       render: (i) => <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatQtde(i.quantidade)}</span>
     },
     {
-      key: 'produtoFilhoCodigo', header: 'CÓD. FILHO', width: 180, minWidth: 130, contentAlign: 'center',
+      key: 'produtoFilhoCodigo', header: 'CÓD. FILHO', width: 220, minWidth: 130, contentAlign: 'center',
       render: (i) => <span className="font-mono text-blue-900 dark:text-blue-300">{i.produtoFilhoCodigo || '-'}</span>
     },
     {
-      key: 'produtoFilhoDescricao', header: 'DESC. FILHO', width: 280, minWidth: 150,
+      key: 'produtoFilhoDescricao', header: 'DESC. FILHO', width: 670, minWidth: 150,
       render: (i) => <span className="font-semibold uppercase text-slate-800 dark:text-slate-200">{i.produtoFilhoDescricao || '-'}</span>
     },
     {
-      key: 'produtoFilhoUnidade', header: 'UN', width: 70, minWidth: 60, contentAlign: 'center',
+      key: 'produtoFilhoUnidade', header: 'UN', width: 80, minWidth: 60, contentAlign: 'center',
       filterType: 'checklist', filterOptions: UNIDADE_OPTIONS
     },
     {

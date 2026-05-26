@@ -359,24 +359,24 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
 
   const columns: GridColumn<Produto>[] = useMemo(() => [
     {
-      key: 'codigo', header: 'CÓDIGO', width: 130, minWidth: 130, contentAlign: 'center',
+      key: 'codigo', header: 'CÓDIGO', width: 230, minWidth: 130, contentAlign: 'center',
       render: (p) => <span className="font-mono font-medium">{p.codigo}</span>,
     },
     {
-      key: 'descricao', header: 'DESCRIÇÃO', width: 250, minWidth: 200,
+      key: 'descricao', header: 'DESCRIÇÃO', width: 980, minWidth: 200,
       render: (p) => (<span className="font-medium">{p.descricao}</span>),
     },
     {
-      key: 'tipo', header: 'TIPO', width: 130, minWidth: 110,
+      key: 'tipo', header: 'TIPO', width: 120, minWidth: 110,
       filterType: 'checklist', filterOptions: TIPO_OPTIONS, contentAlign: 'center',
       render: (p) => TIPO_PRODUTO_LABELS[p.tipo] || p.tipo,
     },
     {
-      key: 'unidade', header: 'UN', width: 75, minWidth: 65, contentAlign: 'center',
+      key: 'unidade', header: 'UN', width: 90, minWidth: 65, contentAlign: 'center',
       filterType: 'checklist', filterOptions: UNIDADE_OPTIONS
     },
     {
-      key: 'peso', header: 'PESO (KG)', width: 80, minWidth: 70,
+      key: 'peso', header: 'PESO (KG)', width: 90, minWidth: 70,
       filterType: 'number', contentAlign: 'right',
       render: (p) => p.peso ? p.peso.toFixed(2) : '-',
     },
