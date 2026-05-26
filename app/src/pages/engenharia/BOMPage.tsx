@@ -59,7 +59,11 @@ function formatQtde(q: number) {
 function BomDocButtons({ item, extensao }: { item: BomItem; extensao?: string }) {
   const abrirPasta = useProdutosStore((s) => s.abrirPasta);
   const abrirDocumento = useProdutosStore((s) => s.abrirDocumento);
-  const temDoc = item.produtoFilhoTemDocumento ?? false;
+  const produtos = useProdutosStore((s) => s.produtos);
+  // Consulta produto.temDocumento (store atualizado) em vez de item.produtoFilhoTemDocumento
+  // (snapshot do bomFlat que pode estar defasado).
+  const produto = produtos.find((p) => p.id === item.produtoFilhoId);
+  const temDoc = produto?.temDocumento ?? item.produtoFilhoTemDocumento ?? false;
   if (!temDoc) return <span className="text-muted-foreground">-</span>;
 
   return (
@@ -105,11 +109,14 @@ export function BOMPage({ tab }: BOMPageProps) {
   const produtosComEstrutura = useBOMStore((s) => s.produtosComEstrutura);
   const fetchProdutosPai = useBOMStore((s) => s.fetchProdutosPai);
   const deleteEstrutura = useBOMStore((s) => s.deleteEstrutura);
+  const produtos = useProdutosStore((s) => s.produtos);
+  const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
 
   useEffect(() => {
     if (bomFlat.length === 0) fetchBomFlat();
     if (produtosComEstrutura.length === 0) fetchProdutosPai();
-  }, [bomFlat.length, fetchBomFlat, produtosComEstrutura.length, fetchProdutosPai]);
+    if (produtos.length === 0) fetchProdutos();
+  }, [bomFlat.length, fetchBomFlat, produtosComEstrutura.length, fetchProdutosPai, produtos.length, fetchProdutos]);
 
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
@@ -144,6 +151,8 @@ export function BOMPage({ tab }: BOMPageProps) {
   }, [deleteItem, deleteEstrutura]);
 
   // ── List state ──────────────────────────────────────────────────────────────
+
+
 
   const list = useListState<BomItem>({
     tabId: tab.id, data: bomFlat, searchColumns: SEARCH_COLUMNS,
