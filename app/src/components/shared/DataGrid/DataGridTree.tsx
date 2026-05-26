@@ -141,6 +141,13 @@ function DataGridTreeInner<T extends Record<string, any>>({
     overscan: 10,
   });
 
+  // Força o virtualizer a re-medir quando muda quantidade de linhas ou
+  // estado de filtro. Sem isso, depois de mudar o filtro de árvore,
+  // o grid só repinta após um clique/scroll que dispare nova medição.
+  useEffect(() => {
+    virtualizer.measure();
+  }, [sorted.length, filtroAtivo, virtualizer]);
+
   const virtualRows = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
 
