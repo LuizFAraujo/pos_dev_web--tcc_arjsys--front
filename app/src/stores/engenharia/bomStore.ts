@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
+import { useProdutosStore } from './produtosStore';
 import type {
   BomItem,
   BomProdutoPai,
@@ -87,11 +88,28 @@ export const useBOMStore = create<BOMState>((set, get) => ({
   isLoading: false,
   error: null,
 
+
   fetchBomFlat: async () => {
     set({ isLoading: true, error: null });
     try {
       const data = await apiGet<{ itens: BomItem[] }>('/api/engenharia/Bom/flat');
-      set({ bomFlat: data.itens, isLoading: false });
+
+      // Enriquece com temDocumento atualizado do produtosStore (fonte da verdade).
+      // O backend retorna produtoFilhoTemDocumento como snapshot que pode estar
+      // defasado em relação à varredura de documentos. Map indexado por id pra
+      // lookup O(1). Roda uma vez por fetch, no store compartilhado entre abas.
+      const produtos = useProdutosStore.getState().produtos;
+      let itensFinal = data.itens;
+      if (produtos.length > 0) {
+        const temDocPorId = new Map(produtos.map((p) => [p.id, p.temDocumento]));
+        itensFinal = data.itens.map((item) => {
+          const temDoc = temDocPorId.get(item.produtoFilhoId);
+          if (temDoc === undefined) return item;
+          return { ...item, produtoFilhoTemDocumento: temDoc };
+        });
+      }
+
+      set({ bomFlat: itensFinal, isLoading: false });
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar BOM flat';
       set({ error: message, isLoading: false });
