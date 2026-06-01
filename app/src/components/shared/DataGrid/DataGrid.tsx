@@ -26,6 +26,7 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
+  type PaginationState,
   type Updater,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -34,8 +35,11 @@ import { userScopedLocalStorage } from '@/lib/userScopedStorage';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ColFilterPopover } from './ColFilterPopover';
 import { compoundFilterFn } from './filterEngine';
+import { DataGridPaginator } from './DataGridPaginator';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
 import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
+
+const DEFAULT_TAMANHO_OPTIONS = [25, 50, 100, 200];
 
 
 // ============================================
@@ -52,11 +56,19 @@ function DataGridInner<T extends Record<string, any>>({
   onSelect,
   onActivate,
   activateOnDoubleClick = false,
+  serverSide = false,
+  total,
+  tamanhoOptions = DEFAULT_TAMANHO_OPTIONS,
 }: DataGridProps<T>, ref: Ref<DataGridHandle>) {
 
   const [sorting, setSorting] = useTabState<SortingState>(tabId + '-sort', []);
   const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tabId + '-filters', []);
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
+  const [pagina, setPagina] = useTabState<number>(tabId + '-pagina', 1);
+  const [tamanho, setTamanho] = useTabState<number>(tabId + '-tamanho', tamanhoOptions[1] ?? 50);
+
+  const totalRegistros = total ?? data.length;
+  const totalPaginas = tamanho > 0 ? Math.max(1, Math.ceil(totalRegistros / tamanho)) : 1;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -77,6 +89,13 @@ function DataGridInner<T extends Record<string, any>>({
   const handleFiltersChange = useCallback((updater: Updater<ColumnFiltersState>) => {
     setColumnFilters(typeof updater === 'function' ? updater(columnFilters) : updater);
   }, [columnFilters, setColumnFilters]);
+
+  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
+    const atual: PaginationState = { pageIndex: pagina - 1, pageSize: tamanho };
+    const next = typeof updater === 'function' ? updater(atual) : updater;
+    setPagina(next.pageIndex + 1);
+    if (next.pageSize !== tamanho) setTamanho(next.pageSize);
+  }, [pagina, tamanho, setPagina, setTamanho]);
 
   const lsKey = `grid-widths-${storageId || tabId}`;
 
@@ -144,14 +163,24 @@ function DataGridInner<T extends Record<string, any>>({
     },
   })), [gc]);
 
+  const pagination: PaginationState = { pageIndex: pagina - 1, pageSize: tamanho };
+
   const table = useReactTable({
-    data, columns: tCols,
-    state: { sorting, columnFilters },
+    data,
+    columns: tCols,
+    state: serverSide
+      ? { sorting, columnFilters, pagination }
+      : { sorting, columnFilters },
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: handleFiltersChange,
+    onPaginationChange: serverSide ? handlePaginationChange : undefined,
+    rowCount: serverSide ? totalRegistros : undefined,
+    manualFiltering: serverSide,
+    manualSorting: serverSide,
+    manualPagination: serverSide,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: serverSide ? undefined : getSortedRowModel(),
+    getFilteredRowModel: serverSide ? undefined : getFilteredRowModel(),
     filterFns: { compound: compoundFilterFn },
   });
 
@@ -392,6 +421,17 @@ function DataGridInner<T extends Record<string, any>>({
         </table>
       </div>
 
+      {(serverSide || total !== undefined) && (
+        <DataGridPaginator
+          pagina={pagina}
+          totalPaginas={totalPaginas}
+          total={totalRegistros}
+          tamanho={tamanho}
+          tamanhoOptions={tamanhoOptions}
+          onPaginaChange={setPagina}
+          onTamanhoChange={(t) => { setTamanho(t); setPagina(1); }}
+        />
+      )}
 
     </div>
   );

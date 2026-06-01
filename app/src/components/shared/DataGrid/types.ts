@@ -71,6 +71,28 @@ export interface DataGridProps<T> {
    * Útil em modais de seleção, onde o duplo-clique direto é o gesto natural.
    */
   activateOnDoubleClick?: boolean;
+
+  // ── Server-side mode (opcional) ─────────────────────────────────────────
+
+  /**
+   * Quando `true`, o grid opera em modo "controlled": filtros, ordenação e
+   * paginação são aplicados no back (via useGridQuery + POST /buscar) e o
+   * grid só renderiza a página atual. Sem isso, segue o modo client-side
+   * histórico (filtros/sort/paginação resolvidos em memória pelo TanStack).
+   */
+  serverSide?: boolean;
+
+  /**
+   * Total de registros (vem do PaginadoResponse do back). Obrigatório quando
+   * `serverSide=true` para o paginator mostrar "X de Y" e calcular páginas.
+   */
+  total?: number;
+
+  /**
+   * Opções de tamanho de página oferecidas no seletor do rodapé.
+   * Default: [25, 50, 100, 200].
+   */
+  tamanhoOptions?: number[];
 }
 
 /** Métodos expostos pelo DataGrid via ref */
