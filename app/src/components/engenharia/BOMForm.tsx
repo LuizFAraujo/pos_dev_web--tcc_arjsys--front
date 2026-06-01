@@ -585,8 +585,11 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
           codeColumnKey="codigo" indentPx={16}
           emptyTitle="Estrutura vazia" emptyDescription="Adicione itens à estrutura"
           rowClassName={rowClassName} onSelect={handleSelect}
+          footerLeft={mode === 'view' ? (
+            <span className="italic">Pressione Editar para modificar o registro</span>
+          ) : undefined}
           footerExtra={isEditing ? (
-            <span className="flex items-center gap-3 ml-auto text-[11px]">
+            <span className="flex items-center gap-3 text-[11px]">
               {pendingCount > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-medium">{pendingCount} {pendingCount === 1 ? 'alteração' : 'alterações'}</span>}
               <span><kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-mono">F2</kbd> ou duplo clique editar</span>
               <span><kbd className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[10px] font-mono">Del</kbd> marcar exclusão</span>

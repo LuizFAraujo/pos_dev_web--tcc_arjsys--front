@@ -1,17 +1,13 @@
 /**
- * NumeroSeriePage.tsx - Página de Números de Série (list + view + new + edit)
- *
- * Modelo: igual a ProdutosPage / FuncionariosPage (PageShell + PageActions + usePageMode).
+ * NumeroSeriePage.tsx - Página de Números de Série em modo server-side
  *
  * Particularidades de NS:
  *   - Sem DELETE (back não suporta) → hideButtons=['delete']
- *   - "Novo" gateado por ConfiguracaoEmpresa.configurado: se false, mostra toast
- *     e abre a aba Configurações > Sistema (sem abrir o form)
- *   - Form unificado pra new/edit/view (NumeroSerieForm)
+ *   - "Novo" gateado por ConfiguracaoEmpresa.configurado
+ *   - Form unificado pra new/edit/view
  */
 
 import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNumeroSerieStore } from '@/stores/comercial/numeroSerieStore';
 import { useConfiguracaoEmpresaStore } from '@/stores/admin/configuracaoEmpresaStore';
@@ -20,10 +16,10 @@ import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShe
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import {
   STATUS_COLORS,
   STATUS_LABELS,
@@ -46,6 +42,8 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'produtoCodigo', label: 'Produto (código)' },
   { key: 'produtoDescricao', label: 'Produto (descrição)' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['codigo', 'pedidoVendaCodigo', 'clienteNome'];
 
 const TIPO_OPTIONS = [
   { label: 'Normal', value: 'Normal' },
@@ -132,39 +130,38 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
   const formRef = useRef<NumeroSerieFormHandle>(null);
   const page = usePageMode<NumeroSerie>(tab.id, (s) => String(s.id), tab.type);
 
-  // ─── Store NS ─────────────────────────────────────────────────────────
-  const series = useNumeroSerieStore((s) => s.series);
-  const isLoading = useNumeroSerieStore((s) => s.isLoading);
-  const error = useNumeroSerieStore((s) => s.error);
-  const fetchSeries = useNumeroSerieStore((s) => s.fetchSeries);
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
+
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<NumeroSerie>({
+    endpoint: '/api/comercial/NumeroSerie/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  // Mutações via store
   const gerarSerie = useNumeroSerieStore((s) => s.gerarSerie);
   const updateSerie = useNumeroSerieStore((s) => s.updateSerie);
 
-  // ─── Store ConfiguracaoEmpresa (gate do botão Novo) ───────────────────
+  // Gate Configuração da Empresa (não migra — config global)
   const config = useConfiguracaoEmpresaStore((s) => s.config);
   const fetchConfig = useConfiguracaoEmpresaStore((s) => s.fetchConfig);
 
-  // ─── Store Pedidos (refresh após gerar NS pra refletir status) ────────
+  // Refresh de pedidos após gerar NS (back transiciona PV de AguardandoNS → RecebidoNS)
   const fetchPedidos = usePedidosStore((s) => s.fetchPedidos);
 
   useEffect(() => {
-    void fetchSeries();
     void fetchConfig();
-    void fetchPedidos();
-  }, [fetchSeries, fetchConfig, fetchPedidos]);
-  useEffect(() => {
-    if (error) toast.error(error);
-  }, [error]);
+  }, [fetchConfig]);
 
-  // ─── Lista ────────────────────────────────────────────────────────────
   const list = useListState<NumeroSerie>({
     tabId: tab.id,
-    data: series,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['codigo', 'pedidoVendaCodigo', 'clienteNome'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
-  // ─── Wrapper de page com gate em openNew ──────────────────────────────
   const wrappedPage = useMemo(
     () => ({
       ...page,
@@ -181,7 +178,6 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
     [page, config],
   );
 
-  // ─── Save ─────────────────────────────────────────────────────────────
   const handleSave = useCallback(
     async (data: NumeroSerieFormData) => {
       if (page.mode === 'edit' && page.editingItem) {
@@ -192,15 +188,14 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
           produtoId: data.produtoId ?? null,
           codigo: data.codigo ?? null,
         });
-        // Recarrega pedidos pra refletir transição de status (AguardandoNS → RecebidoNS)
-        // que o backend faz ao criar o NS - assim o picker não oferece o mesmo PV de novo.
+        // Recarrega pedidos pra refletir transição de status
         await fetchPedidos();
       }
+      refetch();
     },
-    [page.mode, page.editingItem, gerarSerie, updateSerie, fetchPedidos],
+    [page.mode, page.editingItem, gerarSerie, updateSerie, fetchPedidos, refetch],
   );
 
-  // ─── Colunas ──────────────────────────────────────────────────────────
   const columns: GridColumn<NumeroSerie>[] = useMemo(
     () => [
       {
@@ -314,7 +309,6 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
     [],
   );
 
-  // ─── Render ───────────────────────────────────────────────────────────
   const inForm = page.mode !== 'list';
 
   return (
@@ -322,19 +316,14 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
       module="Comercial"
       title="Números de Série"
       mode={page.mode}
-      footer={
-        page.mode === 'list' ? (
-          <ListFooter filtered={list.filtrados.length} total={series.length} />
-        ) : undefined
-      }
       headerRight={
         <PageActions
           page={wrappedPage}
           activeItem={list.activeItem}
           hideButtons={['delete']}
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -346,44 +335,32 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
         />
       }
     >
-      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef}
           tabId={tab.id}
           storageId="numeroserie"
           columns={columns}
-          data={list.filtrados}
+          data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading}
           loadingText="Carregando séries..."
-          emptyTitle="Nenhum número de série encontrado"
-          emptyDescription="Crie o primeiro número de série"
           onSelect={(item) => list.setSelectedItem(item as NumeroSerie | null)}
           onActivate={(item) => page.openView(item as NumeroSerie)}
-          emptyAction={
-            <Button onClick={() => wrappedPage.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-            </Button>
-          }
         />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef}
-          data={list.filtrados}
+          data={itens}
           selectedId={list.selectedCardId}
           onSelect={(s) => list.setSelectedCardId(s?.id ?? null)}
           onActivate={(item) => page.openView(item as NumeroSerie)}
           loading={isLoading}
           loadingText="Carregando séries..."
           emptyTitle="Nenhum número de série encontrado"
-          emptyDescription="Crie o primeiro número de série"
           renderCard={(s) => <NumeroSerieCard serie={s} />}
-          emptyAction={
-            <Button onClick={() => wrappedPage.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-            </Button>
-          }
         />
       </div>
 

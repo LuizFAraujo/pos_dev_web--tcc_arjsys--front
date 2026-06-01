@@ -1,14 +1,14 @@
 /**
- * PedidosPage.tsx - Página de Pedidos de Venda
+ * PedidosPage.tsx - Página de Pedidos de Venda em modo server-side
  *
- * Mudanças:
- *   - Sem toast.success extra no handleSave (usePageMode já mostra "Registro atualizado")
- *   - Usa onDirtyChange (form reporta dirty derivado, não set-once)
- *   - Mensagem de erro vem só do store (sem genérico do PageActions)
+ * Particularidades:
+ *   - Pedidos enriquecidos com CPF/CNPJ, Estado e Cidade vindos do cache de clientes
+ *     (campos que o back não retorna no DTO de PV). Best-effort: se o cliente não
+ *     estiver carregado em useClientesStore, esses campos ficam '-'.
+ *   - fetchPedidoDetalhe separado em view/edit (mantido)
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePedidosStore } from '@/stores/comercial/pedidosStore';
 import { useClientesStore } from '@/stores/admin/clientesStore';
@@ -16,11 +16,11 @@ import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShe
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import { PedidoDeleteDialog } from '@/components/comercial/PedidoDeleteDialog';
 import { PedidoForm } from '@/components/comercial/PedidoForm';
 import type {
@@ -47,9 +47,6 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'status', label: 'Status' },
   { key: 'clienteCodigo', label: 'Código Cliente' },
   { key: 'clienteNome', label: 'Cliente' },
-  { key: 'clienteCpfCnpj', label: 'CPF/CNPJ' },
-  { key: 'clienteEstado', label: 'Estado' },
-  { key: 'clienteCidade', label: 'Cidade' },
   { key: 'data', label: 'Data' },
   { key: 'dataEntrega', label: 'Entrega' },
 ];
@@ -88,10 +85,7 @@ function formatDate(val?: string | null) {
 /**
  * Pedido enriquecido com dados do Cliente (CPF/CNPJ, Estado, Cidade) que
  * não vêm no PedidoVenda do back. Esses campos são populados via lookup
- * no array `clientes` (já carregado em memória pelo store de clientes).
- *
- * Ficam como campos opcionais; se o cliente não estiver no cache local
- * (caso raro), aparecem como '-'.
+ * no array `clientes` (cache local).
  */
 type PedidoVendaEnriched = PedidoVenda & {
   clienteCpfCnpj?: string | null;
@@ -145,46 +139,51 @@ export function PedidosPage({ tab }: PedidosPageProps) {
 
   const page = usePageMode<PedidoVenda>(tab.id, (p) => String(p.id), tab.type);
 
-  const pedidos = usePedidosStore((s) => s.pedidos);
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
+
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<PedidoVenda>({
+    endpoint: '/api/comercial/PedidoVenda/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
   const pedidoDetalhe = usePedidosStore((s) => s.pedidoDetalhe);
-  const isLoading = usePedidosStore((s) => s.isLoading);
-  const error = usePedidosStore((s) => s.error);
-  const fetchPedidos = usePedidosStore((s) => s.fetchPedidos);
   const fetchPedido = usePedidosStore((s) => s.fetchPedido);
   const createPedido = usePedidosStore((s) => s.createPedido);
   const updatePedido = usePedidosStore((s) => s.updatePedido);
   const deletePedido = usePedidosStore((s) => s.deletePedido);
   const alterarStatus = usePedidosStore((s) => s.alterarStatus);
+  const storeError = usePedidosStore((s) => s.error);
   const clearError = usePedidosStore((s) => s.clearError);
 
-  // Clientes - usados para enriquecer pedidos com CPF/CNPJ, Estado, Cidade
+  // Clientes - cache local pra enriquecer pedidos com CPF/CNPJ, Estado, Cidade
   const clientes = useClientesStore((s) => s.clientes);
   const fetchClientes = useClientesStore((s) => s.fetchClientes);
 
   useEffect(() => {
-    void fetchPedidos();
     if (clientes.length === 0) void fetchClientes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchPedidos]);
+  }, []);
 
-  // Toast de erro vindo do store - única fonte
+  // Toast de erro vindo do store (mutações) ou do useGridQuery (busca)
   useEffect(() => {
-    if (error) {
-      toast.error(error);
+    if (storeError) {
+      toast.error(storeError);
       clearError();
     }
-  }, [error, clearError]);
+  }, [storeError, clearError]);
+  useEffect(() => { if (error) toast.error(error); }, [error]);
 
-  // Index de clientes por id para lookup O(1) no enriquecimento dos pedidos
+  // Index de clientes por id pra lookup O(1)
   const clientesById = useMemo(() => {
     const map = new Map<number, (typeof clientes)[number]>();
     for (const c of clientes) map.set(c.id, c);
     return map;
   }, [clientes]);
 
-  // Pedidos enriquecidos com CPF/CNPJ, Estado e Cidade vindos da tabela de clientes
+  // Pedidos enriquecidos com CPF/CNPJ, Estado e Cidade
   const pedidosEnriched = useMemo<PedidoVendaEnriched[]>(() => {
-    return pedidos.map((p) => {
+    return itens.map((p) => {
       const c = clientesById.get(p.clienteId);
       return {
         ...p,
@@ -193,14 +192,14 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         clienteCidade: c?.cidade ?? null,
       };
     });
-  }, [pedidos, clientesById]);
+  }, [itens, clientesById]);
 
   const pedidoVivo = useMemo<PedidoVenda | null>(() => {
     if (!page.editingItem) return null;
     const id = page.editingItem.id;
     if (pedidoDetalhe && pedidoDetalhe.id === id) return pedidoDetalhe;
-    return pedidos.find((p) => p.id === id) ?? page.editingItem;
-  }, [page.editingItem, pedidoDetalhe, pedidos]);
+    return itens.find((p) => p.id === id) ?? page.editingItem;
+  }, [page.editingItem, pedidoDetalhe, itens]);
 
   useEffect(() => {
     if (page.mode === 'view' || page.mode === 'edit') {
@@ -220,7 +219,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
   const [formHelp, setFormHelp] = useState<string | null>(null);
 
   const del = useDeleteDialog<PedidoVenda>({
-    onDelete: (p) => deletePedido(p.id),
+    onDelete: async (p) => { await deletePedido(p.id); refetch(); },
     onAfterDelete: (p) => {
       if (p.id === list.selectedCardId) list.setSelectedCardId(null);
     },
@@ -232,16 +231,13 @@ export function PedidosPage({ tab }: PedidosPageProps) {
    *   - create:      POST
    *   - update:      PUT + opcional PATCH /status
    *   - status-only: SÓ PATCH /status (sem PUT)
-   *
-   * Sem toasts de sucesso aqui - usePageMode já mostra "Registro atualizado".
-   * Erros vêm via store.error (toast unificado no useEffect acima).
    */
   const handleSave = useCallback(
     async (payload: PedidoFormPayload) => {
       if (payload.kind === 'create') {
         const novo = await createPedido(payload.data);
         if (novo) {
-          await fetchPedidos();
+          refetch();
           page.openEdit(novo);
         }
         return;
@@ -256,7 +252,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           payload.statusPendente,
           payload.justificativaPendente,
         );
-        await fetchPedidos();
+        refetch();
         await fetchPedido(id);
         return;
       }
@@ -272,16 +268,16 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         );
       }
 
-      await fetchPedidos();
+      refetch();
       await fetchPedido(id);
     },
     [
       page,
       updatePedido,
       createPedido,
-      fetchPedidos,
       fetchPedido,
       alterarStatus,
+      refetch,
     ],
   );
 
@@ -300,7 +296,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
 
   const columns: GridColumn<PedidoVendaEnriched>[] = useMemo(
     () => [
-      // 1. Código PV
       {
         key: 'codigo',
         header: 'Código PV',
@@ -312,7 +307,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           <span className="font-mono font-medium">{p.codigo || '-'}</span>
         ),
       },
-      // 2. Tipo
       {
         key: 'tipo',
         header: 'Tipo',
@@ -331,7 +325,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           </span>
         ),
       },
-      // 3. Status
       {
         key: 'status',
         header: 'Status',
@@ -350,7 +343,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           </span>
         ),
       },
-      // 4. Código Cliente
       {
         key: 'clienteCodigo',
         header: 'Código Cliente',
@@ -365,7 +357,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
             <span className="text-muted-foreground">-</span>
           ),
       },
-      // 5. Cliente
       {
         key: 'clienteNome',
         header: 'Cliente',
@@ -376,13 +367,13 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           <span className="truncate">{p.clienteNome || '-'}</span>
         ),
       },
-      // 6. CPF/CNPJ
       {
         key: 'clienteCpfCnpj',
         header: 'CPF/CNPJ',
         width: 150,
         minWidth: 120,
-        filterType: 'text',
+        sortable: false,
+        filterType: false,
         render: (p) =>
           p.clienteCpfCnpj ? (
             <span className="font-mono text-xs">{p.clienteCpfCnpj}</span>
@@ -390,30 +381,29 @@ export function PedidosPage({ tab }: PedidosPageProps) {
             <span className="text-muted-foreground">-</span>
           ),
       },
-      // 7. Estado
       {
         key: 'clienteEstado',
         header: 'Estado',
         width: 80,
         minWidth: 70,
         contentAlign: 'center',
-        filterType: 'text',
+        sortable: false,
+        filterType: false,
         render: (p) => p.clienteEstado || <span className="text-muted-foreground">-</span>,
       },
-      // 8. Cidade
       {
         key: 'clienteCidade',
         header: 'Cidade',
         width: 160,
         minWidth: 120,
-        filterType: 'text',
+        sortable: false,
+        filterType: false,
         render: (p) => (
           <span className="truncate">
             {p.clienteCidade || <span className="text-muted-foreground">-</span>}
           </span>
         ),
       },
-      // 9. Data
       {
         key: 'data',
         header: 'Data',
@@ -422,7 +412,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         contentAlign: 'center',
         render: (p) => formatDate(p.data),
       },
-      // 10. Entrega
       {
         key: 'dataEntrega',
         header: 'Entrega',
@@ -467,8 +456,8 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           onDelete={handleRequestDelete}
           lockMessage="Este pedido já está sendo editado em outra aba."
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -479,11 +468,6 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           noSelectionText="Selecione um pedido"
         />
       }
-      footer={
-        page.mode === 'list' ? (
-          <ListFooter filtered={list.filtrados.length} total={pedidos.length} />
-        ) : undefined
-      }
     >
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
@@ -491,37 +475,26 @@ export function PedidosPage({ tab }: PedidosPageProps) {
           tabId={tab.id}
           storageId="pedidos-venda"
           columns={columns}
-          data={list.filtrados}
+          data={pedidosEnriched}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading}
           loadingText="Carregando pedidos..."
-          emptyTitle="Nenhum pedido encontrado"
-          emptyDescription="Crie o primeiro pedido"
           onSelect={(item) => list.setSelectedItem(item as PedidoVenda | null)}
           onActivate={(item) => page.openView(item as PedidoVenda)}
-          emptyAction={
-            <Button onClick={() => page.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-            </Button>
-          }
         />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef}
-          data={list.filtrados}
+          data={pedidosEnriched}
           selectedId={list.selectedCardId}
           onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
           onActivate={(item) => page.openView(item as PedidoVenda)}
           loading={isLoading}
           loadingText="Carregando pedidos..."
           emptyTitle="Nenhum pedido encontrado"
-          emptyDescription="Crie o primeiro pedido"
           renderCard={(p) => <PedidoCard pedido={p} />}
-          emptyAction={
-            <Button onClick={() => page.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-            </Button>
-          }
         />
       </div>
 

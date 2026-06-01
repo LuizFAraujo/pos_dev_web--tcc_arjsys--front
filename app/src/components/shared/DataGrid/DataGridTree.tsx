@@ -46,8 +46,10 @@ export interface DataGridTreeProps<T> {
   onActivate?: (item: T) => void;
   /** Classe CSS extra por linha (ex: visual de edição por status) */
   rowClassName?: (item: T) => string;
-  /** Conteúdo extra no rodapé (ex: dicas de edição) */
+  /** Conteúdo extra no rodapé, posicionado à direita junto do count (ex: dicas de edição). */
   footerExtra?: ReactNode;
+  /** Conteúdo à esquerda do rodapé (ex: dica "Pressione Editar..."). Count vai pra direita. */
+  footerLeft?: ReactNode;
 }
 
 function DataGridTreeInner<T extends Record<string, any>>({
@@ -57,7 +59,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   loading = false, loadingText = 'Carregando...',
   emptyTitle = 'Nenhum registro encontrado', emptyDescription, emptyAction,
   headerHeight = DEFAULT_HEADER_HEIGHT, rowHeight = DEFAULT_ROW_HEIGHT,
-  className = '', onSelect, onActivate, rowClassName, footerExtra,
+  className = '', onSelect, onActivate, rowClassName, footerExtra, footerLeft,
 }: DataGridTreeProps<T>, ref: Ref<DataGridHandle>) {
   const [sorting, setSorting] = useTabState<{ id: string; desc: boolean }[]>(tabId + '-tsort', []);
   const [colFilters, setColFilters] = useTabState<Record<string, CompoundFilter>>(tabId + '-tfilters', {});
@@ -260,10 +262,13 @@ function DataGridTreeInner<T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
-      <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground flex items-center justify-between">
-        <span>{sorted.length} {sorted.length === 1 ? 'registro' : 'registros'}{sorted.length !== flatRows.length ? ` de ${flatRows.length}` : ''}</span>
-        {hasFilters && (<Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setColFilters({})}><X className="mr-1 h-3 w-3" /> Limpar filtros</Button>)}
-        {footerExtra}
+      <div className="shrink-0 border-t bg-muted/40 px-4 py-1.5 text-xs text-muted-foreground flex items-center gap-3">
+        {footerLeft && <div className="min-w-0 truncate">{footerLeft}</div>}
+        <div className="ml-auto flex items-center gap-3">
+          {hasFilters && (<Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setColFilters({})}><X className="mr-1 h-3 w-3" /> Limpar filtros</Button>)}
+          {footerExtra}
+          <span>{sorted.length} {sorted.length === 1 ? 'registro' : 'registros'}{sorted.length !== flatRows.length ? ` de ${flatRows.length}` : ''}</span>
+        </div>
       </div>
     </div>
   );

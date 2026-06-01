@@ -1,27 +1,28 @@
 /**
- * BOMPage.tsx - Estrutura de Produtos (BOM)
+ * BOMPage.tsx - Estrutura de Produtos (BOM) em modo server-side
  *
- * Flat: DataGrid com todas as relações pai-filho.
+ * Flat: DataGrid com todas as relações pai-filho via /api/engenharia/Bom/flat/buscar.
  *   - Botão deletar → exclui estrutura COMPLETA (todos filhos diretos do pai selecionado)
  *   - Dialog de confirmação sério com quantidade de filhos
+ *   - DocButtons consultam useProdutosStore (cache local) pra `temDocumento` atualizado
  *
- * Tree: BOMForm inline com edição em lote.
- *   - Salvar sem filhos → aviso que estrutura será removida
+ * Tree: BOMForm inline com edição em lote (não server-side - usado dentro do form).
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { Plus, FolderOpen, FileText, ChevronsDown, ChevronsRight, FileSpreadsheet } from 'lucide-react';
+import { FolderOpen, FileText, ChevronsDown, ChevronsRight, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBOMStore } from '@/stores/engenharia/bomStore';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import { BOMForm } from '@/components/engenharia/BOMForm';
 import type { BOMFormHandle } from '@/components/engenharia/BOMForm';
 import { NovaEstruturaDialog } from '@/components/engenharia/NovaEstruturaDialog';
@@ -39,6 +40,8 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'produtoFilhoCodigo', label: 'Código Filho' },
   { key: 'produtoFilhoDescricao', label: 'Descrição Filho' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['produtoPaiCodigo', 'produtoFilhoCodigo'];
 
 const UNIDADE_OPTIONS = [
   { label: 'Unidade', value: 'UN' }, { label: 'Peça', value: 'PC' },
@@ -102,10 +105,18 @@ export function BOMPage({ tab }: BOMPageProps) {
   const formRef = useRef<BOMFormHandle>(null);
   const page = usePageMode<BomItem>(tab.id, (item) => String(item.id), tab.type);
 
-  const bomFlat = useBOMStore((s) => s.bomFlat);
-  const isLoading = useBOMStore((s) => s.isLoading);
-  const error = useBOMStore((s) => s.error);
-  const fetchBomFlat = useBOMStore((s) => s.fetchBomFlat);
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
+
+  // Lista flat via endpoint server-side
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<BomItem>({
+    endpoint: '/api/engenharia/Bom/flat/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  // Stores complementares (mutações + cache de produtos pra DocButtons + lista de pais)
   const produtosComEstrutura = useBOMStore((s) => s.produtosComEstrutura);
   const fetchProdutosPai = useBOMStore((s) => s.fetchProdutosPai);
   const deleteEstrutura = useBOMStore((s) => s.deleteEstrutura);
@@ -113,12 +124,9 @@ export function BOMPage({ tab }: BOMPageProps) {
   const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
 
   useEffect(() => {
-    if (bomFlat.length === 0) fetchBomFlat();
     if (produtosComEstrutura.length === 0) fetchProdutosPai();
     if (produtos.length === 0) fetchProdutos();
-  }, [bomFlat.length, fetchBomFlat, produtosComEstrutura.length, fetchProdutosPai, produtos.length, fetchProdutos]);
-
-  useEffect(() => { if (error) toast.error(error); }, [error]);
+  }, [produtosComEstrutura.length, fetchProdutosPai, produtos.length, fetchProdutos]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -127,11 +135,11 @@ export function BOMPage({ tab }: BOMPageProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<BomItem | null>(null);
 
-  /** Conta filhos diretos do pai selecionado */
+  /** Conta filhos diretos do pai selecionado dentro do que está carregado. */
   const deleteFilhosCount = useMemo(() => {
     if (!deleteItem) return 0;
-    return bomFlat.filter((b) => b.produtoPaiId === deleteItem.produtoPaiId).length;
-  }, [deleteItem, bomFlat]);
+    return itens.filter((b) => b.produtoPaiId === deleteItem.produtoPaiId).length;
+  }, [deleteItem, itens]);
 
   const handleRequestDelete = useCallback((item: BomItem) => {
     setDeleteItem(item);
@@ -145,25 +153,23 @@ export function BOMPage({ tab }: BOMPageProps) {
       toast.success(`Estrutura de ${deleteItem.produtoPaiCodigo || 'produto'} excluída.`);
       setDeleteDialogOpen(false);
       setDeleteItem(null);
+      refetch();
     } catch (err: any) {
       toast.error(err?.body?.erro || err?.message || 'Erro ao excluir estrutura');
     }
-  }, [deleteItem, deleteEstrutura]);
+  }, [deleteItem, deleteEstrutura, refetch]);
 
-  // ── List state ──────────────────────────────────────────────────────────────
-
-
-
+  // ── List state (cards/UI) ───────────────────────────────────────────────────
   const list = useListState<BomItem>({
-    tabId: tab.id, data: bomFlat, searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['produtoPaiCodigo', 'produtoFilhoCodigo'],
+    tabId: tab.id, data: itens, searchColumns: SEARCH_COLUMNS,
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
   const handleSave = useCallback(async () => {
     toast.success('Estrutura salva.');
-    await fetchBomFlat();
+    refetch();
     await fetchProdutosPai();
-  }, [fetchBomFlat, fetchProdutosPai]);
+  }, [fetchProdutosPai, refetch]);
 
   const handleNew = useCallback(() => { setDialogOpen(true); }, []);
 
@@ -211,7 +217,7 @@ export function BOMPage({ tab }: BOMPageProps) {
 
   const inForm = page.mode !== 'list';
 
-  // Botões extras só dentro do form (view/edit/new). Na lista não fazem sentido.
+  // Botões extras só dentro do form (view/edit/new).
   const extraActions = inForm ? (
     <div className="flex items-center gap-1">
       <Tooltip>
@@ -246,17 +252,18 @@ export function BOMPage({ tab }: BOMPageProps) {
 
   return (
     <PageShell module="Engenharia" title="Estrutura de Produtos" mode={page.mode} extraTag={extraTag}
-      footer={page.mode === 'list' ? (
-        <ListFooter filtered={list.filtrados.length} total={bomFlat.length} />
-      ) : undefined}
+      hideFooter={page.mode === 'view'}
       headerRight={
         <PageActions
           page={pageOverride} activeItem={list.activeItem}
           onDelete={handleRequestDelete}
           lockMessage="Esta estrutura já está sendo editada em outra aba."
-          searchColumns={SEARCH_COLUMNS} searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm} searchSelectedColumns={list.searchCols}
-          onSearchColumnsChange={list.setSearchCols} gridRef={list.gridRef}
+          searchColumns={SEARCH_COLUMNS}
+          searchTerm={busca}
+          onSearchChange={setBusca}
+          searchSelectedColumns={list.searchCols}
+          onSearchColumnsChange={list.setSearchCols}
+          gridRef={list.gridRef}
           viewMode={list.viewMode} onViewModeChange={list.handleViewMode}
           formRef={formRef} hideButtons={['cards']}
           extraActions={extraActions}
@@ -269,12 +276,12 @@ export function BOMPage({ tab }: BOMPageProps) {
       {!inForm && (
         <DataGrid
           ref={list.gridRef} tabId={tab.id} storageId="bom-flat"
-          columns={columns} data={list.filtrados}
+          columns={columns} data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading} loadingText="Carregando estruturas..."
-          emptyTitle="Nenhuma estrutura encontrada" emptyDescription="Crie a primeira estrutura"
           onSelect={(item) => list.setSelectedItem(item as BomItem | null)}
           onActivate={(item) => page.openView(item as BomItem)}
-          emptyAction={<Button onClick={handleNew}><Plus className="mr-2 h-4 w-4" /> Criar Primeira</Button>}
         />
       )}
 
@@ -298,5 +305,3 @@ export function BOMPage({ tab }: BOMPageProps) {
     </PageShell>
   );
 }
-
-

@@ -22,6 +22,12 @@ export interface PageShellProps {
    * form, dicas por campo focado).
    */
   footerLeft?: ReactNode;
+  /**
+   * Quando `true`, suprime o rodapé padrão (dica em view, atalhos em new/edit).
+   * Use quando o conteúdo da página já renderiza seu próprio rodapé (ex: grid
+   * com rodapé próprio que incorpora a dica via footerLeft do DataGridTree).
+   */
+  hideFooter?: boolean;
   children: ReactNode;
 }
 

@@ -1,24 +1,22 @@
 /**
- * FuncionariosPage.tsx - Página de funcionários com modos list/view/new/edit
+ * FuncionariosPage.tsx - Página de funcionários em modo server-side com scroll infinito
  *
  * Template: PageShell + PageActions + usePageMode
- * Hooks: useListState, useDeleteDialog
- * Página: colunas, form, card, callbacks de CRUD
+ * Hooks: useGridQuery (server-side), useListState (UI/cards/search), useDeleteDialog
  */
 
 import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFuncionariosStore } from '@/stores/admin/funcionariosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import { FuncionarioDeleteDialog } from '@/components/admin/FuncionarioDeleteDialog';
 import { FuncionarioForm } from '@/components/admin/FuncionarioForm';
 import type { FuncionarioFormHandle } from '@/components/admin/FuncionarioForm';
@@ -36,6 +34,8 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'cidade', label: 'Cidade' },
   { key: 'telefone', label: 'Telefone' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['nome'];
 
 function FuncionarioCard({ funcionario }: { funcionario: Funcionario }) {
   return (
@@ -59,38 +59,33 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
 
   const page = usePageMode<Funcionario>(tab.id, (f) => String(f.id), tab.type);
 
-  // ─── Store ────────────────────────────────────────────────────────────────────
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
 
-  const funcionarios = useFuncionariosStore((s) => s.funcionarios);
-  const isLoading = useFuncionariosStore((s) => s.isLoading);
-  const error = useFuncionariosStore((s) => s.error);
-  const fetchFuncionarios = useFuncionariosStore((s) => s.fetchFuncionarios);
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<Funcionario>({
+    endpoint: '/api/admin/Funcionarios/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
   const createFuncionario = useFuncionariosStore((s) => s.createFuncionario);
   const updateFuncionario = useFuncionariosStore((s) => s.updateFuncionario);
   const deleteFuncionario = useFuncionariosStore((s) => s.deleteFuncionario);
 
-  useEffect(() => { fetchFuncionarios(); }, [fetchFuncionarios]);
-  useEffect(() => { if (error) toast.error(error); }, [error]);
-
-  // ─── Lista ────────────────────────────────────────────────────────────────────
-
   const list = useListState<Funcionario>({
     tabId: tab.id,
-    data: funcionarios,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['nome'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
-  // ─── Delete ───────────────────────────────────────────────────────────────────
-
   const del = useDeleteDialog<Funcionario>({
-    onDelete: (f) => deleteFuncionario(f.id),
+    onDelete: async (f) => { await deleteFuncionario(f.id); refetch(); },
     onAfterDelete: (f) => {
       if (f.id === list.selectedCardId) list.setSelectedCardId(null);
     },
   });
-
-  // ─── Save ─────────────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(async (data: FuncionarioFormData) => {
     if (page.mode === 'edit' && page.editingItem) {
@@ -98,9 +93,8 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
     } else {
       await createFuncionario(data);
     }
-  }, [page.mode, page.editingItem, updateFuncionario, createFuncionario]);
-
-  // ─── Colunas ──────────────────────────────────────────────────────────────────
+    refetch();
+  }, [page.mode, page.editingItem, updateFuncionario, createFuncionario, refetch]);
 
   const columns: GridColumn<Funcionario>[] = useMemo(() => [
     {
@@ -122,15 +116,10 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
     },
   ], []);
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
-
   const inForm = page.mode !== 'list';
 
   return (
     <PageShell module="Admin" title="Funcionários" mode={page.mode}
-      footer={page.mode === 'list' ? (
-        <ListFooter filtered={list.filtrados.length} total={funcionarios.length} />
-      ) : undefined}
       headerRight={
         <PageActions
           page={page}
@@ -138,8 +127,8 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
           onDelete={del.requestDelete}
           lockMessage="Este funcionário já está sendo editado em outra aba."
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -152,36 +141,26 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
       }
     >
 
-      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
-          <DataGrid
-            ref={list.gridRef} tabId={tab.id} storageId="funcionarios"
-            columns={columns} data={list.filtrados}
-            loading={isLoading} loadingText="Carregando funcionários..."
-            emptyTitle="Nenhum funcionário encontrado" emptyDescription="Crie o primeiro funcionário"
-            onSelect={(item) => list.setSelectedItem(item as Funcionario | null)}
-            onActivate={(item) => page.openView(item as Funcionario)}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <DataGrid
+          ref={list.gridRef} tabId={tab.id} storageId="funcionarios"
+          columns={columns} data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
+          loading={isLoading} loadingText="Carregando funcionários..."
+          onSelect={(item) => list.setSelectedItem(item as Funcionario | null)}
+          onActivate={(item) => page.openView(item as Funcionario)}
+        />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
-          <CardGrid
-            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
-            onSelect={(f) => list.setSelectedCardId(f?.id ?? null)}
-			onActivate={(item) => page.openView(item as Funcionario)}
-            loading={isLoading} loadingText="Carregando funcionários..."
-            emptyTitle="Nenhum funcionário encontrado" emptyDescription="Crie o primeiro funcionário"
-            renderCard={(f) => <FuncionarioCard funcionario={f} />}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <CardGrid
+          ref={list.cardGridRef} data={itens} selectedId={list.selectedCardId}
+          onSelect={(f) => list.setSelectedCardId(f?.id ?? null)}
+          onActivate={(item) => page.openView(item as Funcionario)}
+          loading={isLoading} loadingText="Carregando funcionários..."
+          emptyTitle="Nenhum funcionário encontrado"
+          renderCard={(f) => <FuncionarioCard funcionario={f} />}
+        />
       </div>
 
       {inForm && (
@@ -203,7 +182,3 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
     </PageShell>
   );
 }
-
-
-
-

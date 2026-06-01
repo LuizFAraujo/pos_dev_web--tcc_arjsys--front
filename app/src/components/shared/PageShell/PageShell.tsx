@@ -54,6 +54,7 @@ export function PageShell({
   headerRight,
   footer,
   footerLeft,
+  hideFooter,
   children,
 }: PageShellProps) {
   const resolvedTag = useMemo(
@@ -64,6 +65,8 @@ export function PageShell({
   const resolvedFooter = useMemo(() => {
     // Compat total: footer explícito substitui tudo
     if (footer) return footer;
+
+    if (hideFooter) return null;
 
     if (!mode || mode === 'list') return null;
 
@@ -100,7 +103,7 @@ export function PageShell({
       );
     }
     return atalhos;
-  }, [footer, footerLeft, mode]);
+  }, [footer, footerLeft, mode, hideFooter]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

@@ -1,28 +1,23 @@
 /**
- * OrdensProducaoPage.tsx - Página de Ordens de Produção (list + view + new + edit)
- *
- * Modelo: ProdutosPage / NumeroSeriePage (PageShell + PageActions + usePageMode).
+ * OrdensProducaoPage.tsx - Página de Ordens de Produção em modo server-side
  *
  * Particularidades:
  *   - Listagem mostra OPs Master e Filhas (back retorna todas).
- *   - View mode mostra detalhes da OP: itens (qtd planejada/produzida/%), filhas (se Master),
+ *   - View mode mostra detalhes da OP: itens (qtd planejada/produzida/%), filhas,
  *     histórico, painel de status.
- *   - Apontamento e ações de status entram via Fase 3 (componentes filhos).
- *   - Form (criar Master) entra via Fase 2.
  */
 
 import { useEffect, useMemo, useCallback, useRef } from 'react';
-import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrdemProducaoStore } from '@/stores/producao/ordemProducaoStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import {
   STATUS_OP_COLORS,
   STATUS_OP_LABELS,
@@ -46,6 +41,8 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'produtoCodigo', label: 'Produto (código)' },
   { key: 'produtoDescricao', label: 'Produto (descrição)' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['codigo', 'pedidoVendaCodigo', 'produtoDescricao'];
 
 const STATUS_OPTIONS = [
   { label: 'Pendente', value: 'Pendente' },
@@ -113,31 +110,26 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
   const formRef = useRef<OrdemProducaoFormHandle>(null);
   const page = usePageMode<OrdemProducao>(tab.id, (o) => String(o.id), tab.type);
 
-  // ─── Store OPs ────────────────────────────────────────────────────────
-  const ordens = useOrdemProducaoStore((s) => s.ordens);
-  const isLoading = useOrdemProducaoStore((s) => s.isLoading);
-  const error = useOrdemProducaoStore((s) => s.error);
-  const fetchOrdens = useOrdemProducaoStore((s) => s.fetchOrdens);
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
+
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<OrdemProducao>({
+    endpoint: '/api/producao/OrdemProducao/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
   const criarMaster = useOrdemProducaoStore((s) => s.criarMaster);
   const updateOrdem = useOrdemProducaoStore((s) => s.updateOrdem);
 
-  useEffect(() => {
-    void fetchOrdens();
-  }, [fetchOrdens]);
-
-  useEffect(() => {
-    if (error) toast.error(error);
-  }, [error]);
-
-  // ─── Lista ────────────────────────────────────────────────────────────
   const list = useListState<OrdemProducao>({
     tabId: tab.id,
-    data: ordens,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['codigo', 'pedidoVendaCodigo', 'produtoDescricao'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
-  // ─── Save ─────────────────────────────────────────────────────────────
   const handleSave = useCallback(
     async (data: OrdemProducaoFormData) => {
       if (page.mode === 'edit' && page.editingItem) {
@@ -149,11 +141,11 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
           observacoes: data.observacoes,
         });
       }
+      refetch();
     },
-    [page.mode, page.editingItem, criarMaster, updateOrdem],
+    [page.mode, page.editingItem, criarMaster, updateOrdem, refetch],
   );
 
-  // ─── Colunas ──────────────────────────────────────────────────────────
   const columns: GridColumn<OrdemProducao>[] = useMemo(
     () => [
       {
@@ -266,7 +258,6 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
     [],
   );
 
-  // ─── Render ───────────────────────────────────────────────────────────
   const inForm = page.mode !== 'list';
 
   return (
@@ -274,19 +265,14 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
       module="Produção"
       title="Ordens de Produção"
       mode={page.mode}
-      footer={
-        page.mode === 'list' ? (
-          <ListFooter filtered={list.filtrados.length} total={ordens.length} />
-        ) : undefined
-      }
       headerRight={
         <PageActions
           page={page}
           activeItem={list.activeItem}
           hideButtons={['delete']}
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -304,38 +290,27 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
           tabId={tab.id}
           storageId="ordens-producao"
           columns={columns}
-          data={list.filtrados}
+          data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading}
           loadingText="Carregando ordens..."
-          emptyTitle="Nenhuma ordem de produção encontrada"
-          emptyDescription="Crie a primeira ordem"
           onSelect={(item) => list.setSelectedItem(item as OrdemProducao | null)}
           onActivate={(item) => page.openView(item as OrdemProducao)}
-          emptyAction={
-            <Button onClick={() => page.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeira
-            </Button>
-          }
         />
       </div>
 
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef}
-          data={list.filtrados}
+          data={itens}
           selectedId={list.selectedCardId}
           onSelect={(o) => list.setSelectedCardId(o?.id ?? null)}
           onActivate={(item) => page.openView(item as OrdemProducao)}
           loading={isLoading}
           loadingText="Carregando ordens..."
           emptyTitle="Nenhuma ordem de produção encontrada"
-          emptyDescription="Crie a primeira ordem"
           renderCard={(o) => <OrdemProducaoCard op={o} />}
-          emptyAction={
-            <Button onClick={() => page.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeira
-            </Button>
-          }
         />
       </div>
 

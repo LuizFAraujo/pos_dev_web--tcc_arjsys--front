@@ -1,24 +1,22 @@
 /**
- * ClientesPage.tsx - Página de clientes com modos list/view/new/edit
+ * ClientesPage.tsx - Página de clientes em modo server-side com scroll infinito
  *
- * Template: PageShell + PageActions + usePageMode (header, botões, modos)
- * Hooks: useListState (search, filtro, seleção), useDeleteDialog (exclusão)
- * Página: colunas, form, card, callbacks de CRUD
+ * Template: PageShell + PageActions + usePageMode
+ * Hooks: useGridQuery (server-side), useListState (UI/cards/search), useDeleteDialog
  */
 
 import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useClientesStore } from '@/stores/admin/clientesStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import { ClienteDeleteDialog } from '@/components/admin/ClienteDeleteDialog';
 import { ClienteForm } from '@/components/admin/ClienteForm';
 import type { ClienteFormHandle } from '@/components/admin/ClienteForm';
@@ -64,51 +62,51 @@ export function ClientesPage({ tab }: ClientesPageProps) {
 
   const page = usePageMode<Cliente>(tab.id, (c) => String(c.id), tab.type);
 
-  // ─── Store ────────────────────────────────────────────────────────────────────
+  // ─── Busca textual server-side (alimenta useGridQuery) ──────────────────────
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
 
-  const clientes = useClientesStore((s) => s.clientes);
-  const isLoading = useClientesStore((s) => s.isLoading);
-  const error = useClientesStore((s) => s.error);
-  const fetchClientes = useClientesStore((s) => s.fetchClientes);
+  // ─── Query server-side em modo scroll infinito ──────────────────────────────
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<Cliente>({
+    endpoint: '/api/admin/Clientes/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  // ─── Mutações via store ─────────────────────────────────────────────────────
   const createCliente = useClientesStore((s) => s.createCliente);
   const updateCliente = useClientesStore((s) => s.updateCliente);
   const deleteCliente = useClientesStore((s) => s.deleteCliente);
 
-  useEffect(() => { fetchClientes(); }, [fetchClientes]);
-  useEffect(() => { if (error) toast.error(error); }, [error]);
-
-  // ─── Lista (search, filtro, seleção, viewMode) ───────────────────────────────
-
+  // ─── Lista (cards/UI) ───────────────────────────────────────────────────────
   const list = useListState<Cliente>({
     tabId: tab.id,
-    data: clientes,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
     defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
-  // ─── Delete ───────────────────────────────────────────────────────────────────
-
+  // ─── Delete ─────────────────────────────────────────────────────────────────
   const del = useDeleteDialog<Cliente>({
-    onDelete: (c) => deleteCliente(c.id),
+    onDelete: async (c) => { await deleteCliente(c.id); refetch(); },
     onAfterDelete: (c) => {
       if (c.id === list.selectedCardId) list.setSelectedCardId(null);
     },
   });
 
-  // ─── Save ─────────────────────────────────────────────────────────────────────
-
+  // ─── Save ───────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async (data: ClienteFormData) => {
     if (page.mode === 'edit' && page.editingItem) {
       await updateCliente(page.editingItem.id, data);
     } else {
       await createCliente(data);
     }
-  }, [page.mode, page.editingItem, updateCliente, createCliente]);
+    refetch();
+  }, [page.mode, page.editingItem, updateCliente, createCliente, refetch]);
 
-  // ─── Colunas ──────────────────────────────────────────────────────────────────
-
+  // ─── Colunas ────────────────────────────────────────────────────────────────
   const columns: GridColumn<Cliente>[] = useMemo(() => [
-    // 1. Código
     {
       key: 'codigo', header: 'Código', width: 110, minWidth: 90,
       contentAlign: 'center', filterType: 'text',
@@ -116,7 +114,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         <span className="font-mono text-xs">{c.codigo || '-'}</span>
       ),
     },
-    // 2. Cliente (nome fantasia)
     {
       key: 'nome', header: 'Cliente', width: 220, minWidth: 140,
       filterType: 'text',
@@ -126,7 +123,6 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         </span>
       ),
     },
-    // 3. Razão Social
     {
       key: 'razaoSocial', header: 'Razão Social', width: 240, minWidth: 140,
       filterType: 'text',
@@ -136,18 +132,15 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         </span>
       ),
     },
-    // 4. CPF/CNPJ
     {
       key: 'cpfCnpj', header: 'CPF/CNPJ', width: 170, minWidth: 130,
       contentAlign: 'center', className: 'font-mono', filterType: 'exact',
     },
-    // 5. Estado
     {
       key: 'estado', header: 'Estado', width: 80, minWidth: 70,
       contentAlign: 'center', filterType: 'text',
       render: (c) => c.estado || <span className="text-muted-foreground">-</span>,
     },
-    // 6. Cidade
     {
       key: 'cidade', header: 'Cidade', width: 160, minWidth: 110,
       filterType: 'text',
@@ -157,22 +150,17 @@ export function ClientesPage({ tab }: ClientesPageProps) {
         </span>
       ),
     },
-    // 7. Telefone
     {
       key: 'telefone', header: 'Telefone', width: 140, minWidth: 100,
       contentAlign: 'center', className: 'font-mono', filterType: 'text',
     },
   ], []);
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
-
+  // ─── Render ─────────────────────────────────────────────────────────────────
   const inForm = page.mode !== 'list';
 
   return (
     <PageShell module="Admin" title="Clientes" mode={page.mode}
-      footer={page.mode === 'list' ? (
-        <ListFooter filtered={list.filtrados.length} total={clientes.length} />
-      ) : undefined}
       headerRight={
         <PageActions
           page={page}
@@ -180,8 +168,8 @@ export function ClientesPage({ tab }: ClientesPageProps) {
           onDelete={del.requestDelete}
           lockMessage="Este cliente já está sendo editado em outra aba."
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -194,36 +182,26 @@ export function ClientesPage({ tab }: ClientesPageProps) {
       }
     >
 
-      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
-          <DataGrid
-            ref={list.gridRef} tabId={tab.id} storageId="clientes"
-            columns={columns} data={list.filtrados}
-            loading={isLoading} loadingText="Carregando clientes..."
-            emptyTitle="Nenhum cliente encontrado" emptyDescription="Crie o primeiro cliente"
-            onSelect={(item) => list.setSelectedItem(item as Cliente | null)}
-            onActivate={(item) => page.openView(item as Cliente)}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <DataGrid
+          ref={list.gridRef} tabId={tab.id} storageId="clientes"
+          columns={columns} data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
+          loading={isLoading} loadingText="Carregando clientes..."
+          onSelect={(item) => list.setSelectedItem(item as Cliente | null)}
+          onActivate={(item) => page.openView(item as Cliente)}
+        />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
-          <CardGrid
-            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
-            onSelect={(c) => list.setSelectedCardId(c?.id ?? null)}
-            onActivate={(item) => page.openView(item as Cliente)}
-            loading={isLoading} loadingText="Carregando clientes..."
-            emptyTitle="Nenhum cliente encontrado" emptyDescription="Crie o primeiro cliente"
-            renderCard={(c) => <ClienteCard cliente={c} />}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <CardGrid
+          ref={list.cardGridRef} data={itens} selectedId={list.selectedCardId}
+          onSelect={(c) => list.setSelectedCardId(c?.id ?? null)}
+          onActivate={(item) => page.openView(item as Cliente)}
+          loading={isLoading} loadingText="Carregando clientes..."
+          emptyTitle="Nenhum cliente encontrado"
+          renderCard={(c) => <ClienteCard cliente={c} />}
+        />
       </div>
 
       {inForm && (
@@ -245,8 +223,3 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     </PageShell>
   );
 }
-
-
-
-
-
