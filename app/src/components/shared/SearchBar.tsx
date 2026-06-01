@@ -47,16 +47,24 @@ export function SearchBar({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fecha dropdown ao clicar fora
+  // Fecha dropdown ao clicar fora (pointerdown em capture pra disparar antes
+  // que Radix/Popover/Dialog consumam o evento) e ao pressionar Escape.
   useEffect(() => {
     if (!dropdownOpen) return;
-    const onClickOutside = (e: MouseEvent) => {
+    const onPointerDown = (e: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
     };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDropdownOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [dropdownOpen]);
 
   const toggleColumn = (key: string) => {
@@ -82,12 +90,21 @@ export function SearchBar({
         <Search className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
 
-      {/* Input */}
+      {/* Input — focar/clicar fecha o dropdown de colunas */}
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setDropdownOpen(false)}
         placeholder={placeholder}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
+        name="search-term"
         className="flex-1 h-full px-2 text-xs bg-transparent outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 min-w-0"
       />
 

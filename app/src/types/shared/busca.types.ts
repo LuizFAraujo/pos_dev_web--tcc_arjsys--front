@@ -69,6 +69,11 @@ export interface BuscaRequest {
   busca?: string;
   filtros?: FiltroColuna[];
   ordenacoes?: Ordenacao[];
+  /**
+   * Colunas onde aplicar a busca textual (campo `busca`). Quando vazio/undefined,
+   * o back usa o default do service. Quando vier, substitui o default.
+   */
+  colunasBusca?: string[];
 }
 
 /**
@@ -77,7 +82,10 @@ export interface BuscaRequest {
  */
 export interface PaginadoResponse<T> {
   itens: T[];
+  /** Total de registros após filtros e busca. */
   total: number;
+  /** Total de registros da tabela inteira, sem filtros nem busca. */
+  totalGeral: number;
   pagina: number;
   tamanho: number;
   totalPaginas: number;

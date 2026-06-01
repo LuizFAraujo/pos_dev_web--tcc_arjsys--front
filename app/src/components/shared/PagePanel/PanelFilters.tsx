@@ -20,8 +20,8 @@
  *   />
  */
 
-import { useState, useMemo } from 'react';
-import { Filter, FilterX, ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Filter, FilterX, ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown, Check, X } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { FilterConditionRow, LogicToggle, TEXT_FILTER_OPTIONS } from '@/components/shared/DataGrid/FilterConditionRow';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,8 @@ interface PanelFiltersProps {
   values: Record<string, CompoundFilter>;
   /** Callback ao mudar qualquer filtro - controlled */
   onChange: (values: Record<string, CompoundFilter>) => void;
+  /** Callback opcional pra fechar o painel (chamado no Aplicar/Cancelar/Limpar todos) */
+  onClose?: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -67,23 +69,55 @@ function countActive(f?: CompoundFilter): number {
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
-export function PanelFilters({ filters, values, onChange }: PanelFiltersProps) {
+export function PanelFilters({ filters, values, onChange, onClose }: PanelFiltersProps) {
   // Accordion expand/collapse - local (não precisa sincronizar)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const getValue = (key: string, type: GridFilterType): CompoundFilter =>
-    values[key] || { type };
+  // Estado LOCAL (`pendentes`) — só comita pro estado externo (`onChange`)
+  // ao clicar em "Aplicar". Evita re-render do grid a cada microação.
+  const [pendentes, setPendentes] = useState<Record<string, CompoundFilter>>(values);
 
-  const setValue = (key: string, f: CompoundFilter) =>
-    onChange({ ...values, [key]: f });
+  // Quando `values` externo muda (ex: limpar tudo pela sidebar do grid),
+  // sincroniza pendentes
+  useEffect(() => {
+    setPendentes(values);
+  }, [values]);
 
-  const clearOne = (key: string) => {
-    const next = { ...values };
-    delete next[key];
-    onChange(next);
+  const haPendencias = useMemo(
+    () => JSON.stringify(pendentes) !== JSON.stringify(values),
+    [pendentes, values],
+  );
+
+  const aplicar = () => {
+    onChange(pendentes);
+    onClose?.();
   };
 
-  const clearAll = () => onChange({});
+  const cancelar = () => {
+    setPendentes(values);
+    onClose?.();
+  };
+
+  const getValue = (key: string, type: GridFilterType): CompoundFilter =>
+    pendentes[key] || { type };
+
+  const setValue = (key: string, f: CompoundFilter) =>
+    setPendentes((prev) => ({ ...prev, [key]: f }));
+
+  // Limpar individual aplica direto (sem precisar Aplicar) e mantem sidebar aberta
+  const clearOne = (key: string) => {
+    const proximos = { ...pendentes };
+    delete proximos[key];
+    setPendentes(proximos);
+    onChange(proximos);
+  };
+
+  // Limpar TODOS aplica direto + fecha sidebar
+  const clearAll = () => {
+    setPendentes({});
+    onChange({});
+    onClose?.();
+  };
 
   const toggle = (key: string) =>
     setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
@@ -98,8 +132,8 @@ export function PanelFilters({ filters, values, onChange }: PanelFiltersProps) {
 
   const anyExpanded = Object.values(expanded).some(v => v);
   const activeCount = useMemo(
-    () => filters.filter(f => isActive(values[f.key])).length,
-    [filters, values],
+    () => filters.filter(f => isActive(pendentes[f.key])).length,
+    [filters, pendentes],
   );
 
   // ── Render: texto (multi-condição) ────────────────────────────────────────
@@ -298,7 +332,7 @@ export function PanelFilters({ filters, values, onChange }: PanelFiltersProps) {
       {/* Lista de filtros accordion */}
       <div className="flex-1 overflow-y-auto -mx-4 px-4">
         {filters.map((col) => {
-          const f = values[col.key];
+          const f = pendentes[col.key];
           const active = isActive(f);
           const count = countActive(f);
           const isOpen = expanded[col.key] || false;
@@ -354,6 +388,29 @@ export function PanelFilters({ filters, values, onChange }: PanelFiltersProps) {
             </div>
           );
         })}
+      </div>
+
+      {/* Footer fixo: Cancelar (sempre habilitado, descarta + fecha) /
+          Aplicar (so quando ha pendencias, comita + fecha) */}
+      <div className="flex items-center justify-end gap-1 pt-2 mt-1 border-t border-slate-200 dark:border-slate-700">
+        <button
+          type="button"
+          onClick={cancelar}
+          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          <X className="h-3 w-3" /> Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={aplicar}
+          disabled={!haPendencias}
+          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded font-medium ${haPendencias
+            ? 'bg-blue-600 text-white hover:bg-blue-700'
+            : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+            }`}
+        >
+          <Check className="h-3 w-3" /> Aplicar
+        </button>
       </div>
     </div>
   );

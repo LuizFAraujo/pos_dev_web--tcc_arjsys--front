@@ -10,12 +10,18 @@
  * - checklist: checkboxes multi-select (todos marcados = sem filtro)
  *
  * Ícone fica amarelo preenchido quando filtro ativo.
- * Botão limpar tudo + contagem ficam ao lado do título.
+ *
+ * Comportamento de edição: o popover mantém estado LOCAL (`pendente`)
+ * enquanto o usuário edita. Mudanças só são comitadas pro estado externo
+ * (`onChange`) quando o usuário clica em "Aplicar" (ou pressiona Enter).
+ * Botão "Cancelar" descarta as alterações em curso. Isso evita re-render
+ * do grid a cada microação (abrir, trocar operador, digitar cada tecla).
  *
  * Lógica de filtro centralizada em filterEngine.ts.
  */
 
-import { Filter, FilterX, Eraser } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Filter, FilterX, Eraser, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -34,90 +40,152 @@ export { isFilterActive, matchSingleCondition };
 interface ColFilterPopoverProps {
   type: GridFilterType;                              // tipo de filtro da coluna
   options?: { label: string; value: string }[];      // opções pra filterType 'select' ou 'checklist'
-  value: CompoundFilter;                             // valor atual do filtro
-  onChange: (f: CompoundFilter) => void;              // callback ao mudar filtro
+  value: CompoundFilter;                             // valor atual do filtro (estado externo)
+  onChange: (f: CompoundFilter) => void;              // callback pra COMITAR mudança ao aplicar
   onClear: () => void;                               // callback ao limpar filtro
   header: string;                                    // nome da coluna (exibido no título)
 }
 
-export function ColFilterPopover({ type, options, value, onChange, header }: ColFilterPopoverProps) {
-  const on = isFilterActive(value);
+function condicaoVazia(): FilterCondition {
+  return { operator: 'contem', value: '', logic: 'E' };
+}
 
-  // Pra tipo 'text': usa multi-condição
-  const conditions: FilterCondition[] = (type === 'text' && value.conditions) ? value.conditions : [];
-  const hasConditions = conditions.some(c => c.value.trim());
-  const activeCount = conditions.filter(c => c.value.trim()).length;
+function inicializarPendente(value: CompoundFilter, type: GridFilterType): CompoundFilter {
+  if (type === 'text' && (!value.conditions || value.conditions.length === 0)) {
+    return { ...value, type, conditions: [condicaoVazia()] };
+  }
+  return { ...value, type };
+}
+
+export function ColFilterPopover({ type, options, value, onChange, header }: ColFilterPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [pendente, setPendente] = useState<CompoundFilter>(() => inicializarPendente(value, type));
+
+  // Sincroniza pendente com value quando popover abre
+  // (snapshot do estado externo no momento da abertura)
+  useEffect(() => {
+    if (open) setPendente(inicializarPendente(value, type));
+  }, [open, value, type]);
+
+  const filtroAtivoExterno = isFilterActive(value);
+  const haPendencias = useMemo(
+    () => JSON.stringify(pendente) !== JSON.stringify(inicializarPendente(value, type)),
+    [pendente, value, type],
+  );
+
+  const aplicar = () => {
+    onChange(pendente);
+    setOpen(false);
+  };
+
+  const cancelar = () => {
+    setPendente(inicializarPendente(value, type));
+    setOpen(false);
+  };
+
+  // Enter no popover → Aplicar (exceto se for em textarea ou similar)
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      aplicar();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelar();
+    }
+  };
+
+  // ── Helpers de edição (operam sobre `pendente`) ────────────────────────────
+
+  const conditions: FilterCondition[] = (type === 'text' && pendente.conditions) ? pendente.conditions : [];
+  const hasConditions = conditions.some((c) => c.value.trim());
+  const activeCount = conditions.filter((c) => c.value.trim()).length;
 
   const updateConditions = (newConds: FilterCondition[]) => {
-    onChange({ ...value, conditions: newConds });
+    setPendente((prev) => ({ ...prev, conditions: newConds }));
   };
 
   const addCondition = () => {
-    updateConditions([...conditions, { operator: 'contem', value: '', logic: 'E' }]);
+    updateConditions([...conditions, condicaoVazia()]);
   };
 
   const removeCondition = (idx: number) => {
     const next = conditions.filter((_, i) => i !== idx);
-    updateConditions(next.length > 0 ? next : [{ operator: 'contem', value: '', logic: 'E' }]);
+    updateConditions(next.length > 0 ? next : [condicaoVazia()]);
   };
 
-  // Garante pelo menos 1 condição ao abrir o popover
-  const ensureConditions = () => {
-    if (type === 'text' && conditions.length === 0) {
-      onChange({ ...value, conditions: [{ operator: 'contem', value: '', logic: 'E' }] });
-    }
+  // Eraser: zera valores das condicoes E aplica direto (fecha popover)
+  const limparValoresTexto = () => {
+    const zerado = { ...pendente, conditions: conditions.map((c) => ({ ...c, value: '' })) };
+    setPendente(zerado);
+    onChange(zerado);
+    setOpen(false);
   };
 
-  const popWidth = type === 'checklist' ? 'w-38' : type === 'text' ? 'w-72' : 'w-52';
+  // FilterX: reseta filtro (condicao unica vazia) + aplica direto + fecha
+  const resetarFiltroPendente = () => {
+    const zerado: CompoundFilter = { type, conditions: [condicaoVazia()] };
+    setPendente(zerado);
+    onChange(zerado);
+    setOpen(false);
+  };
+
+  // Checklist clear: zera selecao + aplica direto + fecha
+  const limparChecklistPendente = () => {
+    const zerado = { ...pendente, checkedValues: undefined };
+    setPendente(zerado);
+    onChange(zerado);
+    setOpen(false);
+  };
+
+  const popWidth = type === 'checklist' ? 'w-48' : type === 'text' ? 'w-72' : 'w-52';
 
   return (
-    <Popover onOpenChange={(open) => { if (open) ensureConditions(); }}>
-      {/* Ícone - amarelo preenchido quando ativo */}
+    <Popover open={open} onOpenChange={setOpen}>
+      {/* Ícone - amarelo preenchido quando filtro ATIVO no estado externo */}
       <PopoverTrigger asChild>
-        <button className={`p-0.5 rounded hover:bg-slate-600 ${on ? 'text-yellow-400 bg-slate-600' : 'opacity-40 hover:opacity-80'}`}>
-          <Filter className="h-3 w-3" fill={on ? 'currentColor' : 'none'} />
+        <button className={`p-0.5 rounded hover:bg-slate-600 ${filtroAtivoExterno ? 'text-yellow-400 bg-slate-600' : 'opacity-40 hover:opacity-80'}`}>
+          <Filter className="h-3 w-3" fill={filtroAtivoExterno ? 'currentColor' : 'none'} />
         </button>
       </PopoverTrigger>
 
-      <PopoverContent className={`${popWidth} space-y-1.5 max-h-[70vh] overflow-y-auto`} align="start">
+      <PopoverContent
+        className={`${popWidth} space-y-1.5 max-h-[70vh] overflow-y-auto`}
+        align="start"
+        onKeyDown={onKeyDown}
+      >
 
         {/* Título + contagem + limpar valores + resetar filtro */}
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-muted-foreground">Filtrar: {header}</p>
           <div className="flex items-center gap-1">
-            {hasConditions && (
+            {type === 'text' && hasConditions && (
               <span className="text-[9px] text-muted-foreground mr-1">{activeCount} filtro(s)</span>
             )}
-            {hasConditions && (
+            {type === 'text' && hasConditions && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => {
-                    const cleared = conditions.map(c => ({ ...c, value: '' }));
-                    updateConditions(cleared);
-                  }} className="p-0.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <button onClick={limparValoresTexto} className="p-0.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">
                     <Eraser className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent><p>Limpar valores</p></TooltipContent>
               </Tooltip>
             )}
-            {(conditions.length > 1 || hasConditions) && (
+            {type === 'text' && (conditions.length > 1 || hasConditions) && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => {
-                    onChange({ type: value.type, conditions: [{ operator: 'contem', value: '', logic: 'E' }] });
-                  }} className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                  <button onClick={resetarFiltroPendente} className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
                     <FilterX className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent><p>Resetar filtro</p></TooltipContent>
               </Tooltip>
             )}
-            {/* Limpar checklist - aparece quando filtro checklist está ativo */}
-            {type === 'checklist' && value.checkedValues !== undefined && (
+            {/* Limpar checklist - aplica direto + fecha */}
+            {type === 'checklist' && pendente.checkedValues !== undefined && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button onClick={() => onChange({ ...value, checkedValues: undefined })}
+                  <button onClick={limparChecklistPendente}
                     className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
                     <FilterX className="h-3 w-3" />
                   </button>
@@ -133,7 +201,6 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
           <div className="space-y-0.5">
             {conditions.map((cond, idx) => (
               <div key={idx}>
-                {/* Toggle E/OU entre condições - independente por par */}
                 {idx > 0 && (
                   <LogicToggle
                     logic={conditions[idx - 1].logic}
@@ -172,13 +239,20 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
         {type === 'exact' && (
           <div>
             <label className="text-[10px] text-muted-foreground">Valor exato</label>
-            <Input className="h-7 text-xs" value={value.valor || ''} onChange={(e) => onChange({ ...value, valor: e.target.value })} />
+            <Input
+              className="h-7 text-xs"
+              value={pendente.valor || ''}
+              onChange={(e) => setPendente((prev) => ({ ...prev, valor: e.target.value }))}
+            />
           </div>
         )}
 
         {/* ===== SELECT: dropdown ===== */}
         {type === 'select' && (
-          <Select value={value.valor || '__all__'} onValueChange={(v) => onChange({ ...value, valor: v === '__all__' ? '' : v })}>
+          <Select
+            value={pendente.valor || '__all__'}
+            onValueChange={(v) => setPendente((prev) => ({ ...prev, valor: v === '__all__' ? '' : v }))}
+          >
             <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">Todos</SelectItem>
@@ -190,37 +264,49 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
         {/* ===== NUMBER: range min/max ===== */}
         {type === 'number' && (
           <div className="grid grid-cols-2 gap-2">
-            <div><label className="text-[10px] text-muted-foreground">Mín</label><Input className="h-7 text-xs" type="number" value={value.min || ''} onChange={(e) => onChange({ ...value, min: e.target.value })} /></div>
-            <div><label className="text-[10px] text-muted-foreground">Máx</label><Input className="h-7 text-xs" type="number" value={value.max || ''} onChange={(e) => onChange({ ...value, max: e.target.value })} /></div>
+            <div>
+              <label className="text-[10px] text-muted-foreground">Mín</label>
+              <Input
+                className="h-7 text-xs"
+                type="number"
+                value={pendente.min || ''}
+                onChange={(e) => setPendente((prev) => ({ ...prev, min: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground">Máx</label>
+              <Input
+                className="h-7 text-xs"
+                type="number"
+                value={pendente.max || ''}
+                onChange={(e) => setPendente((prev) => ({ ...prev, max: e.target.value }))}
+              />
+            </div>
           </div>
         )}
 
         {/* ===== CHECKLIST: checkboxes multi-select ===== */}
         {type === 'checklist' && options && (() => {
-          const allValues = options.map(o => o.value);
-          const checked = value.checkedValues ?? allValues;
+          const allValues = options.map((o) => o.value);
+          const checked = pendente.checkedValues ?? allValues;
           const allChecked = checked.length === allValues.length;
 
-          // Marcar todos = sem filtro (remove checkedValues)
-          const setAll = () => {
-            onChange({ ...value, checkedValues: undefined });
-          };
+          const setAll = () => setPendente((prev) => ({ ...prev, checkedValues: undefined }));
           const toggleAll = () => {
             if (allChecked) {
-              onChange({ ...value, checkedValues: [] });
+              setPendente((prev) => ({ ...prev, checkedValues: [] }));
             } else {
               setAll();
             }
           };
           const toggleOne = (val: string) => {
             const next = checked.includes(val)
-              ? checked.filter(v => v !== val)
+              ? checked.filter((v) => v !== val)
               : [...checked, val];
-            // Se marcou todos, limpa o filtro
             if (next.length === allValues.length) {
               setAll();
             } else {
-              onChange({ ...value, checkedValues: next });
+              setPendente((prev) => ({ ...prev, checkedValues: next }));
             }
           };
 
@@ -249,6 +335,28 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
             </div>
           );
         })()}
+
+        {/* ── Footer: Aplicar / Cancelar ────────────────────────────────────── */}
+        <div className="flex items-center justify-end gap-1 pt-1.5 mt-1 border-t border-slate-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={cancelar}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X className="h-3 w-3" /> Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={aplicar}
+            disabled={!haPendencias}
+            className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded font-medium ${haPendencias
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+              }`}
+          >
+            <Check className="h-3 w-3" /> Aplicar
+          </button>
+        </div>
 
       </PopoverContent>
     </Popover>

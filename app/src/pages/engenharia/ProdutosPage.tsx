@@ -13,15 +13,14 @@
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { Plus, ScanSearch, FolderOpen, FileText, FileX2, SlidersHorizontal } from 'lucide-react';
+import { ScanSearch, FolderOpen, FileText, FileX2, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColumnFiltersState } from '@tanstack/react-table';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
-import { DataGrid, applyColumnFilters } from '@/components/shared/DataGrid';
+import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -29,7 +28,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/App
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
-import { isFilterActive } from '@/components/shared/DataGrid/filterEngine';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import { ProdutoDeleteDialog } from '@/components/engenharia/ProdutoDeleteDialog';
 import { ProdutoForm } from '@/components/engenharia/ProdutoForm';
 import type { ProdutoFormHandle } from '@/components/engenharia/ProdutoForm';
@@ -275,46 +274,47 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     setColumnFilters(next);
   }, [setColumnFilters]);
 
-  const hasColumnFilters = useMemo(
-    () => columnFilters.some(f => isFilterActive(f.value as CompoundFilter)),
-    [columnFilters],
-  );
-
   const page = usePageMode<Produto>(tab.id, (p) => String(p.id), tab.type);
 
-  // ─── Store ────────────────────────────────────────────────────────────────────
+  // ─── Busca textual server-side (alimenta useGridQuery) ────────────────────────
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
 
-  const produtos = useProdutosStore((s) => s.produtos);
-  const isLoading = useProdutosStore((s) => s.isLoading);
-  const error = useProdutosStore((s) => s.error);
-  const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
+  // ─── Query server-side em modo scroll infinito ────────────────────────────────
+  // colunasBuscaInicial precisa bater com defaultSearchCols do useListState abaixo,
+  // ja que ambos compartilham a mesma key useTabState(tab.id + '-search-cols').
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<Produto>({
+    endpoint: '/api/engenharia/Produtos/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: ['codigo', 'descricao'],
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  // ─── Mutações via store (mantém abrirPasta/extensoes/abrirDocumento) ──────────
   const createProduto = useProdutosStore((s) => s.createProduto);
   const updateProduto = useProdutosStore((s) => s.updateProduto);
   const deleteProduto = useProdutosStore((s) => s.deleteProduto);
   const varreduraDocumentos = useProdutosStore((s) => s.varreduraDocumentos);
 
-  useEffect(() => { fetchProdutos(); }, [fetchProdutos]);
-  useEffect(() => { if (error) toast.error(error); }, [error]);
-
-  // ─── Lista ────────────────────────────────────────────────────────────────────
+  // ─── Lista (usa itens já paginados do back) ───────────────────────────────────
 
   const list = useListState<Produto>({
     tabId: tab.id,
-    data: produtos,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
     defaultSearchCols: ['codigo', 'descricao'],
   });
 
-  // ─── Dados filtrados para CardGrid (SearchBar + columnFilters) ────────────────
-  const cardData = useMemo(
-    () => applyColumnFilters(list.filtrados, columnFilters),
-    [list.filtrados, columnFilters],
-  );
+  // Em modo server-side: itens já vêm filtrados/ordenados/paginados
+  const cardData = itens;
 
   // ─── Delete ───────────────────────────────────────────────────────────────────
 
   const del = useDeleteDialog<Produto>({
-    onDelete: (p) => deleteProduto(p.id),
+    onDelete: async (p) => {
+      await deleteProduto(p.id);
+      refetch();
+    },
     onAfterDelete: (p) => {
       if (p.id === list.selectedCardId) list.setSelectedCardId(null);
     },
@@ -328,7 +328,8 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
     } else {
       await createProduto(data);
     }
-  }, [page.mode, page.editingItem, updateProduto, createProduto]);
+    refetch();
+  }, [page.mode, page.editingItem, updateProduto, createProduto, refetch]);
 
   // ─── Extra actions (Varredura) ────────────────────────────────────────────────
 
@@ -337,7 +338,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => varreduraDocumentos()}>
+            onClick={async () => { await varreduraDocumentos(); refetch(); }}>
             <ScanSearch className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
@@ -353,7 +354,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
         <TooltipContent><p>Filtros</p></TooltipContent>
       </Tooltip>
     </>
-  ), [varreduraDocumentos]);
+  ), [varreduraDocumentos, refetch]);
 
   // ─── Colunas ──────────────────────────────────────────────────────────────────
 
@@ -416,8 +417,8 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           onDelete={del.requestDelete}
           lockMessage="Este produto já está sendo editado em outra aba."
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -429,30 +430,18 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           noSelectionText="Selecione um produto"
         />
       }
-      footer={page.mode === 'list' ? (
-        <ListFooter
-          filtered={cardData.length}
-          total={list.filtrados.length}
-          hasFilters={hasColumnFilters}
-          onClearFilters={() => setColumnFilters([])}
-        />
-      ) : undefined}
     >
 
       {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
         <DataGrid
           ref={list.gridRef} tabId={tab.id} storageId="produtos"
-          columns={columns} data={list.filtrados}
+          columns={columns} data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading} loadingText="Carregando produtos..."
-          emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
           onSelect={(item) => list.setSelectedItem(item as Produto | null)}
           onActivate={(item) => page.openView(item as Produto)}
-          emptyAction={
-            <Button onClick={() => page.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-            </Button>
-          }
         />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
@@ -462,13 +451,8 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
           onActivate={(item) => page.openView(item as Produto)}
           loading={isLoading} loadingText="Carregando produtos..."
-          emptyTitle="Nenhum produto encontrado" emptyDescription="Crie o primeiro produto"
+          emptyTitle="Nenhum produto encontrado"
           renderCard={(p) => <ProdutoCard produto={p} />}
-          emptyAction={
-            <Button onClick={() => page.openNew()}>
-              <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-            </Button>
-          }
         />
       </div>
 
@@ -489,7 +473,12 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       />
 
       <PagePanel open={panelOpen} onClose={() => setPanelOpen(false)} title="Filtros">
-        <PanelFilters filters={panelFilterColumns} values={panelFilterValues} onChange={handlePanelFilterChange} />
+        <PanelFilters
+          filters={panelFilterColumns}
+          values={panelFilterValues}
+          onChange={handlePanelFilterChange}
+          onClose={() => setPanelOpen(false)}
+        />
       </PagePanel>
 
     </PageShell>

@@ -26,20 +26,16 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
-  type PaginationState,
   type Updater,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
 import { userScopedLocalStorage } from '@/lib/userScopedStorage';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Inbox } from 'lucide-react';
 import { ColFilterPopover } from './ColFilterPopover';
-import { compoundFilterFn } from './filterEngine';
-import { DataGridPaginator } from './DataGridPaginator';
+import { compoundFilterFn, isFilterActive } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
 import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
-
-const DEFAULT_TAMANHO_OPTIONS = [25, 50, 100, 200];
 
 
 // ============================================
@@ -49,7 +45,6 @@ const DEFAULT_TAMANHO_OPTIONS = [25, 50, 100, 200];
 function DataGridInner<T extends Record<string, any>>({
   tabId, storageId, columns: gc, data,
   loading = false, loadingText = 'Carregando...',
-  emptyTitle = 'Nenhum registro encontrado', emptyDescription, emptyAction,
   headerHeight = DEFAULT_HEADER_HEIGHT,
   rowHeight = DEFAULT_ROW_HEIGHT,
   className = '',
@@ -58,17 +53,17 @@ function DataGridInner<T extends Record<string, any>>({
   activateOnDoubleClick = false,
   serverSide = false,
   total,
-  tamanhoOptions = DEFAULT_TAMANHO_OPTIONS,
+  totalGeral,
+  hasMore = false,
+  onCarregarMais,
 }: DataGridProps<T>, ref: Ref<DataGridHandle>) {
 
   const [sorting, setSorting] = useTabState<SortingState>(tabId + '-sort', []);
   const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tabId + '-filters', []);
+  const [busca] = useTabState<string>(tabId + '-busca', '');
   const [selectedIdx, setSelectedIdx] = useTabState<number | null>(tabId + '-selected', null);
-  const [pagina, setPagina] = useTabState<number>(tabId + '-pagina', 1);
-  const [tamanho, setTamanho] = useTabState<number>(tabId + '-tamanho', tamanhoOptions[1] ?? 50);
 
   const totalRegistros = total ?? data.length;
-  const totalPaginas = tamanho > 0 ? Math.max(1, Math.ceil(totalRegistros / tamanho)) : 1;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,13 +84,6 @@ function DataGridInner<T extends Record<string, any>>({
   const handleFiltersChange = useCallback((updater: Updater<ColumnFiltersState>) => {
     setColumnFilters(typeof updater === 'function' ? updater(columnFilters) : updater);
   }, [columnFilters, setColumnFilters]);
-
-  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
-    const atual: PaginationState = { pageIndex: pagina - 1, pageSize: tamanho };
-    const next = typeof updater === 'function' ? updater(atual) : updater;
-    setPagina(next.pageIndex + 1);
-    if (next.pageSize !== tamanho) setTamanho(next.pageSize);
-  }, [pagina, tamanho, setPagina, setTamanho]);
 
   const lsKey = `grid-widths-${storageId || tabId}`;
 
@@ -163,17 +151,12 @@ function DataGridInner<T extends Record<string, any>>({
     },
   })), [gc]);
 
-  const pagination: PaginationState = { pageIndex: pagina - 1, pageSize: tamanho };
-
   const table = useReactTable({
     data,
     columns: tCols,
-    state: serverSide
-      ? { sorting, columnFilters, pagination }
-      : { sorting, columnFilters },
+    state: { sorting, columnFilters },
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: handleFiltersChange,
-    onPaginationChange: serverSide ? handlePaginationChange : undefined,
     rowCount: serverSide ? totalRegistros : undefined,
     manualFiltering: serverSide,
     manualSorting: serverSide,
@@ -199,6 +182,22 @@ function DataGridInner<T extends Record<string, any>>({
 
   const virtualRows = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
+
+  // ── Trigger de carregarMais quando virtualizador chega perto do fim ────────
+  // Threshold: dispara quando o último item visível está nas últimas 10 linhas
+  const onCarregarMaisRef = useRef(onCarregarMais);
+  onCarregarMaisRef.current = onCarregarMais;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+
+  useEffect(() => {
+    if (!serverSide || !hasMore || loadingRef.current) return;
+    if (virtualRows.length === 0) return;
+    const ultimoVisivel = virtualRows[virtualRows.length - 1];
+    if (ultimoVisivel.index >= rows.length - 10) {
+      onCarregarMaisRef.current?.();
+    }
+  }, [serverSide, hasMore, virtualRows, rows.length]);
 
   // ── Refs pra callbacks estáveis ─────────────────────────────────────────────
 
@@ -264,8 +263,9 @@ function DataGridInner<T extends Record<string, any>>({
     return () => el.removeEventListener('keydown', onKey);
   }, [setSelectedIdx, selectedIdx, scrollToIdx]);
 
-  // --- LOADING ---
-  if (loading) return (
+  // --- LOADING (apenas quando primeira carga e sem dados — chunks subsequentes
+  //     não bloqueiam o grid; o spinner discreto fica no rodapé) ---
+  if (loading && data.length === 0) return (
     <div className="flex h-full items-center justify-center">
       <div className="text-center">
         <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -274,14 +274,18 @@ function DataGridInner<T extends Record<string, any>>({
     </div>
   );
 
-  // --- EMPTY ---
-  if (data.length === 0) return (
-    <div className="flex h-full flex-col items-center justify-center">
-      <p className="mb-2 text-lg font-medium">{emptyTitle}</p>
-      {emptyDescription && <p className="mb-4 text-sm text-muted-foreground">{emptyDescription}</p>}
-      {emptyAction}
-    </div>
-  );
+  // Sem early return de "empty" — a mensagem vai dentro do body, com header
+  // do grid sempre visível pra preservar referência visual das colunas.
+  const temFiltrosAtivos = columnFilters.some((f) => isFilterActive(f.value as CompoundFilter));
+  const temBusca = busca.trim().length > 0;
+  const mensagemVazio = temFiltrosAtivos || temBusca
+    ? 'Nenhum registro encontrado para os filtros aplicados'
+    : 'Nenhum registro';
+  const limparFiltrosEBusca = () => {
+    setColumnFilters([]);
+    // busca é controlada pela page (SearchBar) — não temos setter aqui;
+    // o link "Limpar filtros" se restringe a filtros de coluna.
+  };
 
   // --- RENDER ---
   return (
@@ -360,6 +364,27 @@ function DataGridInner<T extends Record<string, any>>({
 
           {/* BODY - Virtualizado */}
           <tbody>
+            {/* Empty state padronizado — header acima permanece visível */}
+            {data.length === 0 && (
+              <tr>
+                <td colSpan={gc.length} className="px-3 py-16 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Inbox className="h-10 w-10 text-slate-300 dark:text-slate-700" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{mensagemVazio}</p>
+                    {temFiltrosAtivos && (
+                      <button
+                        type="button"
+                        onClick={limparFiltrosEBusca}
+                        className="text-xs text-blue-500 hover:underline"
+                      >
+                        Limpar filtros
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )}
+
             {/* Spacer top - empurra as linhas visíveis pra posição correta */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
@@ -421,17 +446,38 @@ function DataGridInner<T extends Record<string, any>>({
         </table>
       </div>
 
-      {(serverSide || total !== undefined) && (
-        <DataGridPaginator
-          pagina={pagina}
-          totalPaginas={totalPaginas}
-          total={totalRegistros}
-          tamanho={tamanho}
-          tamanhoOptions={tamanhoOptions}
-          onPaginaChange={setPagina}
-          onTamanhoChange={(t) => { setTamanho(t); setPagina(1); }}
-        />
-      )}
+      {/* Rodape fino: contagem ao estilo Protheus, com separador de milhar pt-BR
+         - sem filtro/busca: "71.089 registros"
+         - com filtro/busca: "2.033 de 71.089 registros"
+         Fallback quando totalGeral=0 (back antigo ou ainda nao respondeu):
+         usa total > 0 > data.length na ordem
+       */}
+      {serverSide && (() => {
+        const totalRef = (totalGeral && totalGeral > 0)
+          ? totalGeral
+          : (total && total > 0) ? total : data.length;
+        const filtrando = temFiltrosAtivos || temBusca;
+        const fmt = (n: number) => n.toLocaleString('pt-BR');
+        return (
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1 text-[11px] text-slate-500 dark:text-slate-400">
+            {loading && data.length > 0 && (
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-slate-700 dark:border-t-slate-300" />
+            )}
+            <span>
+              {filtrando ? (
+                <>
+                  <span className="font-semibold">{fmt(total ?? 0)}</span>
+                  {' de '}
+                  <span className="font-semibold">{fmt(totalRef)}</span>
+                </>
+              ) : (
+                <span className="font-semibold">{fmt(totalRef)}</span>
+              )}
+              {' '}registros
+            </span>
+          </div>
+        );
+      })()}
 
     </div>
   );

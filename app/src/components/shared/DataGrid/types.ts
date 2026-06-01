@@ -72,27 +72,41 @@ export interface DataGridProps<T> {
    */
   activateOnDoubleClick?: boolean;
 
-  // ── Server-side mode (opcional) ─────────────────────────────────────────
+  // ── Server-side mode (opcional, scroll infinito) ────────────────────────
 
   /**
    * Quando `true`, o grid opera em modo "controlled": filtros, ordenação e
-   * paginação são aplicados no back (via useGridQuery + POST /buscar) e o
-   * grid só renderiza a página atual. Sem isso, segue o modo client-side
-   * histórico (filtros/sort/paginação resolvidos em memória pelo TanStack).
+   * carregamento são feitos no back (via useGridQuery + POST /buscar). Os
+   * itens chegam em chunks, acumulam em `data`, e o grid carrega o próximo
+   * chunk via `onCarregarMais` quando o scroll virtualizado se aproxima do
+   * fim. Sem isso, segue o modo client-side histórico (tudo em memória).
    */
   serverSide?: boolean;
 
   /**
-   * Total de registros (vem do PaginadoResponse do back). Obrigatório quando
-   * `serverSide=true` para o paginator mostrar "X de Y" e calcular páginas.
+   * Total de registros após filtros/busca (vem do PaginadoResponse).
+   * Combinado com `totalGeral`, alimenta o rodapé "N de TotalGeral".
    */
   total?: number;
 
   /**
-   * Opções de tamanho de página oferecidas no seletor do rodapé.
-   * Default: [25, 50, 100, 200].
+   * Total de registros da tabela inteira (sem filtros). Mostrado no
+   * rodapé como referência: "71089 registros" (limpo) ou "100 de 71089
+   * registros" (com filtros/busca).
    */
-  tamanhoOptions?: number[];
+  totalGeral?: number;
+
+  /**
+   * true quando ainda há páginas no back que não foram carregadas — o grid
+   * usa pra decidir se vale a pena chamar `onCarregarMais` ao chegar no fim.
+   */
+  hasMore?: boolean;
+
+  /**
+   * Callback disparado quando o usuário rola até as últimas linhas visíveis.
+   * O consumer (useGridQuery) debounce/protege contra fetch duplicado.
+   */
+  onCarregarMais?: () => void;
 }
 
 /** Métodos expostos pelo DataGrid via ref */

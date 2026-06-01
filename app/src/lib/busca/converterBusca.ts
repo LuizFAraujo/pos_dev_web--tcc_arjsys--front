@@ -150,6 +150,7 @@ export interface MontarBuscaRequestArgs {
   filtros: ColumnFiltersState;
   sort: SortingState;
   busca?: string;
+  colunasBusca?: string[];
   pagina: number;
   tamanho: number;
 }
@@ -166,6 +167,7 @@ export function montarBuscaRequest(args: MontarBuscaRequestArgs): BuscaRequest {
   if (filtrosColunas.length > 0) req.filtros = filtrosColunas;
   if (ordenacoes.length > 0) req.ordenacoes = ordenacoes;
   if (args.busca && args.busca.trim().length > 0) req.busca = args.busca.trim();
+  if (args.colunasBusca && args.colunasBusca.length > 0) req.colunasBusca = args.colunasBusca;
 
   return req;
 }

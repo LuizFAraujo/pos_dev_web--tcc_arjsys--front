@@ -101,6 +101,14 @@ export function FilterConditionRow({
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           placeholder={placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
+          name="filter-value"
           className="w-full h-6 text-[11px] border border-slate-200 dark:border-slate-700 rounded px-1.5 pr-5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         {/* ✕ limpar - só aparece quando tem valor */}
