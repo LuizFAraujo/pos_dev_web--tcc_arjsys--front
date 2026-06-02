@@ -1,23 +1,23 @@
 /**
- * GruposPage.tsx - Página de grupos de produto com modos list/view/new/edit
+ * GruposPage.tsx - Página de grupos em modo server-side com scroll infinito
  *
  * Template: PageShell + PageActions + usePageMode
- * Hooks: useListState, useDeleteDialog
+ * Hooks: useGridQuery (server-side), useListState (UI/cards/search), useDeleteDialog
  */
 
 import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, FolderOpen } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGruposStore } from '@/stores/engenharia/gruposStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import { GrupoDeleteDialog } from '@/components/engenharia/GrupoDeleteDialog';
 import { GrupoForm } from '@/components/engenharia/GrupoForm';
 import type { GrupoFormHandle } from '@/components/engenharia/GrupoForm';
@@ -32,6 +32,8 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'codigo', label: 'Código' },
   { key: 'descricao', label: 'Descrição' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['codigo', 'descricao'];
 
 const NIVEL_OPTIONS = [
   { label: 'Coluna 1 (Grupo)', value: 'Coluna1' },
@@ -69,38 +71,33 @@ export function GruposPage({ tab }: GruposPageProps) {
 
   const page = usePageMode<GrupoProduto>(tab.id, (g) => String(g.id), tab.type);
 
-  // ─── Store ────────────────────────────────────────────────────────────────────
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
 
-  const grupos = useGruposStore((s) => s.grupos);
-  const isLoading = useGruposStore((s) => s.isLoading);
-  const error = useGruposStore((s) => s.error);
-  const fetchGrupos = useGruposStore((s) => s.fetchGrupos);
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<GrupoProduto>({
+    endpoint: '/api/engenharia/GrupoProduto/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
   const createGrupo = useGruposStore((s) => s.createGrupo);
   const updateGrupo = useGruposStore((s) => s.updateGrupo);
   const deleteGrupo = useGruposStore((s) => s.deleteGrupo);
 
-  useEffect(() => { fetchGrupos(); }, [fetchGrupos]);
-  useEffect(() => { if (error) toast.error(error); }, [error]);
-
-  // ─── Lista ────────────────────────────────────────────────────────────────────
-
   const list = useListState<GrupoProduto>({
     tabId: tab.id,
-    data: grupos,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['codigo', 'descricao'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
-  // ─── Delete ───────────────────────────────────────────────────────────────────
-
   const del = useDeleteDialog<GrupoProduto>({
-    onDelete: (g) => deleteGrupo(g.id),
+    onDelete: async (g) => { await deleteGrupo(g.id); refetch(); },
     onAfterDelete: (g) => {
       if (g.id === list.selectedCardId) list.setSelectedCardId(null);
     },
   });
-
-  // ─── Save ─────────────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(async (data: GrupoProdutoFormData) => {
     if (page.mode === 'edit' && page.editingItem) {
@@ -108,9 +105,8 @@ export function GruposPage({ tab }: GruposPageProps) {
     } else {
       await createGrupo(data);
     }
-  }, [page.mode, page.editingItem, updateGrupo, createGrupo]);
-
-  // ─── Colunas ──────────────────────────────────────────────────────────────────
+    refetch();
+  }, [page.mode, page.editingItem, updateGrupo, createGrupo, refetch]);
 
   const columns: GridColumn<GrupoProduto>[] = useMemo(() => [
     {
@@ -140,15 +136,10 @@ export function GruposPage({ tab }: GruposPageProps) {
     },
   ], []);
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
-
   const inForm = page.mode !== 'list';
 
   return (
     <PageShell module="Engenharia" title="Grupos de Produto" mode={page.mode}
-      footer={page.mode === 'list' ? (
-        <ListFooter filtered={list.filtrados.length} total={grupos.length} />
-      ) : undefined}
       headerRight={
         <PageActions
           page={page}
@@ -156,8 +147,8 @@ export function GruposPage({ tab }: GruposPageProps) {
           onDelete={del.requestDelete}
           lockMessage="Este grupo já está sendo editado em outra aba."
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -169,37 +160,26 @@ export function GruposPage({ tab }: GruposPageProps) {
         />
       }
     >
-
-      {/* Grid e Cards sempre montados - alterna visibilidade */}
       <div style={{ display: !inForm && list.isListMode ? 'contents' : 'none' }}>
-          <DataGrid
-            ref={list.gridRef} tabId={tab.id} storageId="grupos"
-            columns={columns} data={list.filtrados}
-            loading={isLoading} loadingText="Carregando grupos..."
-            emptyTitle="Nenhum grupo encontrado" emptyDescription="Crie o primeiro grupo"
-            onSelect={(item) => list.setSelectedItem(item as GrupoProduto | null)}
-            onActivate={(item) => page.openView(item as GrupoProduto)}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <DataGrid
+          ref={list.gridRef} tabId={tab.id} storageId="grupos"
+          columns={columns} data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
+          loading={isLoading} loadingText="Carregando grupos..."
+          onSelect={(item) => list.setSelectedItem(item as GrupoProduto | null)}
+          onActivate={(item) => page.openView(item as GrupoProduto)}
+        />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
-          <CardGrid
-            ref={list.cardGridRef} data={list.filtrados} selectedId={list.selectedCardId}
-            onSelect={(g) => list.setSelectedCardId(g?.id ?? null)}
-            onActivate={(item) => page.openView(item as GrupoProduto)}
-            loading={isLoading} loadingText="Carregando grupos..."
-            emptyTitle="Nenhum grupo encontrado" emptyDescription="Crie o primeiro grupo"
-            renderCard={(g) => <GrupoCard grupo={g} />}
-            emptyAction={
-              <Button onClick={() => page.openNew()}>
-                <Plus className="mr-2 h-4 w-4" /> Criar Primeiro
-              </Button>
-            }
-          />
+        <CardGrid
+          ref={list.cardGridRef} data={itens} selectedId={list.selectedCardId}
+          onSelect={(g) => list.setSelectedCardId(g?.id ?? null)}
+          onActivate={(item) => page.openView(item as GrupoProduto)}
+          loading={isLoading} loadingText="Carregando grupos..."
+          emptyTitle="Nenhum grupo encontrado"
+          renderCard={(g) => <GrupoCard grupo={g} />}
+        />
       </div>
 
       {inForm && (
@@ -221,7 +201,3 @@ export function GruposPage({ tab }: GruposPageProps) {
     </PageShell>
   );
 }
-
-
-
-

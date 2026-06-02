@@ -1,7 +1,7 @@
 /**
  * LiberacaoProjetosPage.tsx - Engenharia libera Projetos (Produto BOM) para PVs.
  *
- * Padrão idêntico a NumeroSeriePage / ProdutosPage:
+ * Padrão server-side com scroll infinito (idêntico a PedidosPage):
  *   - Grid é overview (sem botão de ação por linha)
  *   - Header tem os botões padrão (view, edit) - sem new/delete (PVs vêm do Comercial)
  *   - Editar abre form com picker de Projeto BOM
@@ -14,9 +14,10 @@ import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShe
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { useListState } from '@/hooks/useListState';
+import { useTabState } from '@/hooks/useTabState';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import {
   STATUS_COLORS,
   STATUS_LABELS,
@@ -41,14 +42,11 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'produtoBomDescricao', label: 'Projeto' },
 ];
 
+const DEFAULT_SEARCH_COLS = ['codigo', 'clienteNome', 'produtoBomCodigo'];
+
 const TIPO_OPTIONS = [
   { label: 'Normal', value: 'Normal' },
   { label: 'Pré-venda', value: 'PreVenda' },
-];
-
-const SITUACAO_OPTIONS = [
-  { label: 'Liberado', value: 'liberado' },
-  { label: 'Sem projeto', value: 'sem' },
 ];
 
 function PedidoCard({ pv }: { pv: PedidoVenda }) {
@@ -86,25 +84,23 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
   const formRef = useRef<LiberacaoProjetoFormHandle>(null);
   const page = usePageMode<PedidoVenda>(tab.id, (p) => String(p.id), tab.type);
 
-  const pedidos = usePedidosStore((s) => s.pedidos);
-  const isLoading = usePedidosStore((s) => s.isLoading);
-  const error = usePedidosStore((s) => s.error);
-  const fetchPedidos = usePedidosStore((s) => s.fetchPedidos);
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
+
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<PedidoVenda>({
+    endpoint: '/api/comercial/PedidoVenda/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
   const definirProjeto = usePedidosStore((s) => s.definirProjeto);
-
-  useEffect(() => {
-    void fetchPedidos();
-  }, [fetchPedidos]);
-
-  useEffect(() => {
-    if (error) toast.error(error);
-  }, [error]);
 
   const list = useListState<PedidoVenda>({
     tabId: tab.id,
-    data: pedidos,
+    data: itens,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['codigo', 'clienteNome', 'produtoBomCodigo'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
   const handleSave = useCallback(
@@ -116,8 +112,9 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
           ? 'Projeto liberado.'
           : 'Projeto removido.',
       );
+      refetch();
     },
-    [page.editingItem, definirProjeto],
+    [page.editingItem, definirProjeto, refetch],
   );
 
   const columns: GridColumn<PedidoVenda>[] = useMemo(
@@ -213,8 +210,8 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
         header: 'SITUAÇÃO',
         width: 130,
         contentAlign: 'center',
-        filterType: 'checklist',
-        filterOptions: SITUACAO_OPTIONS,
+        sortable: false,
+        filterType: false,
         render: (p) => (
           <span
             className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -238,19 +235,14 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
       module="Engenharia"
       title="Liberação de Projetos"
       mode={page.mode}
-      footer={
-        page.mode === 'list' ? (
-          <ListFooter filtered={list.filtrados.length} total={pedidos.length} />
-        ) : undefined
-      }
       headerRight={
         <PageActions
           page={page}
           activeItem={list.activeItem}
           hideButtons={['new', 'delete']}
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -268,10 +260,11 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
           tabId={tab.id}
           storageId="liberacao-projetos"
           columns={columns}
-          data={list.filtrados}
+          data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading}
           loadingText="Carregando pedidos..."
-          emptyTitle="Nenhum pedido encontrado"
           onSelect={(item) => list.setSelectedItem(item as PedidoVenda | null)}
           onActivate={(item) => page.openView(item as PedidoVenda)}
         />
@@ -279,7 +272,7 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef}
-          data={list.filtrados}
+          data={itens}
           selectedId={list.selectedCardId}
           onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
           onActivate={(item) => page.openView(item as PedidoVenda)}

@@ -1,5 +1,5 @@
 /**
- * DemandaProducaoPage.tsx - Visão flat dos itens de OPs ativas.
+ * DemandaProducaoPage.tsx - Visão flat dos itens de OPs ativas em modo server-side.
  *
  * Visualizar (olho): abre tela cheia em modo view (DemandaProducaoForm).
  *                    Lá dentro, botão padrão de Editar troca pra edit.
@@ -7,18 +7,16 @@
  *                 (DemandaQuickEditDialog), sem ir pra tela cheia.
  */
 
-import { useEffect, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
-import { useDemandaStore } from '@/stores/producao/demandaStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
-import { ListFooter } from '@/components/shared/ListFooter';
 import type { SearchColumn } from '@/components/shared/SearchBar';
-import { Button } from '@/components/ui/button';
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
+import { useGridQuery } from '@/hooks/useGridQuery';
 import type { DemandaItem } from '@/types/producao/demanda.types';
 import { TIPO_PRODUTO_LABELS } from '@/types/engenharia/produto.types';
 import {
@@ -40,6 +38,8 @@ const SEARCH_COLUMNS: SearchColumn[] = [
   { key: 'produtoCodigo', label: 'Cód. Produto' },
   { key: 'produtoDescricao', label: 'Descrição' },
 ];
+
+const DEFAULT_SEARCH_COLS = ['ordemProducaoCodigo', 'produtoCodigo', 'produtoDescricao'];
 
 const TIPO_OPTIONS = [
   { label: 'Fabricado', value: 'Fabricado' },
@@ -108,38 +108,35 @@ export function DemandaProducaoPage({ tab }: PageProps) {
     tab.type,
   );
 
-  const itens = useDemandaStore((s) => s.itens);
-  const isLoading = useDemandaStore((s) => s.isLoading);
-  const error = useDemandaStore((s) => s.error);
-  const fetchDemanda = useDemandaStore((s) => s.fetchDemanda);
+  const [busca, setBusca] = useTabState<string>(tab.id + '-busca', '');
 
-  // Modal de edição rápida (bypass) - controlado por estado por aba
+  const { itens, total, totalGeral, hasMore, isLoading, error, carregarMais, refetch } = useGridQuery<DemandaItem>({
+    endpoint: '/api/producao/Demanda/buscar',
+    tabId: tab.id,
+    colunasBuscaInicial: DEFAULT_SEARCH_COLS,
+  });
+
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  // Refetch ao voltar de edit→list (DemandaProducaoForm patch local sem callback)
+  const modoAnteriorRef = useRef(page.mode);
+  useEffect(() => {
+    if (modoAnteriorRef.current === 'edit' && page.mode === 'list') refetch();
+    modoAnteriorRef.current = page.mode;
+  }, [page.mode, refetch]);
+
   const [quickEditOpen, setQuickEditOpen] = useTabState<boolean>(
     tab.id + '-quick-edit',
     false,
   );
 
-  useEffect(() => {
-    void fetchDemanda();
-  }, [fetchDemanda]);
-
-  useEffect(() => {
-    if (error) toast.error(error);
-  }, [error]);
-
   const list = useListState<DemandaItem>({
     tabId: tab.id,
     data: itens,
     searchColumns: SEARCH_COLUMNS,
-    defaultSearchCols: ['ordemProducaoCodigo', 'produtoCodigo', 'produtoDescricao'],
+    defaultSearchCols: DEFAULT_SEARCH_COLS,
   });
 
-  const handleAtualizar = useCallback(() => {
-    void fetchDemanda();
-  }, [fetchDemanda]);
-
-  // Resolve item ativo a partir do array fresco do store (evita ref stale
-  // após patchItem). useListState guarda selectedItem por referência.
   const ativoRef = list.activeItem as DemandaItem | null;
   const itemAtivo = useMemo(() => {
     if (!ativoRef) return null;
@@ -189,7 +186,8 @@ export function DemandaProducaoPage({ tab }: PageProps) {
         header: 'FALTANTE',
         width: 100,
         contentAlign: 'right',
-        filterType: 'number',
+        sortable: false,
+        filterType: false,
         className: 'font-mono',
       },
       {
@@ -197,7 +195,8 @@ export function DemandaProducaoPage({ tab }: PageProps) {
         header: '%',
         width: 80,
         contentAlign: 'center',
-        filterType: 'number',
+        sortable: false,
+        filterType: false,
         className: 'font-mono',
         render: (d) => `${Number(d.percentualConcluido ?? 0).toFixed(0)}%`,
       },
@@ -253,11 +252,6 @@ export function DemandaProducaoPage({ tab }: PageProps) {
       module="Produção"
       title="Demanda de Produção"
       mode={page.mode}
-      footer={
-        page.mode === 'list' ? (
-          <ListFooter filtered={list.filtrados.length} total={itens.length} />
-        ) : undefined
-      }
       headerRight={
         <PageActions
           page={page}
@@ -265,8 +259,8 @@ export function DemandaProducaoPage({ tab }: PageProps) {
           hideButtons={['new', 'delete']}
           onEditClick={() => setQuickEditOpen(true)}
           searchColumns={SEARCH_COLUMNS}
-          searchTerm={list.searchTerm}
-          onSearchChange={list.setSearchTerm}
+          searchTerm={busca}
+          onSearchChange={setBusca}
           searchSelectedColumns={list.searchCols}
           onSearchColumnsChange={list.setSearchCols}
           gridRef={list.gridRef}
@@ -285,24 +279,19 @@ export function DemandaProducaoPage({ tab }: PageProps) {
           tabId={tab.id}
           storageId="demanda-producao"
           columns={columns}
-          data={list.filtrados}
+          data={itens}
+          serverSide total={total} totalGeral={totalGeral}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           loading={isLoading}
           loadingText="Carregando demanda..."
-          emptyTitle="Nenhuma demanda encontrada"
-          emptyDescription="Não há OPs ativas com itens pendentes."
           onSelect={(item) => list.setSelectedItem(item as DemandaItem | null)}
           onActivate={(item) => page.openView(item as DemandaItem)}
-          emptyAction={
-            <Button variant="outline" onClick={handleAtualizar}>
-              Atualizar
-            </Button>
-          }
         />
       </div>
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef}
-          data={list.filtrados}
+          data={itens}
           selectedId={list.selectedCardId}
           onSelect={(d) =>
             list.setSelectedCardId(d?.ordemProducaoItemId ?? null)
@@ -322,7 +311,6 @@ export function DemandaProducaoPage({ tab }: PageProps) {
           ref={formRef}
           mode={page.mode as 'view' | 'edit'}
           item={
-            // Resolve do array fresco (evita ref stale após patchItem).
             page.editingItem
               ? (itens.find(
                   (i) =>
@@ -340,6 +328,7 @@ export function DemandaProducaoPage({ tab }: PageProps) {
         open={quickEditOpen}
         onOpenChange={setQuickEditOpen}
         item={itemAtivo}
+        onAfterSave={refetch}
       />
     </PageShell>
   );
