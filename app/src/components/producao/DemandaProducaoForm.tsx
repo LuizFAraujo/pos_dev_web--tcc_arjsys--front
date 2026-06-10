@@ -34,7 +34,6 @@ import {
 } from '@/types/producao/ordemProducao.types';
 import { TIPO_PRODUTO_LABELS } from '@/types/engenharia/produto.types';
 import { useOrdemProducaoStore } from '@/stores/producao/ordemProducaoStore';
-import { useDemandaStore } from '@/stores/producao/demandaStore';
 import { apiGet, ApiError } from '@/lib/api';
 import type { DemandaItem } from '@/types/producao/demanda.types';
 import type { PageMode } from '@/components/shared/PageShell';
@@ -65,7 +64,6 @@ export const DemandaProducaoForm = forwardRef<DemandaProducaoFormHandle, Props>(
   function DemandaProducaoForm({ mode, item, tabId, onDirtyChange }, ref) {
     const isEdit = mode === 'edit';
     const apontar = useOrdemProducaoStore((s) => s.apontar);
-    const patchItem = useDemandaStore((s) => s.patchItem);
 
     const [produzidoStr, setProduzidoStr] = useState('');
     const [committed, setCommitted] = useState<number>(0);
@@ -177,21 +175,6 @@ export const DemandaProducaoForm = forwardRef<DemandaProducaoFormHandle, Props>(
             observacao: justificativa,
           });
           setCommitted(produzidoNum);
-
-          // Atualização cirúrgica (sem refetch + sem flicker).
-          // Mantém linha mesmo a 100% pra histórico visual.
-          const novoFaltante = item.quantidadePlanejada - produzidoNum;
-          const novoPct =
-            item.quantidadePlanejada > 0
-              ? Math.round(
-                  (produzidoNum / item.quantidadePlanejada) * 10000,
-                ) / 100
-              : 0;
-          patchItem(item.ordemProducaoItemId, {
-            quantidadeProduzida: produzidoNum,
-            quantidadeFaltante: novoFaltante,
-            percentualConcluido: novoPct,
-          });
           return true;
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Erro ao salvar';

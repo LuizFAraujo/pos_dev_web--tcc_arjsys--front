@@ -143,6 +143,22 @@ export function NumeroSeriePage({ tab }: NumeroSeriePageProps) {
   // Mutações via store
   const gerarSerie = useNumeroSerieStore((s) => s.gerarSerie);
   const updateSerie = useNumeroSerieStore((s) => s.updateSerie);
+  const fetchSeries = useNumeroSerieStore((s) => s.fetchSeries);
+  const storeError = useNumeroSerieStore((s) => s.error);
+  const clearError = useNumeroSerieStore((s) => s.clearError);
+
+  useEffect(() => {
+    if (storeError) { toast.error(storeError); clearError(); }
+  }, [storeError, clearError]);
+
+  // Alimenta o cache local de séries pra o NumeroSerieForm.computeProximoCodigo
+  // calcular o próximo sequencial. Sem isso, o array fica vazio e sugere sempre 00001.
+  useEffect(() => { void fetchSeries(); }, [fetchSeries]);
+
+  // Refresh do cache de séries ao entrar em "novo", pra pegar emissões concorrentes
+  useEffect(() => {
+    if (page.mode === 'new') void fetchSeries();
+  }, [page.mode, fetchSeries]);
 
   // Gate Configuração da Empresa (não migra — config global)
   const config = useConfiguracaoEmpresaStore((s) => s.config);

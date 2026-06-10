@@ -2,7 +2,7 @@
 // STORE - ORDEM DE PRODUÇÃO (Produção) - v3
 // ========================================
 // Endpoints (feature/vendas):
-//   GET    /api/producao/OrdemProducao                      → lista (?pagina=N&tamanho=N)
+//   POST   /api/producao/OrdemProducao/buscar               → listagem server-side (useGridQuery)
 //   GET    /api/producao/OrdemProducao/{id}                 → detalhe (itens + filhas)
 //   GET    /api/producao/OrdemProducao/pedido/{pvId}        → OPs de um PV
 //   GET    /api/producao/OrdemProducao/{id}/status-producao → consolidado %
@@ -14,6 +14,9 @@
 //   PATCH  /api/producao/OrdemProducao/{id}/status          → muda status (justificativa condicional)
 //   PATCH  /api/producao/OrdemProducao/{id}/itens/{itemId}/apontar → aponta produção
 //   DELETE /api/producao/OrdemProducao/{id}                 → só Pendente sem apontamento
+//
+// Listagem agora vem de useGridQuery direto na page. Store mantém só detalhe
+// (form), mutações e fetches específicos por id.
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete, ApiError } from '@/lib/api';
@@ -31,7 +34,6 @@ import type {
 } from '@/types/producao/ordemProducao.types';
 
 interface OrdemProducaoState {
-  ordens: OrdemProducao[];
   ordemDetalhe: OrdemProducao | null;
   historico: OrdemProducaoHistorico[];
   statusProducao: OrdemProducaoStatusProducao | null;
@@ -39,7 +41,6 @@ interface OrdemProducaoState {
   isLoading: boolean;
   error: string | null;
 
-  fetchOrdens: () => Promise<void>;
   fetchOrdem: (id: number) => Promise<void>;
   fetchOrdensByPedido: (pedidoVendaId: number) => Promise<OrdemProducao[]>;
   fetchStatusProducao: (id: number) => Promise<void>;
@@ -68,25 +69,12 @@ function extractArray<T>(raw: unknown): T[] {
 }
 
 export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
-  ordens: [],
   ordemDetalhe: null,
   historico: [],
   statusProducao: null,
   divergencia: null,
   isLoading: false,
   error: null,
-
-  fetchOrdens: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const raw = await apiGet<unknown>('/api/producao/OrdemProducao');
-      const ordens = extractArray<OrdemProducao>(raw);
-      set({ ordens, isLoading: false });
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Erro ao carregar ordens de produção';
-      set({ error: message, isLoading: false });
-    }
-  },
 
   fetchOrdem: async (id) => {
     set({ error: null });
@@ -150,12 +138,7 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
     set({ error: null });
     try {
       const nova = await apiPost<OrdemProducao>('/api/producao/OrdemProducao/master', data);
-      if (nova && nova.id) {
-        set((state) => ({ ordens: [...state.ordens, nova] }));
-        return nova;
-      }
-      await get().fetchOrdens();
-      return null;
+      return nova ?? null;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao criar OP Master';
       set({ error: message });
@@ -167,12 +150,7 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
     set({ error: null });
     try {
       const nova = await apiPost<OrdemProducao>('/api/producao/OrdemProducao/filha', data);
-      if (nova && nova.id) {
-        set((state) => ({ ordens: [...state.ordens, nova] }));
-        return nova;
-      }
-      await get().fetchOrdens();
-      return null;
+      return nova ?? null;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao criar OP Filha';
       set({ error: message });
@@ -184,7 +162,6 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
     set({ error: null });
     try {
       await apiPut(`/api/producao/OrdemProducao/${id}`, data);
-      await get().fetchOrdens();
       if (get().ordemDetalhe?.id === id) await get().fetchOrdem(id);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar ordem';
@@ -201,7 +178,6 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
         payload.justificativa = justificativa.trim();
       }
       await apiPatch(`/api/producao/OrdemProducao/${id}/status`, payload);
-      await get().fetchOrdens();
       if (get().ordemDetalhe?.id === id) await get().fetchOrdem(id);
       // Atualiza histórico se já estiver carregado pra esta OP - assim a aba
       // Histórico no form reflete o evento recém-criado sem precisar fechar/reabrir.
@@ -217,7 +193,6 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
     set({ error: null });
     try {
       await apiPatch(`/api/producao/OrdemProducao/${id}/itens/${itemId}/apontar`, data);
-      await get().fetchOrdens();
       if (get().ordemDetalhe?.id === id) await get().fetchOrdem(id);
       await get().fetchHistorico(id);
     } catch (err) {
@@ -232,7 +207,6 @@ export const useOrdemProducaoStore = create<OrdemProducaoState>((set, get) => ({
     try {
       await apiDelete(`/api/producao/OrdemProducao/${id}`);
       set((state) => ({
-        ordens: state.ordens.filter((o) => o.id !== id),
         ordemDetalhe: state.ordemDetalhe?.id === id ? null : state.ordemDetalhe,
       }));
     } catch (err) {

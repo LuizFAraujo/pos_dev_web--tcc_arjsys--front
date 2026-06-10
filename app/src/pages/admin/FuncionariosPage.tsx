@@ -13,6 +13,7 @@ import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import type { SearchColumn } from '@/components/shared/SearchBar';
+import { ESTADO_OPTIONS } from '@/lib/constants/estados';
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
@@ -105,14 +106,24 @@ export function FuncionariosPage({ tab }: FuncionariosPageProps) {
     },
     {
       key: 'usuario', header: 'Usuário', width: 140, minWidth: 100,
-      className: 'font-mono', filterType: 'exact',
+      className: 'font-mono', filterType: 'text',
     },
     { key: 'cargo', header: 'Cargo', width: 160, minWidth: 100 },
     { key: 'setor', header: 'Setor', width: 160, minWidth: 100 },
     { key: 'telefone', header: 'Telefone', width: 140, minWidth: 100, contentAlign: 'center' },
     {
-      key: 'cidade', header: 'Cidade/UF', width: 150, minWidth: 80,
-      render: (f) => (f.cidade ? `${f.cidade}${f.estado ? '/' + f.estado : ''}` : '-'),
+      key: 'estado', header: 'Estado', width: 80, minWidth: 70,
+      contentAlign: 'center', filterType: 'checklist', filterOptions: ESTADO_OPTIONS,
+      render: (f) => f.estado || <span className="text-muted-foreground">-</span>,
+    },
+    {
+      key: 'cidade', header: 'Cidade', width: 160, minWidth: 110,
+      filterType: 'text',
+      render: (f) => (
+        <span className="truncate">
+          {f.cidade || <span className="text-muted-foreground">-</span>}
+        </span>
+      ),
     },
   ], []);
 

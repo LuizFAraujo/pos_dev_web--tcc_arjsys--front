@@ -127,6 +127,9 @@ export interface OrdemProducao {
   itens: OrdemProducaoItem[];
   filhas: OrdemProducaoFilhaResumo[];
 
+  /** Média de conclusão dos itens — calculada no back. */
+  percentualMedio: number;
+
   criadoEm?: string;
   modificadoEm?: string | null;
 }

@@ -190,6 +190,34 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     const produtos = useProdutosStore((s) => s.produtos);
     const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
 
+    // Lookup O(1) por produto.id pra evitar produtos.find linear em listas grandes
+    // (>100k produtos). Sem isso, treeData recomputa em O(linhas × produtos).
+    const produtosById = useMemo(() => {
+      const m = new Map<number, typeof produtos[number]>();
+      for (const p of produtos) m.set(p.id, p);
+      return m;
+    }, [produtos]);
+
+    // Índices O(1) sobre bomFlat — usados pra evitar bomFlat.filter linear
+    // em getAncestorIds, getExcludeAndCircularIds e na construção do treeData.
+    const bomFlatByFilho = useMemo(() => {
+      const m = new Map<number, typeof bomFlat>();
+      for (const b of bomFlat) {
+        const arr = m.get(b.produtoFilhoId);
+        if (arr) arr.push(b); else m.set(b.produtoFilhoId, [b]);
+      }
+      return m;
+    }, [bomFlat]);
+
+    const bomFlatByPai = useMemo(() => {
+      const m = new Map<number, typeof bomFlat>();
+      for (const b of bomFlat) {
+        const arr = m.get(b.produtoPaiId);
+        if (arr) arr.push(b); else m.set(b.produtoPaiId, [b]);
+      }
+      return m;
+    }, [bomFlat]);
+
     const editState = useBomEditState();
     const [activeCellId, setActiveCellId] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<BomTreeItemNum | null>(null);
@@ -227,18 +255,22 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
 
     const getAncestorIds = useCallback((produtoId: number): Set<number> => {
       const a = new Set<number>();
-      function walk(id: number) { bomFlat.filter((b) => b.produtoFilhoId === id).forEach((p) => { if (!a.has(p.produtoPaiId)) { a.add(p.produtoPaiId); walk(p.produtoPaiId); } }); }
+      function walk(id: number) {
+        const pais = bomFlatByFilho.get(id);
+        if (!pais) return;
+        pais.forEach((p) => { if (!a.has(p.produtoPaiId)) { a.add(p.produtoPaiId); walk(p.produtoPaiId); } });
+      }
       walk(produtoId); return a;
-    }, [bomFlat]);
+    }, [bomFlatByFilho]);
 
     const getExcludeAndCircularIds = useCallback((parentProductId: number) => {
       const exclude = new Set<number>(); const circular = new Set<number>();
-      bomFlat.filter((b) => b.produtoPaiId === parentProductId).forEach((b) => exclude.add(b.produtoFilhoId));
+      (bomFlatByPai.get(parentProductId) || []).forEach((b) => exclude.add(b.produtoFilhoId));
       editState.pendingAdds.filter((a) => a.produtoPaiId === parentProductId && a.produtoFilhoId > 0).forEach((a) => exclude.add(a.produtoFilhoId));
       exclude.add(parentProductId);
       getAncestorIds(parentProductId).forEach((id) => { exclude.add(id); circular.add(id); });
       return { exclude, circular };
-    }, [bomFlat, editState.pendingAdds, getAncestorIds]);
+    }, [bomFlatByPai, editState.pendingAdds, getAncestorIds]);
 
     const newRowIds = useMemo(() => {
       if (!newRow) return { exclude: new Set<number>(), circular: new Set<number>() };
@@ -445,7 +477,8 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
 
     const treeData = useMemo((): BomTreeItemNum[] => {
       if (!paiId) return [];
-      const idsPai = new Set(bomFlat.map((r) => r.produtoPaiId));
+      const idsPai = new Set<number>();
+      for (const k of bomFlatByPai.keys()) idsPai.add(k);
       editState.pendingAdds.forEach((a) => idsPai.add(a.produtoPaiId));
       const getEffPos = (id: number, p: number) => { const c = editState.pendingChanges.get(id); return c ? c.posicaoNova : p; };
 
@@ -453,16 +486,16 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
         if (visitedIds.has(parentProductId)) return [];
         const pathVisited = new Set(visitedIds); pathVisited.add(parentProductId);
 
-        const banco = bomFlat.filter((r) => r.produtoPaiId === parentProductId).map((r): BomTreeItemNum => {
+        const banco = (bomFlatByPai.get(parentProductId) || []).map((r): BomTreeItemNum => {
           const path = `${parentPath}/${r.id}`;
           // Consulta temDocumento direto do store de produtos (fonte da verdade).
           // bomFlat.produtoFilhoTemDocumento pode estar defasado se a varredura
           // de documentos rodou depois da BOM ser carregada.
-          const prod = produtos.find((p) => p.id === r.produtoFilhoId);
+          const prod = produtosById.get(r.produtoFilhoId);
           const temDoc = prod?.temDocumento ?? (r.produtoFilhoTemDocumento || false);
           return { id: r.id, codigo: r.produtoFilhoCodigo || '', descricao: r.produtoFilhoDescricao || '', unidade: r.produtoFilhoUnidade || 'UN', tipo: r.produtoFilhoTipo || '', quantidade: r.quantidade, posicao: r.posicao, nivel, temDocumento: temDoc, hasChildren: idsPai.has(r.produtoFilhoId), children: [], _rowNum: 0, _bomItemId: r.id, _treePath: path, _produtoId: r.produtoFilhoId };
         });
-        banco.forEach((n) => { if (n.hasChildren) n.children = getFilhos(bomFlat.find((b) => b.id === n.id)!.produtoFilhoId, n.id, n._treePath, nivel + 1, pathVisited); });
+        banco.forEach((n) => { if (n.hasChildren) n.children = getFilhos(n._produtoId, n.id, n._treePath, nivel + 1, pathVisited); });
 
         const novos = editState.pendingAdds
           .filter((a) => a.produtoPaiId === parentProductId)
@@ -484,7 +517,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       let seq = 0;
       (function rn(ns: BomTreeItemNum[]) { for (const n of ns) { seq++; n._rowNum = seq; if (n.children.length > 0) rn(n.children); } })([root]);
       return [root];
-    }, [bomFlat, produtos, paiId, codigoPai, produtoPai, editState.pendingAdds, editState.pendingChanges, newRow]);
+    }, [bomFlatByPai, produtosById, paiId, codigoPai, produtoPai, editState.pendingAdds, editState.pendingChanges, newRow]);
 
     const allNodes = useMemo(() => { const n: BomTreeItemNum[] = []; (function w(is: BomTreeItemNum[]) { for (const i of is) { n.push(i); if (i.children.length > 0) w(i.children); } })(treeData); return n; }, [treeData]);
 

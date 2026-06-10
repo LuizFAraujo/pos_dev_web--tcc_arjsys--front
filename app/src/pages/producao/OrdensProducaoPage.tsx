@@ -52,11 +52,6 @@ const STATUS_OPTIONS = [
   { label: 'Cancelada', value: 'Cancelada' },
 ];
 
-const TIPO_OPTIONS = [
-  { label: 'Master', value: 'master' },
-  { label: 'Filha', value: 'filha' },
-];
-
 function formatDate(val?: string | null) {
   if (!val) return '-';
   try {
@@ -66,14 +61,8 @@ function formatDate(val?: string | null) {
   }
 }
 
-function calcPercentualOp(op: OrdemProducao): number {
-  if (!op.itens || op.itens.length === 0) return 0;
-  const soma = op.itens.reduce((acc, i) => acc + (i.percentualConcluido ?? 0), 0);
-  return Math.round(soma / op.itens.length);
-}
-
 function OrdemProducaoCard({ op }: { op: OrdemProducao }) {
-  const pct = calcPercentualOp(op);
+  const pct = Math.round(op.percentualMedio ?? 0);
   return (
     <div className="p-4">
       <div className="flex items-center justify-between gap-2">
@@ -158,19 +147,6 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
         className: 'font-mono',
       },
       {
-        key: 'tipo',
-        header: 'TIPO',
-        width: 90,
-        contentAlign: 'center',
-        filterType: 'checklist',
-        filterOptions: TIPO_OPTIONS,
-        render: (o) => (
-          <span className="text-xs text-muted-foreground">
-            {o.ehMaster ? 'Master' : 'Filha'}
-          </span>
-        ),
-      },
-      {
         key: 'pedidoVendaCodigo',
         header: 'PEDIDO',
         width: 130,
@@ -236,8 +212,9 @@ export function OrdensProducaoPage({ tab }: OrdensProducaoPageProps) {
         header: '%',
         width: 80,
         contentAlign: 'center',
+        filterType: 'number',
         render: (o) => (
-          <span className="font-mono text-xs">{calcPercentualOp(o)}%</span>
+          <span className="font-mono text-xs">{Math.round(o.percentualMedio ?? 0)}%</span>
         ),
       },
       {

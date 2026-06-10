@@ -30,12 +30,17 @@ import {
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
+import { useTabsStore } from '@/stores/tabsStore';
 import { userScopedLocalStorage } from '@/lib/userScopedStorage';
 import { ArrowUpDown, ArrowUp, ArrowDown, Inbox } from 'lucide-react';
 import { ColFilterPopover } from './ColFilterPopover';
 import { compoundFilterFn, isFilterActive } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
 import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
+
+// Posição de scroll por aba — em memória, fora do ciclo de vida do componente.
+// Aba fechada → entry removido. Não persiste entre sessões.
+const scrollPositionsByTab = new Map<string, number>();
 
 
 // ============================================
@@ -68,6 +73,83 @@ function DataGridInner<T extends Record<string, any>>({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizerRef = useRef<any>(null);
+
+  // Persistência de scroll por aba — Map em memória (não persiste entre sessões).
+  // Salva continuamente via onScroll; restaura quando esta aba vira a ativa
+  // (subscribe direto ao tabsStore) OU quando o viewMode da page volta pra 'list'
+  // (sinal robusto pra troca lista↔cards, que ResizeObserver/IntersectionObserver
+  // não pegam confiavelmente quando o wrapper usa display:contents).
+  const activeTabId = useTabsStore((s) => s.activeTabId);
+  const [viewMode] = useTabState<'list' | 'cards'>(tabId + '-view', 'list');
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      // Só registra scroll quando a aba está ativa (evita falsos zeros durante display:none)
+      if (useTabsStore.getState().activeTabId === tabId) {
+        scrollPositionsByTab.set(tabId, el.scrollTop);
+      }
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [tabId]);
+
+  // Restaura scroll quando esta aba volta a ser a ativa OU quando o container
+  // volta a ficar visível (ex: alternar modo lista/cards na mesma aba).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const restoreWithRetry = () => {
+      const target = scrollPositionsByTab.get(tabId) ?? 0;
+      if (target <= 0) return;
+
+      let attempts = 0;
+      let cancelled = false;
+      const tick = () => {
+        if (cancelled) return;
+        if (!el.isConnected || el.clientHeight === 0) {
+          if (++attempts < 90) requestAnimationFrame(tick);
+          return;
+        }
+        if (el.scrollHeight >= target + el.clientHeight) {
+          if (Math.abs(el.scrollTop - target) > 1) el.scrollTop = target;
+          return;
+        }
+        if (++attempts < 90) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+      return () => { cancelled = true; };
+    };
+
+    // Trigger 1: aba ativa
+    // Trigger 2: viewMode voltou pra 'list' (deps cobre as duas)
+    let cleanup: (() => void) | undefined;
+    if (activeTabId === tabId && viewMode === 'list') cleanup = restoreWithRetry();
+
+    // Trigger 3: container fica visível por outro motivo (fallback).
+    let prevVisible = el.offsetParent !== null && el.clientHeight > 0;
+    const io = new IntersectionObserver((entries) => {
+      const visible = entries[0]?.isIntersecting ?? false;
+      if (visible && !prevVisible) {
+        cleanup?.();
+        cleanup = restoreWithRetry();
+      }
+      prevVisible = visible;
+    });
+    io.observe(el);
+
+    return () => {
+      cleanup?.();
+      io.disconnect();
+    };
+  }, [activeTabId, tabId, viewMode]);
+
+  // Ao desmontar de fato (aba fechada), descarta a posição salva.
+  useEffect(() => () => { scrollPositionsByTab.delete(tabId); }, [tabId]);
 
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColumnFilters([]),
@@ -137,6 +219,8 @@ function DataGridInner<T extends Record<string, any>>({
     accessorKey: col.filterField || col.key,
     header: col.header,
     enableSorting: col.sortable !== false,
+    sortDescFirst: false,
+    enableSortingRemoval: true,
     enableColumnFilter: col.filterType !== false,
     filterFn: col.filterType !== false ? compoundFilterFn : undefined,
     cell: col.render ? ({ row }: any) => col.render!(row.original) : ({ getValue }: any) => getValue() ?? '-',

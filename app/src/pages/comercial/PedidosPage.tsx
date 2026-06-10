@@ -17,6 +17,7 @@ import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import type { SearchColumn } from '@/components/shared/SearchBar';
+import { ESTADO_OPTIONS } from '@/lib/constants/estados';
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
@@ -372,8 +373,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         header: 'CPF/CNPJ',
         width: 150,
         minWidth: 120,
-        sortable: false,
-        filterType: false,
+        filterType: 'text',
         render: (p) =>
           p.clienteCpfCnpj ? (
             <span className="font-mono text-xs">{p.clienteCpfCnpj}</span>
@@ -387,8 +387,8 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         width: 80,
         minWidth: 70,
         contentAlign: 'center',
-        sortable: false,
-        filterType: false,
+        filterType: 'checklist',
+        filterOptions: ESTADO_OPTIONS,
         render: (p) => p.clienteEstado || <span className="text-muted-foreground">-</span>,
       },
       {
@@ -396,8 +396,7 @@ export function PedidosPage({ tab }: PedidosPageProps) {
         header: 'Cidade',
         width: 160,
         minWidth: 120,
-        sortable: false,
-        filterType: false,
+        filterType: 'text',
         render: (p) => (
           <span className="truncate">
             {p.clienteCidade || <span className="text-muted-foreground">-</span>}

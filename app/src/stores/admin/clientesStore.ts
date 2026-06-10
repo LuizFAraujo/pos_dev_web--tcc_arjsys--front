@@ -1,16 +1,15 @@
 // ========================================
-// STORE - CLIENTES (Admin) - v3.1
+// STORE - CLIENTES (Admin) - v3.2
 // ========================================
 // Endpoints:
-//   GET    /api/admin/Clientes?busca=texto  → LIKE em nome/codigo/cpfCnpj/cidade
+//   POST   /api/admin/Clientes/buscar       → listagem server-side (paginada ou tamanho:0 pra tudo)
 //   GET    /api/admin/Clientes/{id}
 //   POST   /api/admin/Clientes              → retorna 201 + Cliente (com codigo gerado)
 //   PUT    /api/admin/Clientes/{id}
 //   DELETE /api/admin/Clientes/{id}
 //
-// Mudanças v3.1:
-//   - fetchClientes aceita busca server-side opcional
-//   - Preserva API pública antiga (chamadas sem argumento continuam funcionando)
+// fetchClientes alimenta um cache global pra fields de autocomplete e enrichment.
+// Pages migradas pra useGridQuery usam o /buscar direto e não dependem deste cache.
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';

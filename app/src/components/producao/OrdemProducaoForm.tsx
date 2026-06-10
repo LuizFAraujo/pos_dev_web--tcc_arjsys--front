@@ -81,9 +81,8 @@ export const OrdemProducaoForm = forwardRef<
   const isNew = mode === 'new';
   const isEdit = mode === 'edit';
 
-  // ─── Live data: lê do store pra refletir status/itens atualizados após
-  // ações (status panel, apontamento). Evita usar snapshot stale do prop.
-  const ordens = useOrdemProducaoStore((s) => s.ordens);
+  const ordemDetalhe = useOrdemProducaoStore((s) => s.ordemDetalhe);
+  const fetchOrdem = useOrdemProducaoStore((s) => s.fetchOrdem);
   const historico = useOrdemProducaoStore((s) => s.historico);
   const fetchHistorico = useOrdemProducaoStore((s) => s.fetchHistorico);
   const alterarStatus = useOrdemProducaoStore((s) => s.alterarStatus);
@@ -94,10 +93,17 @@ export const OrdemProducaoForm = forwardRef<
     justificativa?: string;
   } | null>(null);
 
-  const ordem = useMemo(() => {
-    if (!ordemProp) return null;
-    return ordens.find((o) => o.id === ordemProp.id) ?? ordemProp;
-  }, [ordens, ordemProp]);
+  // Live data: usa ordemDetalhe do store quando o ID bate (reflete apontamentos,
+  // mudanças de status, etc); fallback pra ordemProp (snapshot da grid).
+  const ordem =
+    ordemDetalhe && ordemProp && ordemDetalhe.id === ordemProp.id
+      ? ordemDetalhe
+      : (ordemProp ?? null);
+
+  // Carrega detalhe live quando abre o form pra view/edit.
+  useEffect(() => {
+    if (!isNew && ordemProp?.id) void fetchOrdem(ordemProp.id);
+  }, [isNew, ordemProp?.id, fetchOrdem]);
 
   useEffect(() => {
     if (!isNew && ordem?.id) void fetchHistorico(ordem.id);

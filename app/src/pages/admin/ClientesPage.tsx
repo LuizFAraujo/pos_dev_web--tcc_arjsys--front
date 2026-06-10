@@ -13,6 +13,7 @@ import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
 import type { SearchColumn } from '@/components/shared/SearchBar';
+import { ESTADO_OPTIONS } from '@/lib/constants/estados';
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
@@ -134,11 +135,11 @@ export function ClientesPage({ tab }: ClientesPageProps) {
     },
     {
       key: 'cpfCnpj', header: 'CPF/CNPJ', width: 170, minWidth: 130,
-      contentAlign: 'center', className: 'font-mono', filterType: 'exact',
+      contentAlign: 'center', className: 'font-mono', filterType: 'text',
     },
     {
       key: 'estado', header: 'Estado', width: 80, minWidth: 70,
-      contentAlign: 'center', filterType: 'text',
+      contentAlign: 'center', filterType: 'checklist', filterOptions: ESTADO_OPTIONS,
       render: (c) => c.estado || <span className="text-muted-foreground">-</span>,
     },
     {

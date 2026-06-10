@@ -36,7 +36,6 @@ import {
 } from '@/types/producao/ordemProducao.types';
 import { TIPO_PRODUTO_LABELS } from '@/types/engenharia/produto.types';
 import { useOrdemProducaoStore } from '@/stores/producao/ordemProducaoStore';
-import { useDemandaStore } from '@/stores/producao/demandaStore';
 import type { DemandaItem } from '@/types/producao/demanda.types';
 
 interface Props {
@@ -54,7 +53,6 @@ export function DemandaQuickEditDialog({
   onAfterSave,
 }: Props) {
   const apontar = useOrdemProducaoStore((s) => s.apontar);
-  const patchItem = useDemandaStore((s) => s.patchItem);
 
   const [produzidoStr, setProduzidoStr] = useState('');
   const [committed, setCommitted] = useState<number>(0);
@@ -120,19 +118,6 @@ export function DemandaQuickEditDialog({
         observacao: justificativa,
       });
       setCommitted(produzidoNum);
-
-      // Atualização cirúrgica (sem refetch + sem flicker).
-      // Mantém linha mesmo a 100% pra histórico visual.
-      const novoFaltante = item.quantidadePlanejada - produzidoNum;
-      const novoPct =
-        item.quantidadePlanejada > 0
-          ? Math.round((produzidoNum / item.quantidadePlanejada) * 10000) / 100
-          : 0;
-      patchItem(item.ordemProducaoItemId, {
-        quantidadeProduzida: produzidoNum,
-        quantidadeFaltante: novoFaltante,
-        percentualConcluido: novoPct,
-      });
       toast.success('Quantidade atualizada.');
       onAfterSave?.();
       onOpenChange(false);

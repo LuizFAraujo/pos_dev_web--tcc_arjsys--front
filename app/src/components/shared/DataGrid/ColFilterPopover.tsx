@@ -137,6 +137,19 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
     setOpen(false);
   };
 
+  // Number clear: zera min/max + aplica direto + fecha
+  const limparNumberPendente = () => {
+    const zerado: CompoundFilter = { type: 'number' };
+    setPendente(zerado);
+    onChange(zerado);
+    setOpen(false);
+  };
+
+  const numberTemFiltro = type === 'number' && (
+    (pendente.min !== undefined && pendente.min !== '') ||
+    (pendente.max !== undefined && pendente.max !== '')
+  );
+
   const popWidth = type === 'checklist' ? 'w-48' : type === 'text' ? 'w-72' : 'w-52';
 
   return (
@@ -186,6 +199,18 @@ export function ColFilterPopover({ type, options, value, onChange, header }: Col
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button onClick={limparChecklistPendente}
+                    className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                    <FilterX className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent><p>Limpar filtro</p></TooltipContent>
+              </Tooltip>
+            )}
+            {/* Limpar number - aplica direto + fecha */}
+            {numberTemFiltro && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button onClick={limparNumberPendente}
                     className="p-0.5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
                     <FilterX className="h-3 w-3" />
                   </button>

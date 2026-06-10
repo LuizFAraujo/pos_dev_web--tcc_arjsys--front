@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api';
-import type { GrupoProduto, GrupoProdutoFormData, GrupoVinculo, GrupoVinculoFormData, NivelGrupo } from '@/types/engenharia/grupo.types';
+import type { GrupoProduto, GrupoProdutoFormData, GrupoVinculo, GrupoVinculoFormData } from '@/types/engenharia/grupo.types';
 
 interface GruposState {
   grupos: GrupoProduto[];
@@ -13,7 +13,6 @@ interface GruposState {
   error: string | null;
 
   fetchGrupos: () => Promise<void>;
-  fetchGruposPorNivel: (nivel: NivelGrupo) => Promise<GrupoProduto[]>;
   createGrupo: (data: GrupoProdutoFormData) => Promise<void>;
   updateGrupo: (id: number, data: GrupoProdutoFormData) => Promise<void>;
   deleteGrupo: (id: number) => Promise<void>;
@@ -49,15 +48,6 @@ export const useGruposStore = create<GruposState>((set, get) => ({
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar grupos';
       set({ error: message, isLoading: false });
-    }
-  },
-
-  fetchGruposPorNivel: async (nivel) => {
-    try {
-      const raw = await apiGet<any>(`/api/engenharia/GrupoProduto/nivel/${nivel}`);
-      return Array.isArray(raw) ? raw : [];
-    } catch {
-      return [];
     }
   },
 

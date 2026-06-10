@@ -210,8 +210,11 @@ export function LiberacaoProjetosPage({ tab }: PageProps) {
         header: 'SITUAÇÃO',
         width: 130,
         contentAlign: 'center',
-        sortable: false,
-        filterType: false,
+        filterType: 'checklist',
+        filterOptions: [
+          { label: 'Liberado', value: 'Liberado' },
+          { label: 'Sem projeto', value: 'Sem projeto' },
+        ],
         render: (p) => (
           <span
             className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
