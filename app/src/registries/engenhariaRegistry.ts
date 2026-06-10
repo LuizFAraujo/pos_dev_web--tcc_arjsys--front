@@ -4,17 +4,32 @@
  * Registra todas as páginas do setor de Engenharia:
  * - Produtos
  * - Estrutura de Produto (BOM)
- * - Configurações (Fase 7)
- * - Grupos de Produto (Fase 8)
+ * - Liberação de Projetos
+ * - Configurações
+ * - Grupos de Produto
+ *
+ * Páginas carregadas via React.lazy — cada uma vira chunk separado no build.
  */
 
+import { lazy } from 'react';
 import type { TabRegistry } from '@/types/registry.types';
 import { Package, Network, Settings, FolderTree, Rocket } from 'lucide-react';
-import { ProdutosPage } from '@/pages/engenharia/ProdutosPage';
-import { BOMPage } from '@/pages/engenharia/BOMPage';
-import { ConfiguracoesPage } from '@/pages/engenharia/ConfiguracoesPage';
-import { GruposPage } from '@/pages/engenharia/GruposPage';
-import { LiberacaoProjetosPage } from '@/pages/engenharia/LiberacaoProjetosPage';
+
+const ProdutosPage = lazy(() =>
+  import('@/pages/engenharia/ProdutosPage').then((m) => ({ default: m.ProdutosPage })),
+);
+const BOMPage = lazy(() =>
+  import('@/pages/engenharia/BOMPage').then((m) => ({ default: m.BOMPage })),
+);
+const ConfiguracoesPage = lazy(() =>
+  import('@/pages/engenharia/ConfiguracoesPage').then((m) => ({ default: m.ConfiguracoesPage })),
+);
+const GruposPage = lazy(() =>
+  import('@/pages/engenharia/GruposPage').then((m) => ({ default: m.GruposPage })),
+);
+const LiberacaoProjetosPage = lazy(() =>
+  import('@/pages/engenharia/LiberacaoProjetosPage').then((m) => ({ default: m.LiberacaoProjetosPage })),
+);
 
 export const engenhariaRegistry: TabRegistry = {
   'eng-produtos': {
