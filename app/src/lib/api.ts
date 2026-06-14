@@ -8,7 +8,24 @@
 // Endereço da API configurado em runtime via public/config.api.js
 // Pode ser alterado após o build sem precisar rebuildar.
 
-const API_BASE_URL = (window as any).__ARJSYS_CONFIG__?.API_BASE_URL || '';
+export const API_BASE_URL = (window as any).__ARJSYS_CONFIG__?.API_BASE_URL || '';
+
+/**
+ * Monta a URL da miniatura (thumbnail) do PDF de um produto.
+ * Usada diretamente em <img src> (a auth é por sessão, sem token por request).
+ */
+export function thumbnailUrl(produtoId: number, w = 320): string {
+  return `${API_BASE_URL}/api/engenharia/Produtos/${produtoId}/thumbnail?w=${w}`;
+}
+
+/**
+ * Monta a URL do documento ORIGINAL de um produto, para exibir e interagir
+ * no navegador (ex: PDF embutido no visualizador nativo). Usada em
+ * <iframe src> (PDF) ou <img src> (imagem).
+ */
+export function documentoUrl(produtoId: number, ext = 'pdf'): string {
+  return `${API_BASE_URL}/api/engenharia/Produtos/${produtoId}/documento?ext=${ext}`;
+}
 
 // ============================================
 // TIPOS DE ERRO
