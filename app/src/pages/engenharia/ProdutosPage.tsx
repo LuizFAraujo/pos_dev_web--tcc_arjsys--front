@@ -4,8 +4,11 @@
  * Template: PageShell + PageActions + usePageMode
  * Hooks: useListState, useDeleteDialog
  * Extra: botão Varredura via extraActions do PageActions
- * Coluna DOC.: dois botões - abrir pasta (esq) e abrir documento (dir)
- *   DocButtons recebe prop extensao: se passada, abre direto; se não, lista extensões
+ * Coluna DOC.: DocButtons compartilhado (abrir pasta / abrir documento no servidor).
+ *
+ * Visão Cards: barra de controles (CardViewBar) + cards com miniatura do PDF.
+ *   - Miniatura clicada abre o modal de prévia (DocPreviewDialog, documento original).
+ *   - Preferências (com/sem imagem, largura, altura, cadeado) no cardViewStore.
  *
  * Filtros sincronizados: PanelFilters ↔ DataGrid ↔ CardGrid via useTabState(tabId + '-filters')
  * CardGrid recebe dados já filtrados por applyColumnFilters (filterEngine.ts)
@@ -13,25 +16,29 @@
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
-import { ScanSearch, FolderOpen, FileText, FileX2, SlidersHorizontal } from 'lucide-react';
+import { FileX2, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ColumnFiltersState } from '@tanstack/react-table';
 import { useProdutosStore } from '@/stores/engenharia/produtosStore';
+import { useCardViewStore, fatorProporcao } from '@/stores/engenharia/cardViewStore';
 import { PageShell, usePageMode, PageActions } from '@/components/shared/PageShell';
 import { DataGrid } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { CardGrid } from '@/components/shared/CardGrid';
+import { DocButtons } from '@/components/shared/DocButtons';
+import { DocPreviewDialog } from '@/components/shared/DocPreviewDialog';
 import type { SearchColumn } from '@/components/shared/SearchBar';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
 import { useListState } from '@/hooks/useListState';
 import { useTabState } from '@/hooks/useTabState';
 import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { useGridQuery } from '@/hooks/useGridQuery';
+import { thumbnailUrl } from '@/lib/api';
 import { ProdutoDeleteDialog } from '@/components/engenharia/ProdutoDeleteDialog';
 import { ProdutoForm } from '@/components/engenharia/ProdutoForm';
 import type { ProdutoFormHandle } from '@/components/engenharia/ProdutoForm';
+import { ProdutoConfigPanel } from '@/components/engenharia/ProdutoConfigPanel';
 import type { Produto, ProdutoFormData } from '@/types/engenharia/produto.types';
 import { PagePanel, PanelFilters } from '@/components/shared/PagePanel';
 import type { PanelFilterColumn } from '@/components/shared/PagePanel';
@@ -76,180 +83,93 @@ const SIM_NAO_OPTIONS = [
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-function ProdutoCard({ produto }: { produto: Produto }) {
-  return (
-    <div className="p-3">
-      <p className="font-mono font-semibold text-sm text-slate-800 dark:text-slate-200">
-        {produto.codigo}
-      </p>
-      <p className="text-xs text-muted-foreground mt-1 truncate">{produto.descricao}</p>
-      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-        <span>{TIPO_PRODUTO_LABELS[produto.tipo]}</span>
-        <DocButtons produto={produto} extensao="pdf" />
+interface ProdutoCardProps {
+  produto: Produto;
+  /** Modo com imagem (miniatura) ligado. */
+  comImagem: boolean;
+  /** Altura da área da miniatura, em px (usada quando sem proporção fixa). */
+  altura: number;
+  /** Fator largura/altura da proporção fixa (A4/travada), ou null quando livre. */
+  fator: number | null;
+  /** Abre o modal de prévia ampliada. */
+  onPreview: () => void;
+}
+
+function ProdutoCard({ produto, comImagem, altura, fator, onPreview }: ProdutoCardProps) {
+  const temPasta = (produto as any).temPasta ?? false;
+  const temDoc = produto.temDocumento ?? false;
+
+  // Sem imagem: só o rodapé, respeitando a altura do card. Com imagem: miniatura + rodapé.
+  if (!comImagem) {
+    return (
+      <div style={{ minHeight: altura }}>
+        <CardFooter produto={produto} temPasta={temPasta} temDoc={temDoc} />
       </div>
+    );
+  }
+
+  return (
+    <div>
+      <CardThumb produto={produto} altura={altura} fator={fator} temDoc={temDoc} onPreview={onPreview} />
+      <CardFooter produto={produto} temPasta={temPasta} temDoc={temDoc} />
     </div>
   );
 }
 
-// ─── Botões DOC na coluna da grid ─────────────────────────────────────────────
+// ─── Rodapé do card (igual nos dois modos) ─────────────────────────────────────
 
-function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string }) {
-  const abrirPasta = useProdutosStore((s) => s.abrirPasta);
-  const extensoesDocumento = useProdutosStore((s) => s.extensoesDocumento);
-  const abrirDocumento = useProdutosStore((s) => s.abrirDocumento);
+function CardFooter({ produto, temPasta, temDoc }: { produto: Produto; temPasta: boolean; temDoc: boolean }) {
+  return (
+    <div className="p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-mono font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+          {produto.codigo}
+        </p>
+        <DocButtons produtoId={produto.id} temPasta={temPasta} temDocumento={temDoc} extensao="pdf" />
+      </div>
+      <p className="text-[11px] leading-snug text-muted-foreground mt-1 line-clamp-2">{produto.descricao}</p>
+    </div>
+  );
+}
 
-  const [extOpen, setExtOpen] = useState(false);
-  const [extensoes, setExtensoes] = useState<string[]>([]);
+// ─── Área da miniatura do card ─────────────────────────────────────────────────
 
-  const temPasta = (produto as any).temPasta ?? false;
-  const temDoc = produto.temDocumento ?? false;
+function CardThumb({
+  produto, altura, fator, temDoc, onPreview,
+}: { produto: Produto; altura: number; fator: number | null; temDoc: boolean; onPreview: () => void }) {
+  const [erroImg, setErroImg] = useState(false);
 
-  if (!temPasta && !temDoc) {
-    return <span className="text-muted-foreground">-</span>;
-  }
+  // Largura pedida ao back: 2 degraus conforme a altura (o navegador escala o resto).
+  const w = altura > 220 ? 640 : 320;
 
-  const handleAbrirPasta = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await abrirPasta(produto.id);
-    } catch (err: any) {
-      toast.error(err?.body?.erro || err?.message || 'Erro ao abrir pasta');
-    }
-  };
-
-  const handleDocClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!temDoc) return;
-
-    if (extensao) {
-      try {
-        await abrirDocumento(produto.id, extensao);
-      } catch (err: any) {
-        toast.error(err?.body?.erro || err?.message || 'Erro ao abrir documento');
-      }
-      return;
-    }
-
-    try {
-      const result = await extensoesDocumento(produto.id);
-      const exts = result.extensoes || [];
-
-      if (exts.length === 0) {
-        toast.error('Nenhum documento encontrado.');
-        return;
-      }
-
-      if (exts.length === 1) {
-        await abrirDocumento(produto.id, exts[0]);
-        return;
-      }
-
-      setExtensoes(exts);
-      setExtOpen(true);
-    } catch (err: any) {
-      toast.error(err?.body?.erro || err?.message || 'Erro ao buscar extensões');
-    }
-  };
-
-  const handleAbrirExt = async (ext: string) => {
-    setExtOpen(false);
-    try {
-      await abrirDocumento(produto.id, ext);
-    } catch (err: any) {
-      toast.error(err?.body?.erro || err?.message || 'Erro ao abrir documento');
-    }
-  };
+  const placeholder = (texto: string) => (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-slate-50 dark:bg-slate-900 text-muted-foreground">
+      <FileX2 className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+      <span className="text-xs">{texto}</span>
+    </div>
+  );
 
   return (
-    <div className="flex items-center justify-center gap-0.5">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={handleAbrirPasta}
-            disabled={!temPasta}
-            className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${temPasta
-              ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer'
-              : 'text-muted-foreground/40 cursor-default'
-              }`}
-          >
-            <FolderOpen className="h-3.5 w-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{temPasta ? 'Abrir pasta' : 'Sem pasta'}</p>
-        </TooltipContent>
-      </Tooltip>
-
-      {extensao ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={handleDocClick}
-              disabled={!temDoc}
-              className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${temDoc
-                ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
-                : temPasta
-                  ? 'text-muted-foreground/50 cursor-default'
-                  : 'text-muted-foreground/40 cursor-default'
-                }`}
-            >
-              {temDoc
-                ? <FileText className="h-3.5 w-3.5" />
-                : <FileX2 className="h-3.5 w-3.5" />
-              }
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{temDoc ? 'Abrir documento' : temPasta ? 'Pasta sem documento' : 'Sem documento'}</p>
-          </TooltipContent>
-        </Tooltip>
-      ) : (
-        <Popover open={extOpen} onOpenChange={setExtOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleDocClick}
-                  disabled={!temDoc}
-                  className={`inline-flex items-center justify-center h-6 w-6 rounded transition-colors ${temDoc
-                    ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
-                    : temPasta
-                      ? 'text-muted-foreground/50 cursor-default'
-                      : 'text-muted-foreground/40 cursor-default'
-                    }`}
-                >
-                  {temDoc
-                    ? <FileText className="h-3.5 w-3.5" />
-                    : <FileX2 className="h-3.5 w-3.5" />
-                  }
-                </button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{temDoc ? 'Abrir documento' : temPasta ? 'Pasta sem documento' : 'Sem documento'}</p>
-            </TooltipContent>
-          </Tooltip>
-          <PopoverContent className="w-auto p-1" align="center">
-            <div className="flex flex-col">
-              <p className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">Extensão</p>
-              {extensoes.map((ext) => (
-                <button
-                  key={ext}
-                  type="button"
-                  onClick={() => handleAbrirExt(ext)}
-                  className="px-3 py-1.5 text-xs text-left hover:bg-muted rounded transition-colors font-mono"
-                >
-                  .{ext}
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
-
+    <div
+      onClick={(e) => { e.stopPropagation(); onPreview(); }}
+      title="Clique para ampliar"
+      className="border-b border-slate-100 dark:border-slate-800 cursor-pointer overflow-hidden bg-white dark:bg-slate-950 p-2"
+      style={{ aspectRatio: String(fator ?? 1.414), width: '100%' }}
+    >
+      {!temDoc
+        ? placeholder('Sem documento')
+        : erroImg
+          ? placeholder('Falha ao carregar prévia')
+          : (
+            <img
+              src={thumbnailUrl(produto.id, w)}
+              alt={produto.codigo}
+              loading="lazy"
+              decoding="async"
+              onError={() => setErroImg(true)}
+              className="h-full w-full object-contain"
+            />
+          )}
     </div>
   );
 }
@@ -259,6 +179,7 @@ function DocButtons({ produto, extensao }: { produto: Produto; extensao?: string
 export function ProdutosPage({ tab }: ProdutosPageProps) {
   const formRef = useRef<ProdutoFormHandle>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
   // ─── Filtros sincronizados (mesma key que o DataGrid usa internamente) ─────
   const [columnFilters, setColumnFilters] = useTabState<ColumnFiltersState>(tab.id + '-filters', []);
@@ -294,7 +215,21 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
   const createProduto = useProdutosStore((s) => s.createProduto);
   const updateProduto = useProdutosStore((s) => s.updateProduto);
   const deleteProduto = useProdutosStore((s) => s.deleteProduto);
-  const varreduraDocumentos = useProdutosStore((s) => s.varreduraDocumentos);
+
+  // ─── Preferências do card (globais por usuário) ───────────────────────────────
+  const comImagem = useCardViewStore((s) => s.comImagem);
+  const cardWidth = useCardViewStore((s) => s.cardWidth);
+  const cardHeightPref = useCardViewStore((s) => s.cardHeight);
+  const proporcao = useCardViewStore((s) => s.proporcao);
+  const ratioTravado = useCardViewStore((s) => s.ratioTravado);
+  const proporcaoFator = fatorProporcao(proporcao, ratioTravado);
+  const semImgWidth = useCardViewStore((s) => s.semImgWidth);
+  const semImgHeight = useCardViewStore((s) => s.semImgHeight);
+
+  // Proporção efetiva da área da imagem: travada/A4 usa o fator; sem trava usa a
+  // relação largura/altura atual. Sempre aspect-ratio (nunca altura px fixa), pra
+  // não dar "pulo" ao alternar entre os modos de proporção.
+  const aspectImagem = proporcaoFator ?? (cardWidth / cardHeightPref);
 
   // ─── Lista (usa itens já paginados do back) ───────────────────────────────────
 
@@ -307,6 +242,9 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
 
   // Em modo server-side: itens já vêm filtrados/ordenados/paginados
   const cardData = itens;
+
+  // ─── Modal de prévia do documento (por aba) ───────────────────────────────────
+  const [previewItem, setPreviewItem] = useTabState<Produto | null>(tab.id + '-doc-preview', null);
 
   // ─── Delete ───────────────────────────────────────────────────────────────────
 
@@ -334,27 +272,16 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
   // ─── Extra actions (Varredura) ────────────────────────────────────────────────
 
   const extraActions = useMemo(() => (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={async () => { await varreduraDocumentos(); refetch(); }}>
-            <ScanSearch className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent><p>Varredura de documentos</p></TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => setPanelOpen(true)}>
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent><p>Filtros</p></TooltipContent>
-      </Tooltip>
-    </>
-  ), [varreduraDocumentos, refetch]);
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="outline" size="icon" className="h-8 w-8"
+          onClick={() => setPanelOpen(true)}>
+          <SlidersHorizontal className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent><p>Filtros</p></TooltipContent>
+    </Tooltip>
+  ), []);
 
   // ─── Colunas ──────────────────────────────────────────────────────────────────
 
@@ -385,7 +312,14 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
       key: 'temDocumento', header: 'DOC.', width: 90, minWidth: 80,
       filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS, contentAlign: 'center',
       sortable: false,
-      render: (p) => <DocButtons produto={p} extensao="pdf" />,
+      render: (p) => (
+        <DocButtons
+          produtoId={p.id}
+          temPasta={(p as any).temPasta ?? false}
+          temDocumento={p.temDocumento ?? false}
+          extensao="pdf"
+        />
+      ),
     },
     {
       key: 'ativo', header: 'ATIVO', width: 80, minWidth: 80,
@@ -428,6 +362,7 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           extraActions={page.mode === 'list' ? extraActions : undefined}
           newTooltip="Novo produto"
           noSelectionText="Selecione um produto"
+          onConfig={() => setConfigOpen(true)}
         />
       }
     >
@@ -444,15 +379,27 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           onActivate={(item) => page.openView(item as Produto)}
         />
       </div>
+
+      {/* Cards */}
       <div style={{ display: !inForm && !list.isListMode ? 'contents' : 'none' }}>
         <CardGrid
           ref={list.cardGridRef} data={cardData} selectedId={list.selectedCardId}
-          cardHeight={90}
+          minCardWidth={comImagem ? cardWidth : semImgWidth}
+          cardHeight={comImagem ? cardHeightPref + 70 : semImgHeight}
+          hasMore={hasMore} onCarregarMais={carregarMais}
           onSelect={(p) => list.setSelectedCardId(p?.id ?? null)}
           onActivate={(item) => page.openView(item as Produto)}
           loading={isLoading} loadingText="Carregando produtos..."
           emptyTitle="Nenhum produto encontrado"
-          renderCard={(p) => <ProdutoCard produto={p} />}
+          renderCard={(p) => (
+            <ProdutoCard
+              produto={p}
+              comImagem={comImagem}
+              altura={comImagem ? cardHeightPref : semImgHeight}
+              fator={aspectImagem}
+              onPreview={() => setPreviewItem(p)}
+            />
+          )}
         />
       </div>
 
@@ -480,6 +427,23 @@ export function ProdutosPage({ tab }: ProdutosPageProps) {
           onClose={() => setPanelOpen(false)}
         />
       </PagePanel>
+
+      <PagePanel open={configOpen} onClose={() => setConfigOpen(false)} title="Configurações">
+        <ProdutoConfigPanel />
+      </PagePanel>
+
+      {previewItem && (
+        <DocPreviewDialog
+          open
+          onOpenChange={(o) => { if (!o) setPreviewItem(null); }}
+          produtoId={previewItem.id}
+          codigo={previewItem.codigo}
+          descricao={previewItem.descricao}
+          temPasta={(previewItem as any).temPasta ?? false}
+          temDocumento={previewItem.temDocumento ?? false}
+          extensao="pdf"
+        />
+      )}
 
     </PageShell>
   );

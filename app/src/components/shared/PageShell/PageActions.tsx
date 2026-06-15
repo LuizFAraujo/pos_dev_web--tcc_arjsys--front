@@ -68,6 +68,8 @@ export interface PageActionsProps<T> {
   editTooltip?: string;
   deleteTooltip?: string;
   noSelectionText?: string;
+  /** Ação do botão Config (engrenagem). Sem ela, o botão fica sem função. */
+  onConfig?: () => void;
 }
 
 function Sep() {
@@ -92,6 +94,7 @@ export function PageActions<T>({
   onViewModeChange,
   formRef,
   extraActions,
+  onConfig,
   onEditClick,
   hideButtons = [],
   newTooltip = 'Novo',
@@ -225,7 +228,7 @@ export function PageActions<T>({
   const btnConfig = hide.has('config') ? null : (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={onConfig}>
           <Settings className="h-4 w-4" />
         </Button>
       </TooltipTrigger>

@@ -95,6 +95,13 @@ export interface CardGridProps<T extends { id: number | string }> {
   cols?: 1 | 2 | 3 | 4;
 
   /**
+   * Largura mínima de cada card em px. Quando informado, o número de colunas
+   * é calculado pela largura disponível (largura / minCardWidth), em vez dos
+   * breakpoints fixos. Opcional: sem ele, o comportamento é o atual.
+   */
+  minCardWidth?: number;
+
+  /**
    * Classe Tailwind para cor de hover do card.
    * @default 'hover:bg-slate-100 dark:hover:bg-slate-800'
    */
@@ -114,6 +121,12 @@ export interface CardGridProps<T extends { id: number | string }> {
    * @default 100
    */
   cardHeight?: number;
+
+  /** Há mais páginas a carregar (scroll infinito). Opcional. */
+  hasMore?: boolean;
+
+  /** Dispara ao rolar perto do fim, pra carregar mais. Opcional. */
+  onCarregarMais?: () => void;
 }
 
 // ─── Componente interno (com generics) ────────────────────────────────────────
@@ -131,10 +144,13 @@ function CardGridInner<T extends { id: number | string }>(
     emptyDescription,
     emptyAction,
     cols,
+    minCardWidth,
     hoverClass = 'hover:bg-slate-100 dark:hover:bg-slate-800',
     selectedClass = 'bg-sky-200 dark:bg-sky-900',
     className,
     cardHeight = 100,
+    hasMore = false,
+    onCarregarMais,
   }: CardGridProps<T>,
   ref: React.ForwardedRef<CardGridHandle>,
 ) {
@@ -144,18 +160,27 @@ function CardGridInner<T extends { id: number | string }>(
 
   // ── Medir colunas efetivas ──────────────────────────────────────────────────
 
-  const [measuredCols, setMeasuredCols] = useState(cols ?? 4);
+  const [measuredCols, setMeasuredCols] = useState<number>(cols ?? 4);
 
   const measureCols = useCallback(() => {
     if (cols) { setMeasuredCols(cols); return; }
     const el = containerRef.current;
     if (!el) return;
     const w = el.clientWidth - PAD_X * 2;
+    // Aba escondida (display:none) reporta largura 0: não medir, pra não estragar
+    // a contagem de colunas. Ao voltar a aparecer, o ResizeObserver remede.
+    if (w <= 0) return;
+    // Com minCardWidth: colunas pela largura disponível (considerando o gap).
+    if (minCardWidth && minCardWidth > 0) {
+      setMeasuredCols(Math.max(1, Math.floor((w + GAP_X) / (minCardWidth + GAP_X))));
+      return;
+    }
+    // Sem minCardWidth: breakpoints fixos (comportamento atual).
     if (w < 500) setMeasuredCols(1);
     else if (w < 700) setMeasuredCols(2);
     else if (w < 950) setMeasuredCols(3);
     else setMeasuredCols(4);
-  }, [cols]);
+  }, [cols, minCardWidth]);
 
   useEffect(() => {
     measureCols();
@@ -184,6 +209,21 @@ function CardGridInner<T extends { id: number | string }>(
   });
 
   const virtualRows = virtualizer.getVirtualItems();
+
+  // ── Trigger de carregarMais quando chega perto do fim (igual a DataGrid) ────
+  const onCarregarMaisRef = useRef(onCarregarMais);
+  onCarregarMaisRef.current = onCarregarMais;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+
+  useEffect(() => {
+    if (!hasMore || loadingRef.current) return;
+    if (virtualRows.length === 0) return;
+    const ultimo = virtualRows[virtualRows.length - 1];
+    if (ultimo.index >= rowCount - 2) {
+      onCarregarMaisRef.current?.();
+    }
+  }, [hasMore, virtualRows, rowCount]);
 
   // ── Seleção ─────────────────────────────────────────────────────────────────
 
