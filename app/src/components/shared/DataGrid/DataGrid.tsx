@@ -15,7 +15,7 @@
  * Lógica de filtro centralizada em filterEngine.ts.
  */
 
-import { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Ref } from 'react';
 import {
   useReactTable,
@@ -74,22 +74,6 @@ function DataGridInner<T extends Record<string, any>>({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizerRef = useRef<any>(null);
-
-  // Largura disponível do container do grid. A última coluna usa isso pra
-  // preencher o vazio final por cálculo (JS), em vez de coluna "auto" do
-  // navegador — que era o que redistribuía largura nas colunas vizinhas.
-  // O ResizeObserver reage a tudo que muda a largura: abrir/fechar a sidebar
-  // de menus, redimensionar a janela, surgir barra de rolagem vertical, etc.
-  const [availWidth, setAvailWidth] = useState(0);
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const update = () => setAvailWidth(el.clientWidth);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   // Persistência de scroll por aba — Map em memória (não persiste entre sessões).
   // Salva continuamente via onScroll; restaura quando esta aba vira a ativa
@@ -210,17 +194,18 @@ function DataGridInner<T extends Record<string, any>>({
     const col = gc.find((c) => c.key === k);
     const min = col?.minWidth || DEFAULT_MIN_WIDTH;
     const max = col?.maxWidth;
-    // Parte da largura REAL renderizada do cabeçalho (não da base salva). É o que
-    // faz a última coluna (que pode estar esticada) responder já no primeiro pixel.
+    // Largura inicial = largura real renderizada do cabeçalho.
     const th = (e.currentTarget as HTMLElement).closest('th');
     const startW = th ? th.getBoundingClientRect().width : (colW[k] || col?.width || 150);
     const startX = e.clientX;
     const scroller = scrollRef.current;
     const isLastCol = k === gc[gc.length - 1]?.key;
     let clientX = startX;
-    let extra = 0; // crescimento da auto-rolagem (só na última coluna, só pra direita)
+    let extra = 0; // crescimento somado pela auto-rolagem (acompanha o scroll)
     let raf = 0;
 
+    // Redimensionamento 1:1 com o mouse. Quem cobre o vazio final é a faixa de
+    // preenchimento, então mexer numa coluna não afeta as outras.
     const apply = () => {
       let newW = startW + (clientX - startX) + extra;
       newW = Math.max(min, newW);
@@ -229,18 +214,20 @@ function DataGridInner<T extends Record<string, any>>({
     };
 
     // Auto-rolagem suave, só pra direita e só na última coluna: enquanto o cursor
-    // fica colado na borda direita, a coluna cresce devagar (passo pequeno e
-    // constante, sem pulo) e a rolagem acompanha. Pra diminuir é só arrastar pra
-    // esquerda (1:1, sem auto-rolagem).
-    const EDGE = 32;
-    const STEP = 3;
+    // fica na borda direita, a coluna cresce e a rolagem acompanha (sem pulo).
+    // Velocidade proporcional a quão fundo o cursor entra na zona da borda
+    // (devagar perto do limite), pra dar pra acertar. Diminuir é arrastar pra esquerda.
+    const EDGE = 44;
+    const MAX_STEP = 5;
     const tick = () => {
       if (!scroller) { raf = 0; return; }
       const rect = scroller.getBoundingClientRect();
-      if (clientX >= rect.right - EDGE) {
-        extra += STEP;
+      const depth = clientX - (rect.right - EDGE);
+      if (depth > 0) {
+        const step = Math.min(depth / EDGE, 1) * MAX_STEP;
+        extra += step;
         apply();
-        scroller.scrollLeft += STEP;
+        scroller.scrollLeft += step;
         raf = requestAnimationFrame(tick);
       } else {
         raf = 0;
@@ -252,7 +239,7 @@ function DataGridInner<T extends Record<string, any>>({
       apply();
       if (isLastCol && scroller && raf === 0) {
         const rect = scroller.getBoundingClientRect();
-        if (clientX >= rect.right - EDGE) raf = requestAnimationFrame(tick);
+        if (clientX > rect.right - EDGE) raf = requestAnimationFrame(tick);
       }
     };
     const onUp = () => {
@@ -303,16 +290,9 @@ function DataGridInner<T extends Record<string, any>>({
 
   const rows = table.getRowModel().rows;
 
-  // Larguras explícitas de todas as colunas. A última recebe o maior valor
-  // entre sua largura base e o espaço que sobra (disponível − soma das outras),
-  // garantindo que a soma nunca fique menor que o container. Assim não há espaço
-  // extra pro navegador redistribuir, e redimensionar uma coluna não afeta as
-  // vizinhas — só a última estica/encolhe pra cobrir o vazio.
+  // Largura de cada coluna: a definida pelo usuário (ou padrão). Nenhuma coluna
+  // estica — o vazio final é coberto pela faixa de preenchimento no fim da tabela.
   const baseW = (c: (typeof gc)[number]) => c.widthOverride ?? (colW[c.key] || c.width || 150);
-  const sumOthers = gc.slice(0, -1).reduce((acc, c) => acc + baseW(c), 0);
-  const lastCol = gc[gc.length - 1];
-  const lastBase = lastCol ? (lastCol.widthOverride ?? (colW[lastCol.key] || lastCol.width || lastCol.minWidth || DEFAULT_MIN_WIDTH)) : 0;
-  const lastWidth = Math.max(lastBase, availWidth - sumOthers);
 
   // ── Virtualização ───────────────────────────────────────────────────────────
 
@@ -442,11 +422,12 @@ function DataGridInner<T extends Record<string, any>>({
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <table className="border-separate border-spacing-0" style={{ tableLayout: 'fixed', width: '100%' }}>
           <colgroup>
-            {gc.map((col, idx) => {
-              const isLast = idx === gc.length - 1;
-              const w = isLast ? lastWidth : baseW(col);
-              return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH, maxWidth: isLast ? undefined : col.maxWidth || undefined }} />;
-            })}
+            {gc.map((col) => (
+              <col key={col.key} style={{ width: baseW(col), minWidth: col.minWidth || DEFAULT_MIN_WIDTH, maxWidth: col.maxWidth || undefined }} />
+            ))}
+            {/* Faixa de preenchimento: ocupa o vazio final sem sacrificar nenhuma
+                coluna real. Some (largura 0) quando as colunas passam da tela. */}
+            <col aria-hidden="true" />
           </colgroup>
 
           {/* HEADER */}
@@ -503,6 +484,8 @@ function DataGridInner<T extends Record<string, any>>({
                     </th>
                   );
                 })}
+                {/* Cabeçalho da faixa de preenchimento */}
+                <th aria-hidden="true" style={{ height: headerHeight }} className="bg-slate-700 dark:bg-slate-800" />
               </tr>
             ))}
           </thead>
@@ -512,7 +495,7 @@ function DataGridInner<T extends Record<string, any>>({
             {/* Empty state padronizado — header acima permanece visível */}
             {data.length === 0 && (
               <tr>
-                <td colSpan={gc.length} className="px-3 py-16 text-center">
+                <td colSpan={gc.length + 1} className="px-3 py-16 text-center">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Inbox className="h-10 w-10 text-slate-300 dark:text-slate-700" />
                     <p className="text-sm text-slate-500 dark:text-slate-400">{mensagemVazio}</p>
@@ -533,7 +516,7 @@ function DataGridInner<T extends Record<string, any>>({
             {/* Spacer top - empurra as linhas visíveis pra posição correta */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
-                <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length} />
+                <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length + 1} />
               </tr>
             )}
 
@@ -570,6 +553,8 @@ function DataGridInner<T extends Record<string, any>>({
                       </td>
                     );
                   })}
+                  {/* Célula da faixa de preenchimento (vazia, herda a cor da linha) */}
+                  <td aria-hidden="true" />
                 </tr>
               );
             })}
@@ -577,12 +562,12 @@ function DataGridInner<T extends Record<string, any>>({
             {/* Spacer bottom - completa a altura total pra scrollbar ficar correta */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
-                <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length} />
+                <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length + 1} />
               </tr>
             )}
 
             {rows.length === 0 && data.length > 0 && (
-              <tr><td colSpan={gc.length} className="px-3 py-6 text-center text-muted-foreground">
+              <tr><td colSpan={gc.length + 1} className="px-3 py-6 text-center text-muted-foreground">
                 Nenhum resultado com os filtros aplicados
                 <button className="ml-2 text-primary hover:underline" onClick={() => setColumnFilters([])}>Limpar filtros</button>
               </td></tr>

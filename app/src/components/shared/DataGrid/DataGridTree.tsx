@@ -8,7 +8,7 @@
  * Lógica de filtro centralizada em filterEngine.ts.
  */
 
-import { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Ref, ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
@@ -70,21 +70,6 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizerRef = useRef<any>(null);
 
-  // Largura disponível do container (mesma técnica do DataGrid): a última
-  // coluna preenche o vazio final por cálculo, sem o "auto" do navegador que
-  // redistribuía nas vizinhas. ResizeObserver reage à sidebar de menus, resize
-  // de janela, barra de rolagem vertical, etc.
-  const [availWidth, setAvailWidth] = useState(0);
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const update = () => setAvailWidth(el.clientWidth);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColFilters({}),
     clearSort: () => setSorting([]),
@@ -102,8 +87,6 @@ function DataGridTreeInner<T extends Record<string, any>>({
     e.preventDefault(); e.stopPropagation();
     const col = gc.find((c) => c.key === k);
     const min = col?.minWidth || DEFAULT_MIN_WIDTH;
-    // Largura inicial = largura real renderizada do cabeçalho (não a base), pra
-    // a última coluna esticada responder no primeiro pixel.
     const th = (e.currentTarget as HTMLElement).closest('th');
     const startW = th ? th.getBoundingClientRect().width : (colW[k] || col?.width || 150);
     const startX = e.clientX;
@@ -113,24 +96,26 @@ function DataGridTreeInner<T extends Record<string, any>>({
     let extra = 0;
     let raf = 0;
 
+    // 1:1 com o mouse; o vazio é coberto pela faixa de preenchimento.
     const apply = () => {
       setColW((p) => ({ ...p, [k]: Math.max(min, startW + (clientX - startX) + extra) }));
     };
 
-    // Auto-rolagem suave, só pra direita e só na última coluna (mesmo do DataGrid):
-    // passo pequeno e constante, sem pulo. Diminuir é arrastar pra esquerda (1:1).
-    const EDGE = 32;
-    const STEP = 3;
+    // Auto-rolagem suave, só pra direita e só na última coluna (sem pulo),
+    // proporcional à entrada na zona da borda. Diminuir é arrastar pra esquerda.
+    const EDGE = 44;
+    const MAX_STEP = 5;
     const tick = () => {
       if (!scroller) { raf = 0; return; }
       const rect = scroller.getBoundingClientRect();
-      if (clientX >= rect.right - EDGE) { extra += STEP; apply(); scroller.scrollLeft += STEP; raf = requestAnimationFrame(tick); }
+      const depth = clientX - (rect.right - EDGE);
+      if (depth > 0) { const step = Math.min(depth / EDGE, 1) * MAX_STEP; extra += step; apply(); scroller.scrollLeft += step; raf = requestAnimationFrame(tick); }
       else { raf = 0; }
     };
 
     const onMove = (ev: MouseEvent) => {
       clientX = ev.clientX; apply();
-      if (isLastCol && scroller && raf === 0) { const rect = scroller.getBoundingClientRect(); if (clientX >= rect.right - EDGE) raf = requestAnimationFrame(tick); }
+      if (isLastCol && scroller && raf === 0) { const rect = scroller.getBoundingClientRect(); if (clientX > rect.right - EDGE) raf = requestAnimationFrame(tick); }
     };
     const onUp = () => { if (raf) cancelAnimationFrame(raf); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
     document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
@@ -175,14 +160,9 @@ function DataGridTreeInner<T extends Record<string, any>>({
 
   const hasFilters = Object.values(colFilters).some(isFilterActive);
 
-  // Larguras explícitas: a última coluna recebe max(largura base, vazio
-  // restante), garantindo soma >= container. Sem espaço extra pro navegador
-  // redistribuir, redimensionar uma coluna não mexe nas vizinhas.
+  // Largura de cada coluna: a definida pelo usuário (ou padrão). Nenhuma coluna
+  // estica — o vazio final é coberto pela faixa de preenchimento no fim da tabela.
   const baseW = (c: (typeof gc)[number]) => c.widthOverride ?? (colW[c.key] || c.width || 150);
-  const sumOthers = gc.slice(0, -1).reduce((acc, c) => acc + baseW(c), 0);
-  const lastCol = gc[gc.length - 1];
-  const lastBase = lastCol ? (lastCol.widthOverride ?? (colW[lastCol.key] || lastCol.width || lastCol.minWidth || DEFAULT_MIN_WIDTH)) : 0;
-  const lastWidth = Math.max(lastBase, availWidth - sumOthers);
 
   const rowsRef = useRef(sorted); rowsRef.current = sorted;
   const onSelRef = useRef(onSelect); onSelRef.current = onSelect;
@@ -257,7 +237,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
     <div ref={containerRef} tabIndex={0} className={`flex flex-col h-full overflow-hidden outline-none ${className}`}>
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <table className="border-separate border-spacing-0" style={{ tableLayout: 'fixed', width: '100%' }}>
-          <colgroup>{gc.map((col, idx) => { const isLast = idx === gc.length - 1; const w = isLast ? lastWidth : baseW(col); return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH }} />; })}</colgroup>
+          <colgroup>{gc.map((col) => <col key={col.key} style={{ width: baseW(col), minWidth: col.minWidth || DEFAULT_MIN_WIDTH }} />)}<col aria-hidden="true" /></colgroup>
           <thead className="sticky top-0 z-10 text-slate-100">
             <tr className="border-b-2 border-slate-300">
               {gc.map((col) => {
@@ -273,13 +253,14 @@ function DataGridTreeInner<T extends Record<string, any>>({
                     {canResize && <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-slate-400" onMouseDown={(e) => onResizeDown(col.key, e)} />}
                   </th>);
               })}
+              <th aria-hidden="true" style={{ height: headerHeight }} className="bg-slate-700 dark:bg-slate-800" />
             </tr>
           </thead>
           <tbody>
             {/* Spacer top */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
-                <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length} />
+                <td style={{ height: virtualRows[0].start, padding: 0, border: 0 }} colSpan={gc.length + 1} />
               </tr>
             )}
 
@@ -302,17 +283,18 @@ function DataGridTreeInner<T extends Record<string, any>>({
                     }
                     return (<td key={col.key} className={`px-2 py-0 text-sm truncate ${col.className || ''}`}><div className={`flex items-center ${col.contentAlign === 'center' ? 'justify-center' : col.contentAlign === 'right' ? 'justify-end' : 'justify-start'}`}>{col.render ? col.render(row) : String((row as any)[col.key] ?? '-')}</div></td>);
                   })}
+                  <td aria-hidden="true" />
                 </tr>);
             })}
 
             {/* Spacer bottom */}
             {virtualRows.length > 0 && (
               <tr aria-hidden="true">
-                <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length} />
+                <td style={{ height: totalHeight - virtualRows[virtualRows.length - 1].end, padding: 0, border: 0 }} colSpan={gc.length + 1} />
               </tr>
             )}
 
-            {sorted.length === 0 && data.length > 0 && (<tr><td colSpan={gc.length} className="px-3 py-6 text-center text-muted-foreground">Nenhum resultado com os filtros aplicados<button className="ml-2 text-primary hover:underline" onClick={() => setColFilters({})}>Limpar filtros</button></td></tr>)}
+            {sorted.length === 0 && data.length > 0 && (<tr><td colSpan={gc.length + 1} className="px-3 py-6 text-center text-muted-foreground">Nenhum resultado com os filtros aplicados<button className="ml-2 text-primary hover:underline" onClick={() => setColFilters({})}>Limpar filtros</button></td></tr>)}
           </tbody>
         </table>
       </div>
