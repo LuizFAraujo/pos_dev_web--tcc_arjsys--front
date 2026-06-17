@@ -46,8 +46,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --background: #f6f7f9;
+  --foreground: #363642;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
@@ -77,6 +77,12 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Azul de ação estilo Looper — vale claro + escuro */
+  --color-blue-700: #2b5a92;
+  --color-blue-600: #346CB0;
+  --color-blue-500: #4f7cc0;
+  --color-blue-400: #6b93cc;
 }
 
 .dark {
