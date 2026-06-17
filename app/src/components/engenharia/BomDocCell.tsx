@@ -9,22 +9,6 @@
 import type { ReactNode } from 'react';
 import { thumbnailUrl } from '@/lib/api';
 
-/** Proporção largura/altura de uma folha A4 em retrato (210/297). */
-export const A4_RATIO = 0.7071;
-
-/** Largura (px) da miniatura retrato para uma dada altura. */
-export function thumbWidth(thumbHeight: number) {
-  return Math.round(thumbHeight * A4_RATIO);
-}
-
-/**
- * Largura (px) da coluna DOC. quando as miniaturas estão ligadas: precisa caber
- * a miniatura retrato e os dois botões (pasta/arquivo) embaixo dela.
- */
-export function docColWidth(thumbHeight: number) {
-  return Math.max(thumbWidth(thumbHeight), 52) + 24;
-}
-
 interface BomDocCellProps {
   /** ID do produto cujo documento será exibido. */
   produtoId: number;
@@ -54,8 +38,8 @@ export function BomDocCell({ produtoId, temDocumento, enabled, thumbHeight, codi
         loading="lazy"
         decoding="async"
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
-        style={{ height: thumbHeight, width: thumbWidth(thumbHeight) }}
-        className="cursor-pointer rounded border border-slate-200 bg-white object-contain p-0.5 transition-colors hover:border-blue-500 dark:border-slate-700 dark:bg-slate-950"
+        style={{ maxHeight: thumbHeight, maxWidth: '100%' }}
+        className="cursor-pointer rounded border border-slate-200 bg-white p-0.5 transition-colors hover:border-blue-500 dark:border-slate-700 dark:bg-slate-950"
         title="Clique para ampliar"
       />
       {buttons}

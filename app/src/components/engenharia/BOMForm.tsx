@@ -29,7 +29,7 @@ import { useBomEditState } from '@/hooks/useBomEditState';
 import { DataGridTree } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
-import { BomDocCell, docColWidth } from '@/components/engenharia/BomDocCell';
+import { BomDocCell } from '@/components/engenharia/BomDocCell';
 import { DocPreviewDialog } from '@/components/shared/DocPreviewDialog';
 import { useBomThumbsStore } from '@/stores/engenharia/bomThumbsStore';
 import type { PageMode } from '@/components/shared/PageShell';
@@ -611,7 +611,6 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
           { label: 'Sim', value: 'true' },
           { label: 'Não', value: 'false' },
         ],
-        widthOverride: thumbsEnabled ? docColWidth(thumbHeight) : undefined,
         render: (i) => {
           const produto = produtosById.get(i._produtoId);
           const temDoc = produto?.temDocumento ?? i.temDocumento ?? false;

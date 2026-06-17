@@ -11,7 +11,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/App
 import { useBomThumbsStore } from '@/stores/engenharia/bomThumbsStore';
 
 const TAM_MIN = 40;
-const TAM_MAX = 160;
+const TAM_MAX = 400;
 const TAM_STEP = 10;
 
 export function BomThumbControls() {

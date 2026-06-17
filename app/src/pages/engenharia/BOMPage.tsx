@@ -29,7 +29,7 @@ import { NovaEstruturaDialog } from '@/components/engenharia/NovaEstruturaDialog
 import { BomDeleteDialog } from '@/components/engenharia/BomDeleteDialog';
 import { ExportarBOMDialog } from '@/components/engenharia/ExportarBOMDialog';
 import { BomThumbControls } from '@/components/engenharia/BomThumbControls';
-import { BomDocCell, docColWidth } from '@/components/engenharia/BomDocCell';
+import { BomDocCell } from '@/components/engenharia/BomDocCell';
 import { DocPreviewDialog } from '@/components/shared/DocPreviewDialog';
 import { useBomThumbsStore } from '@/stores/engenharia/bomThumbsStore';
 import type { BomItem } from '@/types/engenharia/bom.types';
@@ -223,7 +223,6 @@ export function BOMPage({ tab }: BOMPageProps) {
     {
       key: 'produtoFilhoTemDocumento', header: 'DOC.', width: 90, minWidth: 80, contentAlign: 'center', sortable: false,
       filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS,
-      widthOverride: thumbsEnabled ? docColWidth(thumbHeight) : undefined,
       render: (i) => {
         const produto = produtosById.get(i.produtoFilhoId);
         const temDoc = produto?.temDocumento ?? i.produtoFilhoTemDocumento ?? false;
