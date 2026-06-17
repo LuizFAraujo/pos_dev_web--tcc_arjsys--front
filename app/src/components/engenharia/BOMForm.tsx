@@ -192,6 +192,8 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
     const deleteBomItem = useBOMStore((s) => s.deleteBomItem);
     const produtos = useProdutosStore((s) => s.produtos);
     const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
+    const isLoadingFlat = useBOMStore((s) => s.isLoading);
+    const produtosLoading = useProdutosStore((s) => s.isLoading);
 
     // Lookup O(1) por produto.id pra evitar produtos.find linear em listas grandes
     // (>100k produtos). Sem isso, treeData recomputa em O(linhas × produtos).
@@ -652,6 +654,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
         <DataGridTree<BomTreeItemNum>
           tabId={`${tabId}-bomtree-${codigoPai}`} storageId="bom-tree"
           columns={columns} data={allNodes} rootNodes={treeData}
+          loading={(isLoadingFlat && bomFlat.length === 0) || (produtosLoading && produtos.length === 0)}
           getChildren={(n) => n.children || []} getKey={(n) => n._treePath}
           getLevel={(n) => n.nivel} hasChildren={(n) => n.hasChildren}
           isExpanded={isNodeExpanded} onToggle={handleToggle}

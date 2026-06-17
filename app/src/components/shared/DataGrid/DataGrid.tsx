@@ -37,6 +37,7 @@ import { ColFilterPopover } from './ColFilterPopover';
 import { compoundFilterFn, isFilterActive } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
 import type { GridFilterType, DataGridProps, DataGridHandle, CompoundFilter } from './types';
+import { GridSkeleton } from '@/components/shared/GridSkeleton';
 
 // Posição de scroll por aba — em memória, fora do ciclo de vida do componente.
 // Aba fechada → entry removido. Não persiste entre sessões.
@@ -394,14 +395,7 @@ function DataGridInner<T extends Record<string, any>>({
 
   // --- LOADING (apenas quando primeira carga e sem dados — chunks subsequentes
   //     não bloqueiam o grid; o spinner discreto fica no rodapé) ---
-  if (loading && data.length === 0) return (
-    <div className="flex h-full items-center justify-center">
-      <div className="text-center">
-        <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground">{loadingText}</p>
-      </div>
-    </div>
-  );
+  if (loading && data.length === 0) return <GridSkeleton label={loadingText} />;
 
   // Sem early return de "empty" — a mensagem vai dentro do body, com header
   // do grid sempre visível pra preservar referência visual das colunas.

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { ColFilterPopover } from './ColFilterPopover';
 import { isFilterActive, matchCompoundFilter } from './filterEngine';
 import { DEFAULT_MIN_WIDTH, DEFAULT_HEADER_HEIGHT, DEFAULT_ROW_HEIGHT } from './types';
+import { GridSkeleton } from '@/components/shared/GridSkeleton';
 import type { GridColumn, DataGridHandle, GridFilterType, CompoundFilter } from './types';
 
 export interface DataGridTreeProps<T> {
@@ -230,7 +231,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
 
   const toggleSort = useCallback((k: string) => { setSorting((prev) => { const ex = prev.find((s) => s.id === k); if (!ex) return [{ id: k, desc: false }]; if (!ex.desc) return [{ id: k, desc: true }]; return []; }); }, [setSorting]);
 
-  if (loading) return (<div className="flex h-full items-center justify-center"><div className="text-center"><div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /><p className="text-sm text-muted-foreground">{loadingText}</p></div></div>);
+  if (loading) return <GridSkeleton label={loadingText} />;
   if (data.length === 0) return (<div className="flex h-full flex-col items-center justify-center"><p className="mb-2 text-lg font-medium">{emptyTitle}</p>{emptyDescription && <p className="mb-4 text-sm text-muted-foreground">{emptyDescription}</p>}{emptyAction}</div>);
 
   return (
