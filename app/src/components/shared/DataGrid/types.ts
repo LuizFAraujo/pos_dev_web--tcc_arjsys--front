@@ -30,6 +30,7 @@ export interface GridColumn<T> {
   width?: number;                                     // largura inicial em px (default: 150). última coluna ignora
   minWidth?: number;                                  // largura mínima em px (default: 50)
   maxWidth?: number;                                  // largura máxima em px (default: sem limite)
+  widthOverride?: number;                             // força a largura (precede a largura arrastada salva). útil pra coluna reativa
 }
 
 // ============================================
@@ -49,6 +50,8 @@ export interface DataGridProps<T> {
   emptyAction?: ReactNode;      // botão/ação quando sem dados
   headerHeight?: number;        // altura do header em px (default: 32)
   rowHeight?: number;           // altura das linhas em px (default: 28)
+  /** Altura variável por linha (px). Opcional: sem ela, usa rowHeight fixo. */
+  getRowHeight?: (item: T, index: number) => number;
   className?: string;           // classes extras no container
 
   /**

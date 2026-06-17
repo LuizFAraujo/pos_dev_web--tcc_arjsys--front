@@ -28,6 +28,10 @@ import type { BOMFormHandle } from '@/components/engenharia/BOMForm';
 import { NovaEstruturaDialog } from '@/components/engenharia/NovaEstruturaDialog';
 import { BomDeleteDialog } from '@/components/engenharia/BomDeleteDialog';
 import { ExportarBOMDialog } from '@/components/engenharia/ExportarBOMDialog';
+import { BomThumbControls } from '@/components/engenharia/BomThumbControls';
+import { BomDocCell, docColWidth } from '@/components/engenharia/BomDocCell';
+import { DocPreviewDialog } from '@/components/shared/DocPreviewDialog';
+import { useBomThumbsStore } from '@/stores/engenharia/bomThumbsStore';
 import type { BomItem } from '@/types/engenharia/bom.types';
 
 interface BOMPageProps {
@@ -123,6 +127,14 @@ export function BOMPage({ tab }: BOMPageProps) {
   const produtos = useProdutosStore((s) => s.produtos);
   const fetchProdutos = useProdutosStore((s) => s.fetchProdutos);
 
+  // Miniaturas (compartilhado flat/tree)
+  const thumbsEnabled = useBomThumbsStore((s) => s.enabled);
+  const thumbHeight = useBomThumbsStore((s) => s.thumbHeight);
+  const produtosById = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
+  const [preview, setPreview] = useTabState<
+    { produtoId: number; codigo: string; descricao: string; temPasta: boolean; temDocumento: boolean } | null
+  >(tab.id + '-bom-preview', null);
+
   useEffect(() => {
     if (produtosComEstrutura.length === 0) fetchProdutosPai();
     if (produtos.length === 0) fetchProdutos();
@@ -211,44 +223,81 @@ export function BOMPage({ tab }: BOMPageProps) {
     {
       key: 'produtoFilhoTemDocumento', header: 'DOC.', width: 90, minWidth: 80, contentAlign: 'center', sortable: false,
       filterType: 'checklist', filterOptions: SIM_NAO_OPTIONS,
-      render: (i) => <BomDocButtons item={i} extensao="pdf" />
+      widthOverride: thumbsEnabled ? docColWidth(thumbHeight) : undefined,
+      render: (i) => {
+        const produto = produtosById.get(i.produtoFilhoId);
+        const temDoc = produto?.temDocumento ?? i.produtoFilhoTemDocumento ?? false;
+        return (
+          <BomDocCell
+            produtoId={i.produtoFilhoId}
+            temDocumento={temDoc}
+            enabled={thumbsEnabled}
+            thumbHeight={thumbHeight}
+            codigo={i.produtoFilhoCodigo || ''}
+            onPreview={() => setPreview({
+              produtoId: i.produtoFilhoId,
+              codigo: i.produtoFilhoCodigo || '',
+              descricao: i.produtoFilhoDescricao || '',
+              temPasta: produto?.temPasta ?? false,
+              temDocumento: temDoc,
+            })}
+            buttons={<BomDocButtons item={i} extensao="pdf" />}
+          />
+        );
+      },
     },
-  ], []);
+  ], [thumbsEnabled, thumbHeight, produtosById, setPreview]);
+
+  // Altura variável: linha com PDF cresce; sem PDF fica padrão. Só quando ligado.
+  const getRowHeight = useMemo(() => {
+    if (!thumbsEnabled) return undefined;
+    return (i: BomItem) => {
+      const produto = produtosById.get(i.produtoFilhoId);
+      const temDoc = produto?.temDocumento ?? i.produtoFilhoTemDocumento ?? false;
+      return temDoc ? thumbHeight + 40 : 28;
+    };
+  }, [thumbsEnabled, thumbHeight, produtosById]);
 
   const inForm = page.mode !== 'list';
 
-  // Botões extras só dentro do form (view/edit/new).
-  const extraActions = inForm ? (
+  // Botões extras: colapsar/expandir/exportar só no form; miniaturas sempre
+  // (logo à esquerda da engrenagem, valendo pra flat e pra tree).
+  const extraActions = (
     <div className="flex items-center gap-1">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => formRef.current?.collapseAll()}>
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent><p>Recolher todos</p></TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => formRef.current?.expandAll()}>
-            <ChevronsDown className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent><p>Expandir todos</p></TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => setExportDialogOpen(true)}>
-            <FileSpreadsheet className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent><p>Exportar para Excel</p></TooltipContent>
-      </Tooltip>
+      {inForm && (
+        <>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8"
+                onClick={() => formRef.current?.collapseAll()}>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Recolher todos</p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8"
+                onClick={() => formRef.current?.expandAll()}>
+                <ChevronsDown className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Expandir todos</p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8"
+                onClick={() => setExportDialogOpen(true)}>
+                <FileSpreadsheet className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Exportar para Excel</p></TooltipContent>
+          </Tooltip>
+        </>
+      )}
+      <BomThumbControls />
     </div>
-  ) : undefined;
+  );
 
   return (
     <PageShell module="Engenharia" title="Estrutura de Produtos" mode={page.mode} extraTag={extraTag}
@@ -279,6 +328,7 @@ export function BOMPage({ tab }: BOMPageProps) {
           columns={columns} data={itens}
           serverSide total={total} totalGeral={totalGeral}
           hasMore={hasMore} onCarregarMais={carregarMais}
+          getRowHeight={getRowHeight}
           loading={isLoading} loadingText="Carregando estruturas..."
           onSelect={(item) => list.setSelectedItem(item as BomItem | null)}
           onActivate={(item) => page.openView(item as BomItem)}
@@ -302,6 +352,19 @@ export function BOMPage({ tab }: BOMPageProps) {
         getTreeNodes={() => (formRef.current?.getTreeNodes() ?? []) as never}
         hasDirtyChanges={formRef.current?.hasDirtyChanges() ?? false}
       />
+
+      {preview && (
+        <DocPreviewDialog
+          open
+          onOpenChange={(o) => { if (!o) setPreview(null); }}
+          produtoId={preview.produtoId}
+          codigo={preview.codigo}
+          descricao={preview.descricao}
+          temPasta={preview.temPasta}
+          temDocumento={preview.temDocumento}
+          extensao="pdf"
+        />
+      )}
     </PageShell>
   );
 }

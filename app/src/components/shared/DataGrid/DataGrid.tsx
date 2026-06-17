@@ -15,7 +15,7 @@
  * Lógica de filtro centralizada em filterEngine.ts.
  */
 
-import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Ref } from 'react';
 import {
   useReactTable,
@@ -52,6 +52,7 @@ function DataGridInner<T extends Record<string, any>>({
   loading = false, loadingText = 'Carregando...',
   headerHeight = DEFAULT_HEADER_HEIGHT,
   rowHeight = DEFAULT_ROW_HEIGHT,
+  getRowHeight,
   className = '',
   onSelect,
   onActivate,
@@ -73,6 +74,22 @@ function DataGridInner<T extends Record<string, any>>({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizerRef = useRef<any>(null);
+
+  // Largura disponível do container do grid. A última coluna usa isso pra
+  // preencher o vazio final por cálculo (JS), em vez de coluna "auto" do
+  // navegador — que era o que redistribuía largura nas colunas vizinhas.
+  // O ResizeObserver reage a tudo que muda a largura: abrir/fechar a sidebar
+  // de menus, redimensionar a janela, surgir barra de rolagem vertical, etc.
+  const [availWidth, setAvailWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => setAvailWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Persistência de scroll por aba — Map em memória (não persiste entre sessões).
   // Salva continuamente via onScroll; restaura quando esta aba vira a ativa
@@ -187,26 +204,59 @@ function DataGridInner<T extends Record<string, any>>({
     try { userScopedLocalStorage.set(lsKey, JSON.stringify(colW)); } catch { }
   }, [colW, lsKey]);
 
-  const resRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
-
   const onResizeDown = useCallback((k: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const col = gc.find((c) => c.key === k);
-    const sw = colW[k] || col?.width || 150;
-    resRef.current = { key: k, startX: e.clientX, startW: sw };
-    const onMove = (ev: MouseEvent) => {
-      const r = resRef.current;
-      if (!r) return;
-      const c = gc.find((x) => x.key === r.key);
-      const min = c?.minWidth || DEFAULT_MIN_WIDTH;
-      const max = c?.maxWidth;
-      let newW = Math.max(min, r.startW + ev.clientX - r.startX);
+    const min = col?.minWidth || DEFAULT_MIN_WIDTH;
+    const max = col?.maxWidth;
+    // Parte da largura REAL renderizada do cabeçalho (não da base salva). É o que
+    // faz a última coluna (que pode estar esticada) responder já no primeiro pixel.
+    const th = (e.currentTarget as HTMLElement).closest('th');
+    const startW = th ? th.getBoundingClientRect().width : (colW[k] || col?.width || 150);
+    const startX = e.clientX;
+    const scroller = scrollRef.current;
+    const isLastCol = k === gc[gc.length - 1]?.key;
+    let clientX = startX;
+    let extra = 0; // crescimento da auto-rolagem (só na última coluna, só pra direita)
+    let raf = 0;
+
+    const apply = () => {
+      let newW = startW + (clientX - startX) + extra;
+      newW = Math.max(min, newW);
       if (max) newW = Math.min(max, newW);
-      setColW((p) => ({ ...p, [r.key]: newW }));
+      setColW((p) => ({ ...p, [k]: newW }));
+    };
+
+    // Auto-rolagem suave, só pra direita e só na última coluna: enquanto o cursor
+    // fica colado na borda direita, a coluna cresce devagar (passo pequeno e
+    // constante, sem pulo) e a rolagem acompanha. Pra diminuir é só arrastar pra
+    // esquerda (1:1, sem auto-rolagem).
+    const EDGE = 32;
+    const STEP = 3;
+    const tick = () => {
+      if (!scroller) { raf = 0; return; }
+      const rect = scroller.getBoundingClientRect();
+      if (clientX >= rect.right - EDGE) {
+        extra += STEP;
+        apply();
+        scroller.scrollLeft += STEP;
+        raf = requestAnimationFrame(tick);
+      } else {
+        raf = 0;
+      }
+    };
+
+    const onMove = (ev: MouseEvent) => {
+      clientX = ev.clientX;
+      apply();
+      if (isLastCol && scroller && raf === 0) {
+        const rect = scroller.getBoundingClientRect();
+        if (clientX >= rect.right - EDGE) raf = requestAnimationFrame(tick);
+      }
     };
     const onUp = () => {
-      resRef.current = null;
+      if (raf) cancelAnimationFrame(raf);
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
     };
@@ -252,17 +302,32 @@ function DataGridInner<T extends Record<string, any>>({
   });
 
   const rows = table.getRowModel().rows;
-  const lastColKey = gc[gc.length - 1]?.key;
+
+  // Larguras explícitas de todas as colunas. A última recebe o maior valor
+  // entre sua largura base e o espaço que sobra (disponível − soma das outras),
+  // garantindo que a soma nunca fique menor que o container. Assim não há espaço
+  // extra pro navegador redistribuir, e redimensionar uma coluna não afeta as
+  // vizinhas — só a última estica/encolhe pra cobrir o vazio.
+  const baseW = (c: (typeof gc)[number]) => c.widthOverride ?? (colW[c.key] || c.width || 150);
+  const sumOthers = gc.slice(0, -1).reduce((acc, c) => acc + baseW(c), 0);
+  const lastCol = gc[gc.length - 1];
+  const lastBase = lastCol ? (lastCol.widthOverride ?? (colW[lastCol.key] || lastCol.width || lastCol.minWidth || DEFAULT_MIN_WIDTH)) : 0;
+  const lastWidth = Math.max(lastBase, availWidth - sumOthers);
 
   // ── Virtualização ───────────────────────────────────────────────────────────
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: (index) => getRowHeight?.(rows[index]?.original as T, index) ?? rowHeight,
     overscan: 10,
   });
   virtualizerRef.current = virtualizer;
+
+  // Re-mede quando a função de altura variável muda (ex: liga/desliga miniaturas).
+  useEffect(() => {
+    virtualizer.measure();
+  }, [getRowHeight, rowHeight, virtualizer]);
 
   const virtualRows = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
@@ -379,11 +444,8 @@ function DataGridInner<T extends Record<string, any>>({
           <colgroup>
             {gc.map((col, idx) => {
               const isLast = idx === gc.length - 1;
-              if (isLast) {
-                return <col key={col.key} style={{ minWidth: col.minWidth || col.width || 80 }} />;
-              }
-              const w = colW[col.key] || col.width || 150;
-              return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH, maxWidth: col.maxWidth || undefined }} />;
+              const w = isLast ? lastWidth : baseW(col);
+              return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH, maxWidth: isLast ? undefined : col.maxWidth || undefined }} />;
             })}
           </colgroup>
 
@@ -394,11 +456,10 @@ function DataGridInner<T extends Record<string, any>>({
                 {hg.headers.map((h) => {
                   const m = h.column.columnDef.meta as any;
                   const ck = m?.colKey as string | undefined;
-                  const isLast = ck === lastColKey;
                   const canSort = h.column.getCanSort();
                   const sorted = h.column.getIsSorted();
                   const ft: GridFilterType | false = m?.filterType ?? false;
-                  const canResize = m?.resizable !== false && !isLast;
+                  const canResize = m?.resizable !== false;
                   const cf = h.column.getFilterValue() as CompoundFilter | undefined;
 
                   return (
@@ -482,7 +543,7 @@ function DataGridInner<T extends Record<string, any>>({
               const isSelected = selectedIdx === i;
               return (
                 <tr key={row.id}
-                  style={{ height: rowHeight }}
+                  style={{ height: getRowHeight?.(row.original, i) ?? rowHeight }}
                   onClick={() => selectRow(i)}
                   onDoubleClick={(e) => {
                     // Por padrão exige Ctrl pra evitar ativação acidental em listas.

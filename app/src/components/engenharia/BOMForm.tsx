@@ -29,6 +29,9 @@ import { useBomEditState } from '@/hooks/useBomEditState';
 import { DataGridTree } from '@/components/shared/DataGrid';
 import type { GridColumn } from '@/components/shared/DataGrid';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/shared/AppTooltip';
+import { BomDocCell, docColWidth } from '@/components/engenharia/BomDocCell';
+import { DocPreviewDialog } from '@/components/shared/DocPreviewDialog';
+import { useBomThumbsStore } from '@/stores/engenharia/bomThumbsStore';
 import type { PageMode } from '@/components/shared/PageShell';
 import type { BomTreeItem } from '@/types/engenharia/bom.types';
 import type { BomRowStatus } from '@/hooks/useBomEditState';
@@ -197,6 +200,13 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
       for (const p of produtos) m.set(p.id, p);
       return m;
     }, [produtos]);
+
+    // Miniaturas (compartilhado flat/tree) + modal de prévia
+    const thumbsEnabled = useBomThumbsStore((s) => s.enabled);
+    const thumbHeight = useBomThumbsStore((s) => s.thumbHeight);
+    const [preview, setPreview] = useTabState<
+      { produtoId: number; codigo: string; descricao: string; temPasta: boolean; temDocumento: boolean } | null
+    >(`${tabId}-bomtree-preview`, null);
 
     // Índices O(1) sobre bomFlat — usados pra evitar bomFlat.filter linear
     // em getAncestorIds, getExcludeAndCircularIds e na construção do treeData.
@@ -601,9 +611,40 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
           { label: 'Sim', value: 'true' },
           { label: 'Não', value: 'false' },
         ],
-        render: (i) => <TreeDocButtons item={i} />,
+        widthOverride: thumbsEnabled ? docColWidth(thumbHeight) : undefined,
+        render: (i) => {
+          const produto = produtosById.get(i._produtoId);
+          const temDoc = produto?.temDocumento ?? i.temDocumento ?? false;
+          return (
+            <BomDocCell
+              produtoId={i._produtoId}
+              temDocumento={temDoc}
+              enabled={thumbsEnabled}
+              thumbHeight={thumbHeight}
+              codigo={i.codigo}
+              onPreview={() => setPreview({
+                produtoId: i._produtoId,
+                codigo: i.codigo,
+                descricao: i.descricao,
+                temPasta: produto?.temPasta ?? false,
+                temDocumento: temDoc,
+              })}
+              buttons={<TreeDocButtons item={i} />}
+            />
+          );
+        },
       },
-    ], [isEditing, editState, activeCellId, newRow, newRowIds, autocompleteDesc, autocompleteIsCircular, getEffQtde, getEffPos, handleQtdeConfirm, handlePosConfirm, handleAutocompleteConfirm, handleAutocompleteCancel, handleAddChildOf, handleToggleDelete, handleReopenAutocomplete]);
+    ], [isEditing, editState, activeCellId, newRow, newRowIds, autocompleteDesc, autocompleteIsCircular, getEffQtde, getEffPos, handleQtdeConfirm, handlePosConfirm, handleAutocompleteConfirm, handleAutocompleteCancel, handleAddChildOf, handleToggleDelete, handleReopenAutocomplete, thumbsEnabled, thumbHeight, produtosById, setPreview]);
+
+    // Altura variável: linha com PDF cresce; sem PDF fica padrão. Só quando ligado.
+    const getRowHeight = useMemo(() => {
+      if (!thumbsEnabled) return undefined;
+      return (i: BomTreeItemNum) => {
+        const produto = produtosById.get(i._produtoId);
+        const temDoc = produto?.temDocumento ?? i.temDocumento ?? false;
+        return temDoc ? thumbHeight + 40 : 28;
+      };
+    }, [thumbsEnabled, thumbHeight, produtosById]);
 
     if (!codigoPai) return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Nenhum produto selecionado</div>;
 
@@ -615,7 +656,7 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
           getChildren={(n) => n.children || []} getKey={(n) => n._treePath}
           getLevel={(n) => n.nivel} hasChildren={(n) => n.hasChildren}
           isExpanded={isNodeExpanded} onToggle={handleToggle}
-          codeColumnKey="codigo" indentPx={16}
+          codeColumnKey="codigo" indentPx={16} getRowHeight={getRowHeight}
           emptyTitle="Estrutura vazia" emptyDescription="Adicione itens à estrutura"
           rowClassName={rowClassName} onSelect={handleSelect}
           footerLeft={mode === 'view' ? (
@@ -630,6 +671,19 @@ export const BOMForm = forwardRef<BOMFormHandle, BOMFormProps>(
             </span>
           ) : undefined}
         />
+
+        {preview && (
+          <DocPreviewDialog
+            open
+            onOpenChange={(o) => { if (!o) setPreview(null); }}
+            produtoId={preview.produtoId}
+            codigo={preview.codigo}
+            descricao={preview.descricao}
+            temPasta={preview.temPasta}
+            temDocumento={preview.temDocumento}
+            extensao="pdf"
+          />
+        )}
 
         {/* Dialog QTDE 0 */}
         <AlertDialog open={!!zeroQtdeDialog}><AlertDialogContent>

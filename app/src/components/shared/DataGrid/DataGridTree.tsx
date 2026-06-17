@@ -8,7 +8,7 @@
  * Lógica de filtro centralizada em filterEngine.ts.
  */
 
-import { useMemo, useState, useCallback, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Ref, ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTabState } from '@/hooks/useTabState';
@@ -41,6 +41,8 @@ export interface DataGridTreeProps<T> {
   emptyAction?: ReactNode;
   headerHeight?: number;
   rowHeight?: number;
+  /** Altura variável por linha (px). Opcional: sem ela, usa rowHeight fixo. */
+  getRowHeight?: (item: T, index: number) => number;
   className?: string;
   onSelect?: (item: T | null) => void;
   onActivate?: (item: T) => void;
@@ -58,7 +60,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   codeColumnKey, indentPx = 16,
   loading = false, loadingText = 'Carregando...',
   emptyTitle = 'Nenhum registro encontrado', emptyDescription, emptyAction,
-  headerHeight = DEFAULT_HEADER_HEIGHT, rowHeight = DEFAULT_ROW_HEIGHT,
+  headerHeight = DEFAULT_HEADER_HEIGHT, rowHeight = DEFAULT_ROW_HEIGHT, getRowHeight,
   className = '', onSelect, onActivate, rowClassName, footerExtra, footerLeft,
 }: DataGridTreeProps<T>, ref: Ref<DataGridHandle>) {
   const [sorting, setSorting] = useTabState<{ id: string; desc: boolean }[]>(tabId + '-tsort', []);
@@ -67,6 +69,21 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizerRef = useRef<any>(null);
+
+  // Largura disponível do container (mesma técnica do DataGrid): a última
+  // coluna preenche o vazio final por cálculo, sem o "auto" do navegador que
+  // redistribuía nas vizinhas. ResizeObserver reage à sidebar de menus, resize
+  // de janela, barra de rolagem vertical, etc.
+  const [availWidth, setAvailWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => setAvailWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useImperativeHandle(ref, () => ({
     clearFilters: () => setColFilters({}),
@@ -81,13 +98,41 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const [colW, setColW] = useState<Record<string, number>>(() => { try { const s = userScopedLocalStorage.get(lsKey); if (s) return { ...defaultW, ...JSON.parse(s) }; } catch { } return { ...defaultW }; });
   useEffect(() => { try { userScopedLocalStorage.set(lsKey, JSON.stringify(colW)); } catch { } }, [colW, lsKey]);
 
-  const resRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
   const onResizeDown = useCallback((k: string, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    const sw = colW[k] || gc.find((c) => c.key === k)?.width || 150;
-    resRef.current = { key: k, startX: e.clientX, startW: sw };
-    const onMove = (ev: MouseEvent) => { const r = resRef.current; if (!r) return; const min = gc.find((x) => x.key === r.key)?.minWidth || DEFAULT_MIN_WIDTH; setColW((p) => ({ ...p, [r.key]: Math.max(min, r.startW + ev.clientX - r.startX) })); };
-    const onUp = () => { resRef.current = null; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    const col = gc.find((c) => c.key === k);
+    const min = col?.minWidth || DEFAULT_MIN_WIDTH;
+    // Largura inicial = largura real renderizada do cabeçalho (não a base), pra
+    // a última coluna esticada responder no primeiro pixel.
+    const th = (e.currentTarget as HTMLElement).closest('th');
+    const startW = th ? th.getBoundingClientRect().width : (colW[k] || col?.width || 150);
+    const startX = e.clientX;
+    const scroller = scrollRef.current;
+    const isLastCol = k === gc[gc.length - 1]?.key;
+    let clientX = startX;
+    let extra = 0;
+    let raf = 0;
+
+    const apply = () => {
+      setColW((p) => ({ ...p, [k]: Math.max(min, startW + (clientX - startX) + extra) }));
+    };
+
+    // Auto-rolagem suave, só pra direita e só na última coluna (mesmo do DataGrid):
+    // passo pequeno e constante, sem pulo. Diminuir é arrastar pra esquerda (1:1).
+    const EDGE = 32;
+    const STEP = 3;
+    const tick = () => {
+      if (!scroller) { raf = 0; return; }
+      const rect = scroller.getBoundingClientRect();
+      if (clientX >= rect.right - EDGE) { extra += STEP; apply(); scroller.scrollLeft += STEP; raf = requestAnimationFrame(tick); }
+      else { raf = 0; }
+    };
+
+    const onMove = (ev: MouseEvent) => {
+      clientX = ev.clientX; apply();
+      if (isLastCol && scroller && raf === 0) { const rect = scroller.getBoundingClientRect(); if (clientX >= rect.right - EDGE) raf = requestAnimationFrame(tick); }
+    };
+    const onUp = () => { if (raf) cancelAnimationFrame(raf); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
     document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
   }, [colW, gc]);
 
@@ -129,7 +174,16 @@ function DataGridTreeInner<T extends Record<string, any>>({
   }, [filtered, sorting, gc]);
 
   const hasFilters = Object.values(colFilters).some(isFilterActive);
-  const lastColKey = gc[gc.length - 1]?.key;
+
+  // Larguras explícitas: a última coluna recebe max(largura base, vazio
+  // restante), garantindo soma >= container. Sem espaço extra pro navegador
+  // redistribuir, redimensionar uma coluna não mexe nas vizinhas.
+  const baseW = (c: (typeof gc)[number]) => c.widthOverride ?? (colW[c.key] || c.width || 150);
+  const sumOthers = gc.slice(0, -1).reduce((acc, c) => acc + baseW(c), 0);
+  const lastCol = gc[gc.length - 1];
+  const lastBase = lastCol ? (lastCol.widthOverride ?? (colW[lastCol.key] || lastCol.width || lastCol.minWidth || DEFAULT_MIN_WIDTH)) : 0;
+  const lastWidth = Math.max(lastBase, availWidth - sumOthers);
+
   const rowsRef = useRef(sorted); rowsRef.current = sorted;
   const onSelRef = useRef(onSelect); onSelRef.current = onSelect;
   const onActRef = useRef(onActivate); onActRef.current = onActivate;
@@ -139,7 +193,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   const virtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: (index) => getRowHeight?.(sorted[index], index) ?? rowHeight,
     overscan: 10,
   });
 
@@ -148,7 +202,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
   // o grid só repinta após um clique/scroll que dispare nova medição.
   useEffect(() => {
     virtualizer.measure();
-  }, [sorted.length, filtroAtivo, virtualizer]);
+  }, [sorted.length, filtroAtivo, virtualizer, getRowHeight, rowHeight]);
 
   const virtualRows = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
@@ -203,11 +257,11 @@ function DataGridTreeInner<T extends Record<string, any>>({
     <div ref={containerRef} tabIndex={0} className={`flex flex-col h-full overflow-hidden outline-none ${className}`}>
       <div ref={scrollRef} className="flex-1 overflow-auto">
         <table className="border-separate border-spacing-0" style={{ tableLayout: 'fixed', width: '100%' }}>
-          <colgroup>{gc.map((col, idx) => { const isLast = idx === gc.length - 1; if (isLast) return <col key={col.key} style={{ minWidth: col.minWidth || col.width || 80 }} />; const w = colW[col.key] || col.width || 150; return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH }} />; })}</colgroup>
+          <colgroup>{gc.map((col, idx) => { const isLast = idx === gc.length - 1; const w = isLast ? lastWidth : baseW(col); return <col key={col.key} style={{ width: w, minWidth: col.minWidth || DEFAULT_MIN_WIDTH }} />; })}</colgroup>
           <thead className="sticky top-0 z-10 text-slate-100">
             <tr className="border-b-2 border-slate-300">
               {gc.map((col) => {
-                const isLast = col.key === lastColKey; const canSort = col.sortable !== false; const ss = sorting.find((s) => s.id === col.key); const ft: GridFilterType | false = col.filterType !== false ? (col.filterType || 'text') : false; const canResize = col.resizable !== false && !isLast; const cf = colFilters[col.key]; return (
+                const canSort = col.sortable !== false; const ss = sorting.find((s) => s.id === col.key); const ft: GridFilterType | false = col.filterType !== false ? (col.filterType || 'text') : false; const canResize = col.resizable !== false; const cf = colFilters[col.key]; return (
                   <th key={col.key} style={{ height: headerHeight }}
                     className="px-0.5 py-0 text-xs font-medium relative select-none whitespace-nowrap overflow-hidden border-r border-slate-600 last:border-r-0 bg-slate-700 dark:bg-slate-800"
                   >
@@ -233,7 +287,7 @@ function DataGridTreeInner<T extends Record<string, any>>({
               const row = sorted[vRow.index];
               const i = vRow.index;
               const key = getKey(row); const level = getLevel(row); const kids = hasKids(row); const exp = isExpandedEffective(row); const isSel = selectedIdx === i; return (
-                <tr key={key} style={{ height: rowHeight }} onClick={() => selectRow(i)} onDoubleClick={(e) => { if (e.ctrlKey) onActRef.current?.(row); }}
+                <tr key={key} style={{ height: getRowHeight?.(row, i) ?? rowHeight }} onClick={() => selectRow(i)} onDoubleClick={(e) => { if (e.ctrlKey) onActRef.current?.(row); }}
                   className={(() => {
                     const rc = rowClassName?.(row) || '';
                     const bgClasses = rc.split(' ').filter(c => c.startsWith('bg-')).join(' ');
